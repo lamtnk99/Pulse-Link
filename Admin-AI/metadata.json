@@ -1,0 +1,6 @@
+{
+  "name": "Pulse Link - Hospital Admin Portal",
+  "description": "Hệ thống quản lý hành chính bệnh viện, điều phối cấp cứu SOS, quản lý hiến máu và phân quyền nhân sự tối cao.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

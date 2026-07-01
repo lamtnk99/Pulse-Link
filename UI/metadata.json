@@ -1,0 +1,6 @@
+{
+  "name": "Pulse Link",
+  "description": "A clean, modern, and emotional mobile interface for blood donation and emergency dispatch.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
