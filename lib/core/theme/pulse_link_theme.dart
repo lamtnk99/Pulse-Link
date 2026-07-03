@@ -65,6 +65,8 @@ class PulseLinkTheme {
         indicatorColor: seed.withOpacity(isDark ? 0.18 : 0.12),
         labelTextStyle: WidgetStatePropertyAll(
           TextStyle(
+            fontFamily: 'BeVietnamPro',
+            fontFamilyFallback: const ['Roboto', 'Arial', 'sans-serif'],
             color: onSurface,
             fontSize: 11,
             fontWeight: FontWeight.w600,

@@ -263,6 +263,8 @@ class _PulseBottomNavItem extends StatelessWidget {
                   duration: const Duration(milliseconds: 180),
                   curve: Curves.easeOutCubic,
                   style: TextStyle(
+                    fontFamily: 'BeVietnamPro',
+                    fontFamilyFallback: const ['Roboto', 'Arial', 'sans-serif'],
                     color: textColor,
                     fontSize: 10.5,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
