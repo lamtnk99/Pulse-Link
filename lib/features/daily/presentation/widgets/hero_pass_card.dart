@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../core/theme/pulse_link_theme.dart';
@@ -10,10 +11,18 @@ class HeroPassCard extends StatelessWidget {
     super.key,
     required this.profile,
     required this.totalVolumeMl,
+    this.daysLeft,
+    this.recoveryProgress,
+    this.nextEligibleDate,
+    this.upcomingCount,
   });
 
   final DonorProfile profile;
   final int totalVolumeMl;
+  final int? daysLeft;
+  final double? recoveryProgress;
+  final DateTime? nextEligibleDate;
+  final int? upcomingCount;
 
   @override
   Widget build(BuildContext context) {
@@ -119,6 +128,15 @@ class HeroPassCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
+            if (daysLeft != null && recoveryProgress != null) ...[
+              _RecoverySummary(
+                daysLeft: daysLeft!,
+                progress: recoveryProgress!,
+                nextEligibleDate: nextEligibleDate,
+                upcomingCount: upcomingCount ?? 0,
+              ),
+              const SizedBox(height: 14),
+            ],
             const Divider(color: Colors.white24),
             const SizedBox(height: 10),
             Row(
@@ -204,6 +222,105 @@ class HeroPassCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _RecoverySummary extends StatelessWidget {
+  const _RecoverySummary({
+    required this.daysLeft,
+    required this.progress,
+    required this.nextEligibleDate,
+    required this.upcomingCount,
+  });
+
+  final int daysLeft;
+  final double progress;
+  final DateTime? nextEligibleDate;
+  final int upcomingCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final ready = daysLeft <= 0;
+    final progressValue = progress.clamp(0.0, 1.0).toDouble();
+    final dateLabel = nextEligibleDate == null
+        ? null
+        : DateFormat('dd/MM/yyyy').format(nextEligibleDate!);
+    final title = ready ? 'Cơ thể đã sẵn sàng' : 'Còn $daysLeft ngày hồi phục';
+    final subtitle = [
+      if (!ready && dateLabel != null) 'Đủ điều kiện lại $dateLabel',
+      if (ready) 'Bạn có thể chọn điểm hiến phù hợp',
+      if (upcomingCount > 0) '$upcomingCount lịch đã giữ chỗ',
+    ].join(' · ');
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.12)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 46,
+            height: 46,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox.expand(
+                  child: CircularProgressIndicator(
+                    value: progressValue,
+                    strokeWidth: 5,
+                    color: ready ? PulseLinkTheme.successGreen : Colors.white,
+                    backgroundColor: Colors.white.withOpacity(0.18),
+                    strokeCap: StrokeCap.round,
+                  ),
+                ),
+                Icon(
+                  ready
+                      ? Icons.volunteer_activism_outlined
+                      : Icons.self_improvement_outlined,
+                  size: 20,
+                  color: ready ? PulseLinkTheme.successGreen : Colors.white,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                  ),
+                ),
+                if (subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      height: 1.3,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

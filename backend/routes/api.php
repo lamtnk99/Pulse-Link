@@ -28,6 +28,8 @@ Route::prefix('mobile')->group(function () {
     Route::post('me/hero-pass', [MobileProfileController::class, 'updateHeroPass']);
     Route::get('me/donations', [MobileDonationController::class, 'history']);
     Route::get('me/appointments', [MobileDonationController::class, 'appointments']);
+    Route::get('me/sos-commitment', [EmergencyController::class, 'mobileActiveCommitment']);
+    Route::get('realtime-config', [EmergencyController::class, 'mobileRealtimeConfig']);
     Route::post('me/donations', [MobileDonationController::class, 'storeHistory']);
     Route::get('donation-events', [MobileDonationController::class, 'events']);
     Route::get('donation-events/{event}', [MobileDonationController::class, 'show']);
@@ -39,6 +41,7 @@ Route::prefix('mobile')->group(function () {
     Route::get('sos-alerts', [EmergencyController::class, 'mobileIndex']);
     Route::post('sos-alerts/{alert:public_id}/commit', [EmergencyController::class, 'commit']);
     Route::post('sos-alerts/{alert:public_id}/location', [EmergencyController::class, 'updateLocation']);
+    Route::post('sos-alerts/{alert:public_id}/cancel', [EmergencyController::class, 'cancelCommitment']);
 });
 
 Route::prefix('admin')->group(function () {

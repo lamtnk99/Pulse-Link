@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/enums/app_mode.dart';
+import '../core/enums/app_theme_preference.dart';
 import '../core/theme/pulse_link_theme.dart';
 import '../features/daily/presentation/daily_mode_screen.dart';
 import '../features/emergency/presentation/sos_mode_screen.dart';
@@ -18,17 +19,27 @@ class PulseLinkApp extends StatefulWidget {
   State<PulseLinkApp> createState() => _PulseLinkAppState();
 }
 
-class _PulseLinkAppState extends State<PulseLinkApp> {
+class _PulseLinkAppState extends State<PulseLinkApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     widget.controller.initialize();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     widget.controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      widget.controller.handleAppResumed();
+    }
   }
 
   @override
@@ -41,7 +52,15 @@ class _PulseLinkAppState extends State<PulseLinkApp> {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'Pulse Link',
-          theme: PulseLinkTheme.themeForMode(state.activeMode),
+          theme: PulseLinkTheme.themeForMode(
+            state.activeMode,
+            brightness: Brightness.light,
+          ),
+          darkTheme: PulseLinkTheme.themeForMode(
+            state.activeMode,
+            brightness: Brightness.dark,
+          ),
+          themeMode: state.themePreference.themeMode,
           home: AnimatedSwitcher(
             duration: const Duration(milliseconds: 450),
             switchInCurve: Curves.easeOutCubic,

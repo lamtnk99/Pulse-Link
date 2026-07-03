@@ -2,6 +2,8 @@ import 'dart:async';
 
 import '../../core/location/geo_point.dart';
 import '../../features/emergency/domain/emergency_alert.dart';
+import '../../features/emergency/domain/emergency_commitment.dart';
+import '../../features/emergency/domain/emergency_mission_resume.dart';
 import '../../features/emergency/domain/route_plan.dart';
 import '../../features/profile/domain/donor_profile.dart';
 import '../../services/emergency_audio_service.dart';
@@ -22,10 +24,52 @@ class MockEmergencySignalService implements EmergencySignalService {
   }
 
   @override
-  Future<void> confirmCommitment({
+  Future<EmergencyMissionResume?> fetchActiveCommitment({
+    required DonorProfile profile,
+  }) async {
+    return null;
+  }
+
+  @override
+  Future<EmergencyCommitment> confirmCommitment({
     required String alertId,
+    GeoPoint? location,
+    int? etaMinutes,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
+    return EmergencyCommitment(
+      id: 'mock-$alertId',
+      alertId: alertId,
+      status: EmergencyCommitmentStatus.committed,
+      location: location,
+      etaMinutes: etaMinutes,
+      committedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<void> updateCommitmentLocation({
+    required String alertId,
+    required GeoPoint location,
+    int? etaMinutes,
+    EmergencyCommitmentStatus status = EmergencyCommitmentStatus.enRoute,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 80));
+  }
+
+  @override
+  Future<EmergencyCommitment> cancelCommitment({
+    required String alertId,
+    required String reason,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 160));
+    return EmergencyCommitment(
+      id: 'mock-$alertId',
+      alertId: alertId,
+      status: EmergencyCommitmentStatus.cancelled,
+      cancelReason: reason,
+      committedAt: DateTime.now(),
+    );
   }
 
   @override

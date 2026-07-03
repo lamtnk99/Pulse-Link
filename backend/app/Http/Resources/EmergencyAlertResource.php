@@ -12,6 +12,9 @@ class EmergencyAlertResource extends JsonResource
     {
         $hospital = $this->whenLoaded('hospital');
         $hospitalResource = $hospital instanceof MissingValue ? null : $hospital;
+        $currentCommitment = $this->resource->relationLoaded('currentCommitment')
+            ? $this->resource->getRelation('currentCommitment')
+            : null;
 
         return [
             'id' => $this->public_id,
@@ -26,6 +29,7 @@ class EmergencyAlertResource extends JsonResource
             'dispatch_summary' => $this->dispatch_summary ?? [],
             'hospital_name' => $hospitalResource?->name,
             'hospital_address' => $hospitalResource?->address,
+            'hospital_contact_phone' => $hospitalResource?->contact_phone,
             'hospital_province_code' => $hospitalResource?->province_code,
             'hospital_location' => $hospitalResource ? [
                 'latitude' => $hospitalResource->latitude,
@@ -34,6 +38,9 @@ class EmergencyAlertResource extends JsonResource
             'hospital' => HospitalResource::make($this->whenLoaded('hospital')),
             'recipients' => EmergencyRecipientResource::collection($this->whenLoaded('recipients')),
             'commitments' => EmergencyCommitmentResource::collection($this->whenLoaded('commitments')),
+            'current_commitment' => $currentCommitment
+                ? EmergencyCommitmentResource::make($currentCommitment)
+                : null,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

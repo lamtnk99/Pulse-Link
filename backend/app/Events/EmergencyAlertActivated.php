@@ -22,6 +22,7 @@ class EmergencyAlertActivated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
+            new Channel('mobile.emergency-alerts'),
             new Channel('hospital.'.$this->alert->hospital_id),
             new Channel('emergency-alert.'.$this->alert->public_id),
         ];

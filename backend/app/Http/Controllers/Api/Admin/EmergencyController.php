@@ -99,7 +99,16 @@ class EmergencyController extends Controller
         $donor = $this->mobileUserResolver->resolve($request->integer('user_id'));
 
         $alerts = EmergencyAlert::query()
-            ->with('hospital.province', 'hospital.ward')
+            ->with([
+                'hospital.province',
+                'hospital.ward',
+                'commitments' => function ($query) use ($donor): void {
+                    $query
+                        ->where('donor_id', $donor->id)
+                        ->whereIn('status', ['committed', 'en_route', 'cancelled', 'donated'])
+                        ->latest();
+                },
+            ])
             ->where('expires_at', '>', now())
             ->whereIn('status', ['active', 'cancelled', 'fulfilled'])
             ->latest()
@@ -109,10 +118,87 @@ class EmergencyController extends Controller
                 $donor->blood_type,
                 $alert->required_blood_type,
             ))
+            ->each(function (EmergencyAlert $alert): void {
+                $alert->setRelation('currentCommitment', $alert->commitments->first());
+            })
             ->values();
 
         return response()->json([
             'data' => EmergencyAlertResource::collection($alerts)->resolve(),
+        ]);
+    }
+
+    public function mobileActiveCommitment(Request $request): JsonResponse
+    {
+        $donor = $this->mobileUserResolver->resolve($request->integer('user_id'));
+
+        $commitment = EmergencyCommitment::query()
+            ->with([
+                'alert.hospital.province',
+                'alert.hospital.ward',
+                'donor.province',
+                'donor.ward',
+            ])
+            ->where('donor_id', $donor->id)
+            ->whereIn('status', ['committed', 'en_route'])
+            ->whereHas('alert', function ($query): void {
+                $query
+                    ->where('status', 'active')
+                    ->where('expires_at', '>', now());
+            })
+            ->orderByRaw('COALESCE(last_location_at, committed_at, created_at) DESC')
+            ->first();
+
+        if (! $commitment) {
+            return response()->json(['data' => null]);
+        }
+
+        return response()->json([
+            'data' => [
+                'alert' => EmergencyAlertResource::make($commitment->alert)->resolve(),
+                'commitment' => EmergencyCommitmentResource::make($commitment)->resolve(),
+            ],
+        ]);
+    }
+
+    public function mobileRealtimeConfig(Request $request): JsonResponse
+    {
+        $reverb = config('broadcasting.connections.reverb', []);
+        $options = $reverb['options'] ?? [];
+        $scheme = (string) (env('MOBILE_REVERB_SCHEME') ?: ($options['scheme'] ?? ($request->isSecure() ? 'https' : 'http')));
+        $host = (string) (env('MOBILE_REVERB_HOST') ?: env('REVERB_PUBLIC_HOST') ?: ($options['host'] ?? $request->getHost()));
+        $port = (int) (env('MOBILE_REVERB_PORT') ?: ($options['port'] ?? ($scheme === 'https' ? 443 : 80)));
+
+        if (str_contains($host, '://')) {
+            $parts = parse_url($host);
+            $scheme = (string) ($parts['scheme'] ?? $scheme);
+            $host = (string) ($parts['host'] ?? $host);
+            $port = (int) ($parts['port'] ?? $port);
+        }
+
+        if (in_array($host, ['0.0.0.0', '127.0.0.1', 'localhost'], true) && $request->getHost() !== $host) {
+            $host = $request->getHost();
+        }
+
+        $key = (string) ($reverb['key'] ?? '');
+
+        return response()->json([
+            'data' => [
+                'enabled' => config('broadcasting.default') === 'reverb' && $key !== '' && $host !== '',
+                'broadcaster' => 'reverb',
+                'key' => $key,
+                'host' => $host,
+                'port' => $port,
+                'scheme' => $scheme,
+                'channels' => [
+                    'global' => 'mobile.emergency-alerts',
+                    'donor' => 'mobile.donor.{donor_id}',
+                ],
+                'events' => [
+                    'alert_activated' => 'emergency.alert.activated',
+                    'commitment_updated' => 'emergency.commitment.updated',
+                ],
+            ],
         ]);
     }
 
@@ -191,6 +277,14 @@ class EmergencyController extends Controller
         $donor = $this->mobileUserResolver->resolve(
             $payload['donor_id'] ?? $request->integer('user_id')
         );
+        $hasLocation = array_key_exists('latitude', $payload) && array_key_exists('longitude', $payload);
+
+        $commitment = EmergencyCommitment::query()
+            ->where('emergency_alert_id', $alert->id)
+            ->where('donor_id', $donor->id)
+            ->first();
+
+        abort_if($commitment?->status === 'donated', 409, 'Ca SOS này đã được bệnh viện ghi nhận hiến máu.');
 
         $commitment = EmergencyCommitment::query()->updateOrCreate(
             [
@@ -199,22 +293,21 @@ class EmergencyController extends Controller
             ],
             [
                 'status' => 'committed',
-                'latitude' => $payload['latitude'] ?? null,
-                'longitude' => $payload['longitude'] ?? null,
-                'eta_minutes' => $payload['eta_minutes'] ?? null,
-                'committed_at' => now(),
-                'last_location_at' => now(),
+                'cancel_reason' => null,
+                'latitude' => $payload['latitude'] ?? $commitment?->latitude,
+                'longitude' => $payload['longitude'] ?? $commitment?->longitude,
+                'eta_minutes' => $payload['eta_minutes'] ?? $commitment?->eta_minutes,
+                'committed_at' => $commitment?->committed_at ?? now(),
+                'last_location_at' => $hasLocation ? now() : $commitment?->last_location_at,
             ],
         );
 
+        $commitment->load('donor.province', 'donor.ward', 'alert.hospital');
         $this->broadcastCommitment($commitment);
 
-        return response()->json([
-            'data' => [
-                'id' => $commitment->id,
-                'status' => $commitment->status,
-            ],
-        ]);
+        return EmergencyCommitmentResource::make($commitment)
+            ->response()
+            ->setStatusCode(200);
     }
 
     public function updateLocation(Request $request, EmergencyAlert $alert): JsonResponse
@@ -235,6 +328,8 @@ class EmergencyController extends Controller
             ->where('donor_id', $donor->id)
             ->firstOrFail();
 
+        abort_if($commitment->status === 'donated', 409, 'Ca SOS này đã được bệnh viện ghi nhận hiến máu.');
+
         $commitment->update([
             'latitude' => $payload['latitude'],
             'longitude' => $payload['longitude'],
@@ -246,6 +341,37 @@ class EmergencyController extends Controller
         $this->broadcastCommitment($commitment);
 
         return response()->json(['data' => ['ok' => true]]);
+    }
+
+    public function cancelCommitment(Request $request, EmergencyAlert $alert): JsonResponse
+    {
+        $payload = $request->validate([
+            'donor_id' => ['nullable', 'integer', 'exists:users,id'],
+            'cancel_reason' => ['required', 'string', 'max:1000'],
+        ]);
+        $donor = $this->mobileUserResolver->resolve(
+            $payload['donor_id'] ?? $request->integer('user_id')
+        );
+
+        $commitment = EmergencyCommitment::query()
+            ->where('emergency_alert_id', $alert->id)
+            ->where('donor_id', $donor->id)
+            ->firstOrFail();
+
+        abort_if($commitment->status === 'donated', 409, 'Ca SOS này đã được bệnh viện ghi nhận hiến máu.');
+
+        $commitment->update([
+            'status' => 'cancelled',
+            'cancel_reason' => $payload['cancel_reason'],
+            'last_location_at' => now(),
+        ]);
+
+        $commitment->load('donor.province', 'donor.ward', 'alert.hospital');
+        $this->broadcastCommitment($commitment);
+
+        return EmergencyCommitmentResource::make($commitment)
+            ->response()
+            ->setStatusCode(200);
     }
 
     private function broadcastCommitment(EmergencyCommitment $commitment): void

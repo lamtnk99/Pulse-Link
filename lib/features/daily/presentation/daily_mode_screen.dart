@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../app/pulse_link_controller.dart';
+import '../../../core/enums/app_theme_preference.dart';
 import '../../../core/theme/pulse_link_theme.dart';
 import '../../../core/utils/vietnamese_labels.dart';
 import '../../community/domain/community_post.dart';
@@ -17,7 +18,6 @@ import 'utils/map_launcher.dart';
 import 'widgets/donation_event_card.dart';
 import 'widgets/donation_history_tile.dart';
 import 'widgets/event_map_preview.dart';
-import 'widgets/health_tracker_card.dart';
 import 'widgets/hero_pass_card.dart';
 
 class DailyModeScreen extends StatefulWidget {
@@ -117,45 +117,184 @@ class _DailyModeScreenState extends State<DailyModeScreen> {
               children: pages,
             ),
           ),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _currentIndex,
-            onDestinationSelected: (index) {
+          bottomNavigationBar: _PulseBottomNavBar(
+            currentIndex: _currentIndex,
+            onSelected: (index) {
               setState(() => _currentIndex = index);
             },
-            backgroundColor: PulseLinkTheme.cardBackground,
-            indicatorColor: PulseLinkTheme.primaryRed.withOpacity(0.18),
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'Trang chủ',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.map_outlined),
-                selectedIcon: Icon(Icons.map_rounded),
-                label: 'Sự kiện',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.event_available_outlined),
-                selectedIcon: Icon(Icons.event_available_rounded),
-                label: 'Lịch đặt',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.history_outlined),
-                selectedIcon: Icon(Icons.history_rounded),
-                label: 'Sổ hiến',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person_rounded),
-                label: 'Hồ sơ',
-              ),
-            ],
           ),
         );
       },
     );
   }
+}
+
+class _PulseBottomNavBar extends StatelessWidget {
+  const _PulseBottomNavBar({
+    required this.currentIndex,
+    required this.onSelected,
+  });
+
+  final int currentIndex;
+  final ValueChanged<int> onSelected;
+
+  static const _items = [
+    _PulseNavItem(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home_rounded,
+      label: 'Trang chủ',
+    ),
+    _PulseNavItem(
+      icon: Icons.map_outlined,
+      selectedIcon: Icons.map_rounded,
+      label: 'Sự kiện',
+    ),
+    _PulseNavItem(
+      icon: Icons.event_available_outlined,
+      selectedIcon: Icons.event_available_rounded,
+      label: 'Lịch',
+    ),
+    _PulseNavItem(
+      icon: Icons.volunteer_activism_outlined,
+      selectedIcon: Icons.volunteer_activism_rounded,
+      label: 'Sổ hiến',
+    ),
+    _PulseNavItem(
+      icon: Icons.person_outline_rounded,
+      selectedIcon: Icons.person_rounded,
+      label: 'Hồ sơ',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = PulseLinkTheme.isDark(context);
+    final surface = PulseLinkTheme.surfaceColor(context);
+    final border = PulseLinkTheme.subtleBorderColor(context);
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 10),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.28 : 0.08),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 7),
+            child: Row(
+              children: [
+                for (var index = 0; index < _items.length; index++)
+                  Expanded(
+                    child: _PulseBottomNavItem(
+                      item: _items[index],
+                      selected: currentIndex == index,
+                      onTap: () => onSelected(index),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PulseBottomNavItem extends StatelessWidget {
+  const _PulseBottomNavItem({
+    required this.item,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _PulseNavItem item;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final muted = PulseLinkTheme.mutedColor(context);
+    final textColor = selected ? primary : muted;
+
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: item.label,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  width: selected ? 42 : 34,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? primary.withOpacity(0.12)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Icon(
+                    selected ? item.selectedIcon : item.icon,
+                    color: selected ? primary : muted,
+                    size: selected ? 21 : 20,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 10.5,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    height: 1.1,
+                    letterSpacing: 0,
+                  ),
+                  child: Text(
+                    item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PulseNavItem {
+  const _PulseNavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
 }
 
 Future<void> _openEventDetail(
@@ -327,21 +466,13 @@ class _HomeTab extends StatelessWidget {
         children: [
           _DailyHeader(controller: controller),
           const SizedBox(height: 14),
-          _TodayCareCard(
-            profile: profile,
-            totalVolumeMl: state.totalVolumeMl,
-            upcomingCount: state.bookedAppointments.length,
-          ),
-          const SizedBox(height: 14),
           HeroPassCard(
             profile: profile,
             totalVolumeMl: state.totalVolumeMl,
-          ),
-          const SizedBox(height: 16),
-          HealthTrackerCard(
             daysLeft: profile.daysUntilEligible(now),
-            progress: profile.recoveryProgress(now),
+            recoveryProgress: profile.recoveryProgress(now),
             nextEligibleDate: profile.nextEligibleDate,
+            upcomingCount: state.bookedAppointments.length,
           ),
           const SizedBox(height: 14),
           _ImpactStrip(
@@ -356,10 +487,10 @@ class _HomeTab extends StatelessWidget {
             onAction: onToggleMap,
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Chọn điểm gần bạn, vào xem kỹ thời gian và chỉ đặt khi cơ thể thật sự ổn.',
             style: TextStyle(
-              color: PulseLinkTheme.mutedText,
+              color: PulseLinkTheme.mutedColor(context),
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -678,9 +809,9 @@ class _HistoryTimelineIntro extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: PulseLinkTheme.surfaceColor(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
       child: Row(
         children: [
@@ -691,8 +822,8 @@ class _HistoryTimelineIntro extends StatelessWidget {
               sosCount > 0
                   ? 'Sổ này có ${history.length} dấu mốc, trong đó có $sosCount lần bạn có mặt cho một ca khẩn cấp.'
                   : 'Sổ này đang giữ ${history.length} dấu mốc. Lần gần nhất là ${DateFormat('dd/MM/yyyy').format(latest.donatedAt)}.',
-              style: const TextStyle(
-                color: PulseLinkTheme.mutedText,
+              style: TextStyle(
+                color: PulseLinkTheme.mutedColor(context),
                 height: 1.4,
                 fontWeight: FontWeight.w700,
               ),
@@ -733,9 +864,9 @@ class _RecognitionSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: PulseLinkTheme.cardBackground,
+        color: PulseLinkTheme.surfaceColor(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -763,8 +894,8 @@ class _RecognitionSummaryCard extends StatelessWidget {
                       recognition.level.isEmpty
                           ? VietnameseLabels.heroLevel(profile.heroLevel)
                           : VietnameseLabels.text(recognition.level),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: PulseLinkTheme.textColor(context),
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                       ),
@@ -774,8 +905,8 @@ class _RecognitionSummaryCard extends StatelessWidget {
                       recognition.badgeTitle.isEmpty
                           ? VietnameseLabels.text(profile.badgeTitle)
                           : VietnameseLabels.text(recognition.badgeTitle),
-                      style: const TextStyle(
-                        color: PulseLinkTheme.mutedText,
+                      style: TextStyle(
+                        color: PulseLinkTheme.mutedColor(context),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -907,8 +1038,8 @@ class _RecognitionMetric extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: PulseLinkTheme.mutedText,
+          style: TextStyle(
+            color: PulseLinkTheme.mutedColor(context),
             fontSize: 11,
             fontWeight: FontWeight.w800,
           ),
@@ -941,20 +1072,22 @@ class _RankPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: PulseLinkTheme.isDark(context)
+            ? Colors.white.withOpacity(0.06)
+            : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          Icon(icon, color: PulseLinkTheme.mutedText, size: 16),
+          Icon(icon, color: PulseLinkTheme.mutedColor(context), size: 16),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               label,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: PulseLinkTheme.mutedText,
+              style: TextStyle(
+                color: PulseLinkTheme.mutedColor(context),
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
               ),
@@ -974,27 +1107,28 @@ class _EmptyHistoryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: PulseLinkTheme.cardBackground,
+        color: PulseLinkTheme.surfaceColor(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.menu_book_outlined, color: PulseLinkTheme.primaryRed),
-          SizedBox(height: 10),
+          const Icon(Icons.menu_book_outlined,
+              color: PulseLinkTheme.primaryRed),
+          const SizedBox(height: 10),
           Text(
             'Sổ hiến máu đang chờ chứng chỉ đầu tiên',
             style: TextStyle(
-              color: Colors.white,
+              color: PulseLinkTheme.textColor(context),
               fontWeight: FontWeight.w900,
             ),
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(
             'Khi một lần hiến được xác nhận, chứng chỉ và QR verify sẽ xuất hiện tại đây.',
             style: TextStyle(
-              color: PulseLinkTheme.mutedText,
+              color: PulseLinkTheme.mutedColor(context),
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -1029,6 +1163,8 @@ class _ProfileTab extends StatelessWidget {
             tooltip: 'Mô phỏng SOS',
           ),
         ),
+        const SizedBox(height: 16),
+        _ThemePreferenceCard(controller: controller),
         const SizedBox(height: 16),
         HeroPassCard(
           profile: profile,
@@ -1066,88 +1202,82 @@ class _ProfileTab extends StatelessWidget {
   }
 }
 
-class _TodayCareCard extends StatelessWidget {
-  const _TodayCareCard({
-    required this.profile,
-    required this.totalVolumeMl,
-    required this.upcomingCount,
+class _ThemePreferenceCard extends StatelessWidget {
+  const _ThemePreferenceCard({
+    required this.controller,
   });
 
-  final DonorProfile profile;
-  final int totalVolumeMl;
-  final int upcomingCount;
+  final PulseLinkController controller;
 
   @override
   Widget build(BuildContext context) {
-    final daysLeft = profile.daysUntilEligible(DateTime.now());
-    final title = daysLeft <= 0
-        ? 'Hôm nay bạn có thể đặt một lịch mới'
-        : 'Cơ thể cần thêm $daysLeft ngày để hồi phục';
-    final message = upcomingCount > 0
-        ? 'Bạn đang có $upcomingCount lịch đã giữ chỗ. Trước khi đi, chỉ cần chắc rằng mình ngủ đủ và thấy khỏe.'
-        : daysLeft <= 0
-            ? 'Nếu tuần này thuận tiện, hãy chọn một điểm gần bạn. Nếu chưa sẵn sàng, để thêm vài ngày cũng không sao.'
-            : 'Khoảng nghỉ giữa các lần hiến là phần quan trọng của việc hiến máu an toàn.';
+    final selected = controller.state.themePreference;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: PulseLinkTheme.cardBackground,
+        color: PulseLinkTheme.surfaceColor(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            height: 46,
-            width: 46,
-            decoration: BoxDecoration(
-              color: PulseLinkTheme.successGreen.withOpacity(0.14),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              daysLeft <= 0
-                  ? Icons.volunteer_activism_outlined
-                  : Icons.self_improvement_outlined,
-              color: PulseLinkTheme.successGreen,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 16,
-                  ),
+          Row(
+            children: [
+              Container(
+                height: 40,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: PulseLinkTheme.primaryRed.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  message,
-                  style: const TextStyle(
-                    color: PulseLinkTheme.mutedText,
-                    height: 1.45,
-                    fontWeight: FontWeight.w700,
-                  ),
+                child: const Icon(
+                  Icons.contrast_outlined,
+                  color: PulseLinkTheme.primaryRed,
                 ),
-                if (totalVolumeMl > 0) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    'Sổ hiến của bạn đã ghi nhận ${NumberFormat.decimalPattern().format(totalVolumeMl)} ml.',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Giao diện',
+                      style: TextStyle(
+                        color: PulseLinkTheme.textColor(context),
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Đổi nền sáng/tối cho dễ nhìn hơn.',
+                      style: TextStyle(
+                        color: PulseLinkTheme.mutedColor(context),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<AppThemePreference>(
+            showSelectedIcon: false,
+            segments: [
+              for (final preference in AppThemePreference.values)
+                ButtonSegment(
+                  value: preference,
+                  icon: Icon(preference.icon, size: 18),
+                  label: Text(preference.label),
+                ),
+            ],
+            selected: {selected},
+            onSelectionChanged: (selection) {
+              controller.setThemePreference(selection.first);
+            },
           ),
         ],
       ),
@@ -1215,9 +1345,9 @@ class _ImpactItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: PulseLinkTheme.surfaceColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.05)),
+        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1228,8 +1358,8 @@ class _ImpactItem extends StatelessWidget {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: PulseLinkTheme.textColor(context),
               fontWeight: FontWeight.w900,
               fontSize: 16,
             ),
@@ -1239,8 +1369,8 @@ class _ImpactItem extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PulseLinkTheme.mutedText,
+            style: TextStyle(
+              color: PulseLinkTheme.mutedColor(context),
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -1280,7 +1410,7 @@ class _DailyHeader extends StatelessWidget {
               Text(
                 'Xin chào, hiệp sĩ',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: PulseLinkTheme.mutedText,
+                      color: PulseLinkTheme.mutedColor(context),
                     ),
               ),
               Text(
@@ -1360,11 +1490,11 @@ class _AppointmentCard extends StatelessWidget {
     };
 
     return Material(
-      color: PulseLinkTheme.cardBackground,
+      color: PulseLinkTheme.surfaceColor(context),
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: Colors.white.withOpacity(0.06)),
+        side: BorderSide(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
       child: Column(
         children: [
@@ -1375,9 +1505,10 @@ class _AppointmentCard extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const CircleAvatar(
-                    backgroundColor: Colors.white10,
-                    child: Icon(
+                  CircleAvatar(
+                    backgroundColor:
+                        PulseLinkTheme.primaryRed.withOpacity(0.08),
+                    child: const Icon(
                       Icons.event_available_outlined,
                       color: PulseLinkTheme.successGreen,
                     ),
@@ -1391,8 +1522,8 @@ class _AppointmentCard extends StatelessWidget {
                           event.title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: PulseLinkTheme.textColor(context),
                             fontWeight: FontWeight.w900,
                           ),
                         ),
@@ -1401,8 +1532,8 @@ class _AppointmentCard extends StatelessWidget {
                           '${DateFormat('dd/MM/yyyy - HH:mm').format(event.startsAt)}\n${event.locationName}',
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: PulseLinkTheme.mutedText,
+                          style: TextStyle(
+                            color: PulseLinkTheme.mutedColor(context),
                             height: 1.35,
                           ),
                         ),
@@ -1434,8 +1565,8 @@ class _AppointmentCard extends StatelessWidget {
                         appointment.bookedAt == null
                             ? 'Đã xác nhận lịch'
                             : 'Đặt lúc ${DateFormat('dd/MM/yyyy - HH:mm').format(appointment.bookedAt!)}',
-                        style: const TextStyle(
-                          color: PulseLinkTheme.mutedText,
+                        style: TextStyle(
+                          color: PulseLinkTheme.mutedColor(context),
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -1450,11 +1581,11 @@ class _AppointmentCard extends StatelessWidget {
                     label: const Text('Hủy lịch'),
                   )
                 else
-                  const Padding(
-                    padding: EdgeInsets.only(left: 8),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
                     child: Icon(
                       Icons.lock_outline,
-                      color: PulseLinkTheme.mutedText,
+                      color: PulseLinkTheme.mutedColor(context),
                       size: 18,
                     ),
                   ),
@@ -1484,9 +1615,9 @@ class _EmptyState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: PulseLinkTheme.cardBackground,
+        color: PulseLinkTheme.surfaceColor(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
       child: Column(
         children: [
@@ -1494,8 +1625,8 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: PulseLinkTheme.textColor(context),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1503,7 +1634,7 @@ class _EmptyState extends StatelessWidget {
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: PulseLinkTheme.mutedText),
+            style: TextStyle(color: PulseLinkTheme.mutedColor(context)),
           ),
         ],
       ),
@@ -1532,18 +1663,19 @@ class _PreparationChecklist extends StatelessWidget {
       decoration: compact
           ? null
           : BoxDecoration(
-              color: PulseLinkTheme.cardBackground,
+              color: PulseLinkTheme.surfaceColor(context),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withOpacity(0.06)),
+              border:
+                  Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
             ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (!compact) ...[
-            const Text(
+            Text(
               'Trước khi đến điểm hiến',
               style: TextStyle(
-                color: Colors.white,
+                color: PulseLinkTheme.textColor(context),
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -1611,7 +1743,7 @@ class _ScreenTitle extends StatelessWidget {
               Text(
                 subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: PulseLinkTheme.mutedText,
+                      color: PulseLinkTheme.mutedColor(context),
                     ),
               ),
             ],
@@ -1640,9 +1772,9 @@ class _ProfileMetricRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: PulseLinkTheme.cardBackground,
+        color: PulseLinkTheme.surfaceColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
       child: Row(
         children: [
@@ -1651,14 +1783,14 @@ class _ProfileMetricRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: const TextStyle(color: PulseLinkTheme.mutedText),
+              style: TextStyle(color: PulseLinkTheme.mutedColor(context)),
             ),
           ),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: PulseLinkTheme.textColor(context),
             ),
           ),
         ],

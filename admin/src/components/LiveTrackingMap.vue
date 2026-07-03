@@ -59,12 +59,12 @@ function renderMarkers() {
     const point: L.LatLngExpression = [commitment.latitude, commitment.longitude]
     L.circleMarker(point, {
       radius: 8,
-      color: '#059669',
-      fillColor: '#10b981',
+      color: commitment.status === 'cancelled' ? '#94a3b8' : '#059669',
+      fillColor: commitment.status === 'cancelled' ? '#cbd5e1' : '#10b981',
       fillOpacity: 0.9,
       weight: 2,
     })
-      .bindPopup(`<strong>${commitment.donor?.name}</strong><br>${statusLabels[commitment.status]}`)
+      .bindPopup(`<strong>${commitment.donor?.name}</strong><br>${statusLabels[commitment.status]}${commitment.cancel_reason ? `<br>${commitment.cancel_reason}` : ''}`)
       .addTo(layerGroup!)
 
     if (hospital) {

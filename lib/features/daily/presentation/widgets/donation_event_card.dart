@@ -31,9 +31,9 @@ class DonationEventCard extends StatelessWidget {
             VietnameseLabels.text(event.title),
             maxLines: expanded ? 2 : 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w900,
-              color: Colors.white,
+              color: PulseLinkTheme.textColor(context),
             ),
           ),
           const SizedBox(height: 6),
@@ -56,8 +56,8 @@ class DonationEventCard extends StatelessWidget {
                     : 'Vào xem kỹ rồi đặt khi bạn thấy sẵn sàng.',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PulseLinkTheme.mutedText,
+            style: TextStyle(
+              color: PulseLinkTheme.mutedColor(context),
               fontSize: 11,
               fontWeight: FontWeight.w700,
             ),
@@ -110,9 +110,10 @@ class DonationEventCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: Ink(
           decoration: BoxDecoration(
-            color: PulseLinkTheme.cardBackground,
+            color: PulseLinkTheme.surfaceColor(context),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withOpacity(0.06)),
+            border:
+                Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(18),
@@ -191,8 +192,8 @@ class _IconText extends StatelessWidget {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: PulseLinkTheme.mutedText,
+            style: TextStyle(
+              color: PulseLinkTheme.mutedColor(context),
               fontSize: 12,
             ),
           ),

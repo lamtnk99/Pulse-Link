@@ -38,7 +38,7 @@ class CertificateController extends Controller
             'certificate_id' => $history->certificate_id,
             'certificate_title' => $history->certificate_title,
             'status' => $history->status,
-            'donor_name' => $this->maskName($history->user?->name ?? 'Nguoi hien mau'),
+            'donor_name' => $history->user?->name ?? 'Người hiến máu',
             'blood_type' => $history->blood_type,
             'donated_at' => $history->donated_at?->toIso8601String(),
             'volume_ml' => $history->volume_ml,
@@ -48,17 +48,5 @@ class CertificateController extends Controller
             'issued_at' => $history->certificate_issued_at?->toIso8601String(),
             'verified' => $history->status === 'verified',
         ];
-    }
-
-    private function maskName(string $name): string
-    {
-        $parts = preg_split('/\s+/', trim($name)) ?: [];
-        if (count($parts) <= 1) {
-            return $name;
-        }
-
-        $last = array_pop($parts);
-
-        return trim(implode(' ', array_map(fn (string $part): string => mb_substr($part, 0, 1).'.', $parts)).' '.$last);
     }
 }

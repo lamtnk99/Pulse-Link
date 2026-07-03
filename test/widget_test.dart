@@ -1,13 +1,16 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulse_link/app/pulse_link_app.dart';
 import 'package:pulse_link/app/pulse_link_controller.dart';
 import 'package:pulse_link/infrastructure/mock/mock_emergency_services.dart';
 import 'package:pulse_link/infrastructure/mock/mock_repositories.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('Daily mode shows five Vietnamese navigation tabs', (
     WidgetTester tester,
   ) async {
+    SharedPreferences.setMockInitialValues({});
     final controller = PulseLinkController(
       donorRepository: MockDonorRepository(),
       eventRepository: MockDonationEventRepository(),
@@ -20,15 +23,18 @@ void main() {
     );
 
     await tester.pumpWidget(PulseLinkApp(controller: controller));
-    await tester.pump(const Duration(seconds: 1));
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+      if (find.byType(CircularProgressIndicator).evaluate().isEmpty) {
+        break;
+      }
+    }
 
-    expect(find.text('Trang chủ'), findsOneWidget);
-    expect(find.text('Sự kiện'), findsOneWidget);
-    expect(find.text('Lịch đặt'), findsOneWidget);
-    expect(find.text('Sổ hiến'), findsOneWidget);
-    expect(find.text('Hồ sơ'), findsOneWidget);
+    for (final label in ['Trang chủ', 'Sự kiện', 'Lịch', 'Sổ hiến', 'Hồ sơ']) {
+      expect(find.text(label), findsOneWidget);
+    }
 
-    await tester.tap(find.text('Lịch đặt'));
+    await tester.tap(find.text('Lịch'));
     await tester.pumpAndSettle();
     expect(find.text('Lịch đã đặt'), findsOneWidget);
   });

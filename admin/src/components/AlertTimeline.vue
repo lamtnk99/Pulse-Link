@@ -50,6 +50,9 @@ function alertStatusLabel(status: string) {
         <p class="mt-1 text-sm text-slate-500">
           {{ commitment.donor?.blood_type }} - Dự kiến {{ commitment.eta_minutes ?? '--' }} phút
         </p>
+        <p v-if="commitment.status === 'cancelled' && commitment.cancel_reason" class="mt-2 rounded-md bg-slate-50 px-2 py-1 text-xs font-bold text-slate-500">
+          {{ commitment.cancel_reason }}
+        </p>
       </div>
 
       <p v-if="alerts.length === 0 && commitments.length === 0" class="rounded-md border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">

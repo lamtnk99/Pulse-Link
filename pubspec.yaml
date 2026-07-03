@@ -9,21 +9,22 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  cloud_firestore: ^5.6.0
+  audio_session: ^0.2.4
   collection: ^1.18.0
   cupertino_icons: ^1.0.8
-  firebase_core: ^3.9.0
-  firebase_messaging: ^15.1.6
   flutter_map: ^7.0.2
   geolocator: ^13.0.2
   google_maps_flutter: ^2.10.0
   http: ^1.2.2
   intl: ^0.19.0
-  just_audio: ^0.9.42
+  just_audio: ^0.10.6
   latlong2: ^0.9.1
   qr_flutter: ^4.1.0
+  shared_preferences: ^2.3.5
   url_launcher: ^6.3.1
   uuid: ^4.5.1
+  flutter_map_cancellable_tile_provider: ^3.0.2
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   flutter_lints: ^5.0.0
@@ -35,3 +36,16 @@ flutter:
   assets:
     - assets/audio/
     - assets/images/
+  fonts:
+    - family: BeVietnamPro
+      fonts:
+        - asset: assets/fonts/be_vietnam_pro/BeVietnamPro-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/be_vietnam_pro/BeVietnamPro-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/be_vietnam_pro/BeVietnamPro-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/be_vietnam_pro/BeVietnamPro-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/be_vietnam_pro/BeVietnamPro-ExtraBold.ttf
+          weight: 800

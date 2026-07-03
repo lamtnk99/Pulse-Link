@@ -13,6 +13,7 @@ class EmergencyCommitment extends Model
         'emergency_alert_id',
         'donor_id',
         'status',
+        'cancel_reason',
         'latitude',
         'longitude',
         'eta_minutes',

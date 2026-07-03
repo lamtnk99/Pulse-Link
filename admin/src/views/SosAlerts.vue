@@ -208,6 +208,9 @@ function normalizeDonationVolume(commitmentId: number) {
             >
               {{ commitmentStatusLabels[commitment.status] }}
             </span>
+            <p v-if="commitment.status === 'cancelled' && commitment.cancel_reason" class="mt-2 text-xs font-bold leading-snug text-slate-500">
+              {{ commitment.cancel_reason }}
+            </p>
           </div>
           <div class="min-w-0">
             <p class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Lượng máu</p>

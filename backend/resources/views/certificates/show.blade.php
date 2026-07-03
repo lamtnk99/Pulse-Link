@@ -16,6 +16,10 @@
 
         * { box-sizing: border-box; }
 
+        html {
+            margin: 0;
+        }
+
         body {
             margin: 0;
             min-height: 100vh;
@@ -27,16 +31,18 @@
                 radial-gradient(circle at 86% 22%, rgba(201, 154, 46, .16), transparent 24%),
                 linear-gradient(135deg, #1b0a0d, #430711 46%, #120608);
             color: var(--ink);
-            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-family: "Segoe UI", Arial, "Helvetica Neue", sans-serif;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: geometricPrecision;
         }
 
-        .wrap { width: min(1120px, 100%); }
+        .wrap { width: min(1160px, 100%); }
 
         .certificate {
             position: relative;
             overflow: hidden;
-            min-height: 720px;
-            padding: 42px;
+            min-height: 650px;
+            padding: 34px;
             border-radius: 28px;
             background:
                 linear-gradient(135deg, rgba(255,255,255,.96), rgba(255,250,243,.98)),
@@ -75,7 +81,7 @@
 
         .brand-logo {
             display: block;
-            width: min(330px, 58vw);
+            width: min(300px, 56vw);
             height: auto;
         }
 
@@ -96,9 +102,9 @@
 
         .body {
             display: grid;
-            grid-template-columns: 1fr 270px;
-            gap: 40px;
-            margin-top: 58px;
+            grid-template-columns: 1fr 230px;
+            gap: 30px;
+            margin-top: 38px;
             align-items: center;
         }
 
@@ -111,20 +117,22 @@
         }
 
         h1 {
-            margin: 14px 0 10px;
+            max-width: 720px;
+            margin: 12px 0 10px;
             color: var(--deep);
-            font-family: Georgia, "Times New Roman", serif;
-            font-size: clamp(42px, 7vw, 76px);
-            line-height: .95;
-            letter-spacing: -.03em;
+            font-family: "Segoe UI", Arial, "Helvetica Neue", sans-serif;
+            font-size: clamp(40px, 5.2vw, 62px);
+            font-weight: 900;
+            line-height: 1.04;
+            letter-spacing: 0;
         }
 
         .lead {
             max-width: 680px;
             margin: 0;
             color: #475467;
-            font-size: 18px;
-            line-height: 1.65;
+            font-size: 17px;
+            line-height: 1.5;
         }
 
         .name {
@@ -133,17 +141,19 @@
             padding-bottom: 8px;
             border-bottom: 2px solid rgba(201, 154, 46, .6);
             color: var(--ink);
-            font-family: Georgia, "Times New Roman", serif;
-            font-size: clamp(30px, 5vw, 48px);
-            font-weight: 700;
+            font-family: "Segoe UI", Arial, "Helvetica Neue", sans-serif;
+            font-size: clamp(30px, 4vw, 46px);
+            font-weight: 900;
+            line-height: 1.12;
+            letter-spacing: 0;
         }
 
         .seal {
             position: relative;
             display: grid;
             place-items: center;
-            width: 230px;
-            height: 230px;
+            width: 198px;
+            height: 198px;
             margin-left: auto;
             border-radius: 50%;
             background:
@@ -153,8 +163,8 @@
         }
 
         .seal-inner {
-            width: 142px;
-            height: 142px;
+            width: 122px;
+            height: 122px;
             display: grid;
             place-items: center;
             border-radius: 50%;
@@ -176,12 +186,12 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 12px;
-            margin-top: 42px;
+            margin-top: 30px;
         }
 
         .fact {
-            min-height: 96px;
-            padding: 14px;
+            min-height: 82px;
+            padding: 12px;
             border: 1px solid rgba(84, 0, 11, .08);
             border-radius: 16px;
             background: rgba(255,255,255,.72);
@@ -200,7 +210,7 @@
             display: block;
             margin-top: 8px;
             color: var(--ink);
-            font-size: 18px;
+            font-size: 16px;
             line-height: 1.25;
         }
 
@@ -209,7 +219,7 @@
             justify-content: space-between;
             align-items: flex-end;
             gap: 24px;
-            margin-top: 46px;
+            margin-top: 28px;
             color: var(--muted);
             font-size: 13px;
             line-height: 1.5;
@@ -260,9 +270,113 @@
         }
 
         @media print {
-            body { padding: 0; background: white; }
-            .wrap { width: 100%; }
-            .certificate { box-shadow: none; border-radius: 0; min-height: 100vh; }
+            @page {
+                size: A4 landscape;
+                margin: 0;
+            }
+
+            html,
+            body {
+                width: 297mm;
+                height: 210mm;
+                margin: 0;
+                overflow: hidden;
+            }
+
+            body {
+                display: block;
+                padding: 0;
+                background: white;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            .wrap {
+                width: 297mm;
+                height: 210mm;
+                overflow: hidden;
+            }
+
+            .certificate {
+                width: 297mm;
+                height: 210mm;
+                min-height: 0;
+                padding: 11mm 13mm;
+                border-radius: 0;
+                box-shadow: none;
+                break-after: avoid;
+                page-break-after: avoid;
+            }
+
+            .certificate::before {
+                inset: 5mm;
+                border-radius: 14px;
+            }
+
+            .certificate::after {
+                right: -28mm;
+                top: -34mm;
+                width: 88mm;
+                height: 88mm;
+            }
+
+            .brand-logo { width: 72mm; }
+            .code { font-size: 10pt; }
+            .code strong { font-size: 12pt; }
+            .body {
+                grid-template-columns: 1fr 48mm;
+                gap: 10mm;
+                margin-top: 11mm;
+            }
+            .eyebrow { font-size: 9pt; }
+            h1 {
+                max-width: 168mm;
+                margin: 4mm 0 3mm;
+                font-size: 35pt;
+                line-height: 1.04;
+            }
+            .lead {
+                max-width: 160mm;
+                font-size: 12pt;
+                line-height: 1.38;
+            }
+            .name {
+                margin: 6mm 0 3mm;
+                padding-bottom: 2mm;
+                font-size: 25pt;
+            }
+            .seal {
+                width: 47mm;
+                height: 47mm;
+            }
+            .seal-inner {
+                width: 29mm;
+                height: 29mm;
+            }
+            .facts {
+                gap: 3mm;
+                margin-top: 9mm;
+            }
+            .fact {
+                min-height: 19mm;
+                padding: 3mm;
+                border-radius: 10px;
+            }
+            .fact small { font-size: 7.5pt; }
+            .fact strong {
+                margin-top: 2mm;
+                font-size: 11pt;
+                line-height: 1.18;
+            }
+            .footer {
+                margin-top: 8mm;
+                font-size: 9pt;
+                line-height: 1.35;
+            }
+            .signature {
+                min-width: 52mm;
+                padding-top: 3mm;
+            }
             .actions { display: none; }
         }
     </style>

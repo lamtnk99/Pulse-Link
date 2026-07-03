@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -66,7 +67,8 @@ class EventMapPreview extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFEFF5F9),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: Colors.white.withOpacity(0.06)),
+            border:
+                Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
           ),
           child: Stack(
             children: [
@@ -100,7 +102,7 @@ class EventMapPreview extends StatelessWidget {
       context: context,
       useSafeArea: true,
       showDragHandle: true,
-      backgroundColor: PulseLinkTheme.cardBackground,
+      backgroundColor: PulseLinkTheme.surfaceColor(context),
       builder: (sheetContext) {
         return _EventMapSheet(
           event: event,
@@ -162,6 +164,7 @@ class _TileEventMap extends StatelessWidget {
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.pulselink.app',
+          tileProvider: CancellableNetworkTileProvider(),
         ),
         MarkerLayer(
           markers: [

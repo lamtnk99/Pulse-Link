@@ -22,9 +22,9 @@ class HealthTrackerCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: PulseLinkTheme.cardBackground,
+        color: PulseLinkTheme.surfaceColor(context),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
       child: Row(
         children: [
@@ -41,7 +41,7 @@ class HealthTrackerCard extends StatelessWidget {
                     color: daysLeft == 0
                         ? PulseLinkTheme.successGreen
                         : PulseLinkTheme.primaryRed,
-                    backgroundColor: Colors.white.withOpacity(0.08),
+                    backgroundColor: PulseLinkTheme.subtleBorderColor(context),
                     strokeCap: StrokeCap.round,
                   ),
                 ),
@@ -50,17 +50,17 @@ class HealthTrackerCard extends StatelessWidget {
                   children: [
                     Text(
                       '$daysLeft',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: PulseLinkTheme.textColor(context),
                       ),
                     ),
-                    const Text(
+                    Text(
                       'ngày',
                       style: TextStyle(
                         fontSize: 10,
-                        color: PulseLinkTheme.mutedText,
+                        color: PulseLinkTheme.mutedColor(context),
                       ),
                     ),
                   ],
@@ -77,9 +77,9 @@ class HealthTrackerCard extends StatelessWidget {
                   daysLeft == 0
                       ? 'Sẵn sàng cho lần hiến tiếp theo'
                       : 'Đếm ngược hồi phục',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                    color: PulseLinkTheme.textColor(context),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -87,8 +87,8 @@ class HealthTrackerCard extends StatelessWidget {
                   daysLeft == 0
                       ? 'Cửa sổ hồi phục 3 tháng đã hoàn tất.'
                       : 'Đủ điều kiện lại từ ${DateFormat('dd/MM/yyyy').format(nextEligibleDate)}.',
-                  style: const TextStyle(
-                    color: PulseLinkTheme.mutedText,
+                  style: TextStyle(
+                    color: PulseLinkTheme.mutedColor(context),
                     fontSize: 12,
                     height: 1.35,
                   ),

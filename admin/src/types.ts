@@ -125,6 +125,7 @@ export interface EmergencyCommitment {
   id: number
   alert_id: string
   status: 'committed' | 'en_route' | 'donated' | 'cancelled'
+  cancel_reason?: string | null
   latitude: number | null
   longitude: number | null
   eta_minutes: number | null

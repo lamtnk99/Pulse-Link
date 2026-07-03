@@ -1,16 +1,20 @@
 import '../core/enums/app_mode.dart';
+import '../core/enums/app_theme_preference.dart';
+import '../core/location/geo_point.dart';
 import '../features/community/domain/community_post.dart';
 import '../features/daily/domain/donation_appointment.dart';
 import '../features/daily/domain/donation_event.dart';
 import '../features/daily/domain/past_donation.dart';
 import '../features/emergency/domain/dispatch_wave.dart';
 import '../features/emergency/domain/emergency_alert.dart';
+import '../features/emergency/domain/emergency_commitment.dart';
 import '../features/emergency/domain/route_plan.dart';
 import '../features/profile/domain/donor_profile.dart';
 
 class PulseLinkState {
   const PulseLinkState({
     required this.activeMode,
+    this.themePreference = AppThemePreference.light,
     required this.isLoading,
     this.profile,
     this.events = const [],
@@ -19,6 +23,10 @@ class PulseLinkState {
     this.donationHistory = const [],
     this.activeAlerts = const [],
     this.activeAlert,
+    this.sosMissionPhase = SosMissionPhase.alertPreview,
+    this.activeEmergencyCommitment,
+    this.emergencyLocation,
+    this.locationSyncError,
     this.dispatchMatch,
     this.routePlan,
     this.sosIntensity = 0,
@@ -35,6 +43,7 @@ class PulseLinkState {
   }
 
   final AppMode activeMode;
+  final AppThemePreference themePreference;
   final bool isLoading;
   final DonorProfile? profile;
   final List<DonationEvent> events;
@@ -43,6 +52,10 @@ class PulseLinkState {
   final List<PastDonation> donationHistory;
   final List<EmergencyAlert> activeAlerts;
   final EmergencyAlert? activeAlert;
+  final SosMissionPhase sosMissionPhase;
+  final EmergencyCommitment? activeEmergencyCommitment;
+  final GeoPoint? emergencyLocation;
+  final String? locationSyncError;
   final DispatchMatch? dispatchMatch;
   final RoutePlan? routePlan;
   final double sosIntensity;
@@ -59,6 +72,7 @@ class PulseLinkState {
 
   PulseLinkState copyWith({
     AppMode? activeMode,
+    AppThemePreference? themePreference,
     bool? isLoading,
     DonorProfile? profile,
     List<DonationEvent>? events,
@@ -68,6 +82,13 @@ class PulseLinkState {
     List<EmergencyAlert>? activeAlerts,
     EmergencyAlert? activeAlert,
     bool clearActiveAlert = false,
+    SosMissionPhase? sosMissionPhase,
+    EmergencyCommitment? activeEmergencyCommitment,
+    bool clearActiveEmergencyCommitment = false,
+    GeoPoint? emergencyLocation,
+    bool clearEmergencyLocation = false,
+    String? locationSyncError,
+    bool clearLocationSyncError = false,
     DispatchMatch? dispatchMatch,
     bool clearDispatchMatch = false,
     RoutePlan? routePlan,
@@ -80,6 +101,7 @@ class PulseLinkState {
   }) {
     return PulseLinkState(
       activeMode: activeMode ?? this.activeMode,
+      themePreference: themePreference ?? this.themePreference,
       isLoading: isLoading ?? this.isLoading,
       profile: profile ?? this.profile,
       events: events ?? this.events,
@@ -88,6 +110,16 @@ class PulseLinkState {
       donationHistory: donationHistory ?? this.donationHistory,
       activeAlerts: activeAlerts ?? this.activeAlerts,
       activeAlert: clearActiveAlert ? null : activeAlert ?? this.activeAlert,
+      sosMissionPhase: sosMissionPhase ?? this.sosMissionPhase,
+      activeEmergencyCommitment: clearActiveEmergencyCommitment
+          ? null
+          : activeEmergencyCommitment ?? this.activeEmergencyCommitment,
+      emergencyLocation: clearEmergencyLocation
+          ? null
+          : emergencyLocation ?? this.emergencyLocation,
+      locationSyncError: clearLocationSyncError
+          ? null
+          : locationSyncError ?? this.locationSyncError,
       dispatchMatch:
           clearDispatchMatch ? null : dispatchMatch ?? this.dispatchMatch,
       routePlan: clearRoutePlan ? null : routePlan ?? this.routePlan,
@@ -99,4 +131,9 @@ class PulseLinkState {
           : initializationError ?? this.initializationError,
     );
   }
+}
+
+enum SosMissionPhase {
+  alertPreview,
+  missionActive,
 }

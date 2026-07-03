@@ -21,6 +21,7 @@ class EmergencyCommitmentUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
+            new Channel('mobile.donor.'.$this->commitment->donor_id),
             new Channel('hospital.'.$this->commitment->alert->hospital_id),
             new Channel('emergency-alert.'.$this->commitment->alert->public_id),
         ];
@@ -38,6 +39,7 @@ class EmergencyCommitmentUpdated implements ShouldBroadcastNow
                 'id' => $this->commitment->id,
                 'alert_id' => $this->commitment->alert->public_id,
                 'status' => $this->commitment->status,
+                'cancel_reason' => $this->commitment->cancel_reason,
                 'eta_minutes' => $this->commitment->eta_minutes,
                 'donation_volume_ml' => $this->commitment->donation_volume_ml,
                 'latitude' => $this->commitment->latitude,
@@ -51,8 +53,10 @@ class EmergencyCommitmentUpdated implements ShouldBroadcastNow
                 'donor' => [
                     'id' => $this->commitment->donor->id,
                     'name' => $this->commitment->donor->name,
+                    'phone' => $this->commitment->donor->phone,
                     'blood_type' => $this->commitment->donor->blood_type,
                     'hero_level' => $this->commitment->donor->hero_level,
+                    'province_code' => $this->commitment->donor->province_code,
                 ],
             ],
         ];

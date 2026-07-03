@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Events\EmergencyAlertActivated;
+use App\Events\EmergencyCommitmentUpdated;
 use App\Models\CommunityPost;
 use App\Models\DonationEvent;
 use App\Models\EmergencyAlert;
@@ -173,12 +175,168 @@ class MobileContractApiTest extends TestCase
             'eta_minutes' => 12,
         ])
             ->assertOk()
-            ->assertJsonPath('data.status', 'committed');
+            ->assertJsonPath('data.status', 'committed')
+            ->assertJsonStructure([
+                'data' => [
+                    'id',
+                    'alert_id',
+                    'status',
+                    'latitude',
+                    'longitude',
+                    'eta_minutes',
+                    'committed_at',
+                    'donor' => ['id', 'name', 'blood_type'],
+                ],
+            ]);
 
         $this->assertDatabaseHas('emergency_commitments', [
             'emergency_alert_id' => $alert->id,
             'donor_id' => $donor->id,
             'eta_minutes' => 12,
         ]);
+    }
+
+    public function test_mobile_can_resume_active_sos_commitment(): void
+    {
+        Event::fake();
+        $this->seed();
+
+        $alert = EmergencyAlert::query()->where('status', 'active')->firstOrFail();
+        $donor = User::query()->where('role', 'donor')->whereNotNull('latitude')->firstOrFail();
+
+        $this->postJson("/api/mobile/sos-alerts/{$alert->public_id}/commit", [
+            'donor_id' => $donor->id,
+            'latitude' => $donor->latitude,
+            'longitude' => $donor->longitude,
+            'eta_minutes' => 12,
+        ])->assertOk();
+
+        $this->getJson("/api/mobile/me/sos-commitment?user_id={$donor->id}")
+            ->assertOk()
+            ->assertJsonPath('data.alert.id', $alert->public_id)
+            ->assertJsonPath('data.commitment.alert_id', $alert->public_id)
+            ->assertJsonPath('data.commitment.status', 'committed')
+            ->assertJsonStructure([
+                'data' => [
+                    'alert' => [
+                        'id',
+                        'hospital_name',
+                        'hospital_location' => ['latitude', 'longitude'],
+                    ],
+                    'commitment' => [
+                        'id',
+                        'alert_id',
+                        'status',
+                        'latitude',
+                        'longitude',
+                        'eta_minutes',
+                    ],
+                ],
+            ]);
+
+        $alerts = $this->getJson("/api/mobile/sos-alerts?user_id={$donor->id}")
+            ->assertOk()
+            ->assertJsonFragment([
+                'id' => $alert->public_id,
+                'status' => 'committed',
+            ])
+            ->json('data');
+        $committedAlert = collect($alerts)->firstWhere('id', $alert->public_id);
+        $this->assertSame($alert->public_id, $committedAlert['current_commitment']['alert_id']);
+        $this->assertSame('committed', $committedAlert['current_commitment']['status']);
+    }
+
+    public function test_mobile_realtime_config_and_channels_are_exposed(): void
+    {
+        Event::fake();
+        config([
+            'broadcasting.default' => 'reverb',
+            'broadcasting.connections.reverb.key' => 'pulse-link-key',
+            'broadcasting.connections.reverb.options.host' => 'api.pulselink.asia',
+            'broadcasting.connections.reverb.options.port' => 443,
+            'broadcasting.connections.reverb.options.scheme' => 'https',
+        ]);
+        $this->seed();
+
+        $alert = EmergencyAlert::query()->where('status', 'active')->firstOrFail();
+        $donor = User::query()->where('role', 'donor')->whereNotNull('latitude')->firstOrFail();
+
+        $this->postJson("/api/mobile/sos-alerts/{$alert->public_id}/commit", [
+            'donor_id' => $donor->id,
+            'eta_minutes' => 12,
+        ])->assertOk();
+        $commitment = $alert->commitments()->where('donor_id', $donor->id)->firstOrFail();
+
+        $this->getJson('/api/mobile/realtime-config')
+            ->assertOk()
+            ->assertJsonPath('data.enabled', true)
+            ->assertJsonPath('data.host', 'api.pulselink.asia')
+            ->assertJsonPath('data.port', 443)
+            ->assertJsonPath('data.scheme', 'https')
+            ->assertJsonPath('data.channels.global', 'mobile.emergency-alerts')
+            ->assertJsonPath('data.channels.donor', 'mobile.donor.{donor_id}');
+
+        $alertChannels = collect((new EmergencyAlertActivated($alert))->broadcastOn())
+            ->map(fn ($channel) => $channel->name)
+            ->all();
+        $commitmentChannels = collect((new EmergencyCommitmentUpdated($commitment))->broadcastOn())
+            ->map(fn ($channel) => $channel->name)
+            ->all();
+
+        $this->assertContains('mobile.emergency-alerts', $alertChannels);
+        $this->assertContains('mobile.donor.'.$donor->id, $commitmentChannels);
+    }
+
+    public function test_mobile_can_cancel_sos_commitment_with_reason(): void
+    {
+        Event::fake();
+        $this->seed();
+
+        $alert = EmergencyAlert::query()->where('status', 'active')->firstOrFail();
+        $donor = User::query()->where('role', 'donor')->whereNotNull('latitude')->firstOrFail();
+
+        $this->postJson("/api/mobile/sos-alerts/{$alert->public_id}/commit", [
+            'donor_id' => $donor->id,
+            'eta_minutes' => 12,
+        ])->assertOk();
+
+        $this->postJson("/api/mobile/sos-alerts/{$alert->public_id}/cancel", [
+            'donor_id' => $donor->id,
+            'cancel_reason' => 'Tôi thấy không đủ sức khỏe để di chuyển.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'cancelled')
+            ->assertJsonPath('data.cancel_reason', 'Tôi thấy không đủ sức khỏe để di chuyển.');
+
+        $this->assertDatabaseHas('emergency_commitments', [
+            'emergency_alert_id' => $alert->id,
+            'donor_id' => $donor->id,
+            'status' => 'cancelled',
+            'cancel_reason' => 'Tôi thấy không đủ sức khỏe để di chuyển.',
+        ]);
+    }
+
+    public function test_mobile_cannot_cancel_donated_sos_commitment(): void
+    {
+        Event::fake();
+        $this->seed();
+
+        $alert = EmergencyAlert::query()->where('status', 'active')->firstOrFail();
+        $donor = User::query()->where('role', 'donor')->whereNotNull('latitude')->firstOrFail();
+
+        $this->postJson("/api/mobile/sos-alerts/{$alert->public_id}/commit", [
+            'donor_id' => $donor->id,
+            'eta_minutes' => 12,
+        ])->assertOk();
+
+        $commitment = $alert->commitments()
+            ->where('donor_id', $donor->id)
+            ->firstOrFail();
+        $commitment->update(['status' => 'donated']);
+
+        $this->postJson("/api/mobile/sos-alerts/{$alert->public_id}/cancel", [
+            'donor_id' => $donor->id,
+            'cancel_reason' => 'Không thể đi.',
+        ])->assertStatus(409);
     }
 }

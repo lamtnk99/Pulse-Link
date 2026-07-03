@@ -24,9 +24,9 @@ class DonationHistoryTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: PulseLinkTheme.cardBackground,
+        color: PulseLinkTheme.surfaceColor(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,8 +58,8 @@ class DonationHistoryTile extends StatelessWidget {
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: PulseLinkTheme.textColor(context),
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -68,8 +68,8 @@ class DonationHistoryTile extends StatelessWidget {
                       VietnameseLabels.text(donation.locationName),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: PulseLinkTheme.mutedText,
+                      style: TextStyle(
+                        color: PulseLinkTheme.mutedColor(context),
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                       ),
@@ -83,8 +83,8 @@ class DonationHistoryTile extends StatelessWidget {
                 children: [
                   Text(
                     '${donation.volumeMl} ml',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: PulseLinkTheme.textColor(context),
                       fontWeight: FontWeight.w900,
                     ),
                   ),
@@ -135,10 +135,10 @@ class DonationHistoryTile extends StatelessWidget {
               ),
             )
           else
-            const Text(
+            Text(
               'Đang chờ kết quả xét nghiệm',
               style: TextStyle(
-                color: PulseLinkTheme.mutedText,
+                color: PulseLinkTheme.mutedColor(context),
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
               ),
@@ -151,8 +151,8 @@ class DonationHistoryTile extends StatelessWidget {
                   donation.certificateIssuedAt == null
                       ? 'Chứng chỉ đã được ghi nhận'
                       : 'Cấp ngày ${DateFormat('dd/MM/yyyy').format(donation.certificateIssuedAt!)}',
-                  style: const TextStyle(
-                    color: PulseLinkTheme.mutedText,
+                  style: TextStyle(
+                    color: PulseLinkTheme.mutedColor(context),
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -196,10 +196,10 @@ class DonationHistoryTile extends StatelessWidget {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: PulseLinkTheme.cardBackground,
+          backgroundColor: PulseLinkTheme.surfaceColor(context),
           title: const Text(
             'QR chứng chỉ',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
+            style: TextStyle(fontWeight: FontWeight.w900),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -220,8 +220,8 @@ class DonationHistoryTile extends StatelessWidget {
               Text(
                 donation.certificateId,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: PulseLinkTheme.textColor(context),
                   fontWeight: FontWeight.w900,
                 ),
               ),
@@ -229,8 +229,8 @@ class DonationHistoryTile extends StatelessWidget {
               Text(
                 'Quét mã này để mở bản chứng chỉ xác thực.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: PulseLinkTheme.mutedText,
+                style: TextStyle(
+                  color: PulseLinkTheme.mutedColor(context),
                   fontSize: 11,
                 ),
               ),
@@ -284,19 +284,21 @@ class _CertificateChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.06),
+        color: PulseLinkTheme.isDark(context)
+            ? Colors.white.withOpacity(0.06)
+            : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withOpacity(0.06)),
+        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: PulseLinkTheme.mutedText),
+          Icon(icon, size: 14, color: PulseLinkTheme.mutedColor(context)),
           const SizedBox(width: 5),
           Text(
             label,
-            style: const TextStyle(
-              color: PulseLinkTheme.mutedText,
+            style: TextStyle(
+              color: PulseLinkTheme.mutedColor(context),
               fontSize: 11,
               fontWeight: FontWeight.w800,
             ),

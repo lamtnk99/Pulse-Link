@@ -13,6 +13,7 @@ class EmergencyCommitmentResource extends JsonResource
             'id' => $this->id,
             'alert_id' => $this->alert?->public_id,
             'status' => $this->status,
+            'cancel_reason' => $this->cancel_reason,
             'latitude' => $this->latitude,
             'longitude' => $this->longitude,
             'eta_minutes' => $this->eta_minutes,
