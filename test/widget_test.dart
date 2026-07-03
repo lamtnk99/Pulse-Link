@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulse_link/app/pulse_link_app.dart';
 import 'package:pulse_link/app/pulse_link_controller.dart';
@@ -26,13 +25,11 @@ void main() {
     expect(find.text('Trang chủ'), findsOneWidget);
     expect(find.text('Sự kiện'), findsOneWidget);
     expect(find.text('Lịch đặt'), findsOneWidget);
-    expect(find.text('Lịch sử'), findsOneWidget);
+    expect(find.text('Sổ hiến'), findsOneWidget);
     expect(find.text('Hồ sơ'), findsOneWidget);
 
     await tester.tap(find.text('Lịch đặt'));
     await tester.pumpAndSettle();
     expect(find.text('Lịch đã đặt'), findsOneWidget);
-
-    controller.dispose();
   });
 }

@@ -48,6 +48,21 @@ class DonationEventCard extends StatelessWidget {
             text: VietnameseLabels.text(event.locationName),
           ),
           if (expanded) const SizedBox(height: 10) else const Spacer(),
+          Text(
+            event.booked
+                ? 'Lịch này đang được giữ cho bạn.'
+                : event.slotsLeft <= 0
+                    ? 'Điểm hiến đã hết chỗ.'
+                    : 'Vào xem kỹ rồi đặt khi bạn thấy sẵn sàng.',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: PulseLinkTheme.mutedText,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -79,7 +94,7 @@ class DonationEventCard extends StatelessWidget {
                       : Icons.calendar_month_outlined,
                   size: 18,
                 ),
-                label: Text(event.booked ? 'Đã đặt' : 'Đặt lịch'),
+                label: Text(event.booked ? 'Đã giữ' : 'Giữ chỗ'),
               ),
             ],
           ),

@@ -4,6 +4,10 @@ use App\Http\Controllers\Api\Admin\AdminDashboardController;
 use App\Http\Controllers\Api\Admin\CommunityPostController as AdminCommunityPostController;
 use App\Http\Controllers\Api\Admin\DonationEventController as AdminDonationEventController;
 use App\Http\Controllers\Api\Admin\EmergencyController;
+use App\Http\Controllers\Api\Admin\HospitalController as AdminHospitalController;
+use App\Http\Controllers\Api\Admin\StaffController as AdminStaffController;
+use App\Http\Controllers\Api\Admin\UploadController as AdminUploadController;
+use App\Http\Controllers\Api\CertificateController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\Mobile\CommunityPostController as MobileCommunityPostController;
 use App\Http\Controllers\Api\Mobile\MobileDonationController;
@@ -16,6 +20,8 @@ Route::prefix('locations')->group(function () {
     Route::get('provinces/{province:code}/wards', [LocationController::class, 'wards']);
     Route::post('normalize', [LocationController::class, 'normalize']);
 });
+
+Route::get('certificates/{certificateId}', [CertificateController::class, 'show']);
 
 Route::prefix('mobile')->group(function () {
     Route::get('me/hero-pass', [MobileProfileController::class, 'heroPass']);
@@ -30,15 +36,30 @@ Route::prefix('mobile')->group(function () {
     Route::get('community-posts', [MobileCommunityPostController::class, 'index']);
     Route::get('community-posts/{post:slug}', [MobileCommunityPostController::class, 'show']);
     Route::post('routes/plan', [RoutePlannerController::class, 'plan']);
+    Route::get('sos-alerts', [EmergencyController::class, 'mobileIndex']);
     Route::post('sos-alerts/{alert:public_id}/commit', [EmergencyController::class, 'commit']);
     Route::post('sos-alerts/{alert:public_id}/location', [EmergencyController::class, 'updateLocation']);
 });
 
 Route::prefix('admin')->group(function () {
     Route::get('dashboard', [AdminDashboardController::class, 'show']);
-    Route::apiResource('donation-events', AdminDonationEventController::class)->except(['show']);
-    Route::apiResource('community-posts', AdminCommunityPostController::class)->except(['show']);
+    Route::post('uploads', [AdminUploadController::class, 'store']);
+    Route::apiResource('hospitals', AdminHospitalController::class)->except(['show']);
+    Route::apiResource('donation-events', AdminDonationEventController::class)
+        ->parameters(['donation-events' => 'event']);
+    Route::post('donation-events/{event}/appointments/{appointment}/check-in', [AdminDonationEventController::class, 'checkIn']);
+    Route::post('donation-events/{event}/appointments/{appointment}/cancel', [AdminDonationEventController::class, 'cancelAppointment']);
+    Route::post('donation-events/{event}/appointments/{appointment}/no-show', [AdminDonationEventController::class, 'noShow']);
+    Route::post('donation-events/{event}/appointments/{appointment}/defer', [AdminDonationEventController::class, 'defer']);
+    Route::post('donation-events/{event}/appointments/{appointment}/complete', [AdminDonationEventController::class, 'completeAppointment']);
+    Route::post('donation-events/{event}/appointments/{appointment}/publish-result', [AdminDonationEventController::class, 'publishResult']);
+    Route::apiResource('community-posts', AdminCommunityPostController::class)
+        ->parameters(['community-posts' => 'post'])
+        ->except(['show']);
+    Route::apiResource('staff', AdminStaffController::class)->except(['show']);
     Route::post('emergency-alerts', [EmergencyController::class, 'store']);
     Route::get('emergency-alerts/{alert:public_id}', [EmergencyController::class, 'show']);
     Route::post('emergency-alerts/{alert:public_id}/cancel', [EmergencyController::class, 'cancel']);
+    Route::post('emergency-alerts/{alert:public_id}/complete', [EmergencyController::class, 'complete']);
+    Route::post('emergency-alerts/{alert:public_id}/commitments/{commitment}/donated', [EmergencyController::class, 'markCommitmentDonated']);
 });

@@ -47,14 +47,25 @@ class HeroPassCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Expanded(
-                  child: Text(
-                    'THẺ HERO PASS PULSE LINK',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.4,
-                      fontSize: 12,
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      height: 42,
+                      constraints: const BoxConstraints(maxWidth: 188),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Image.asset(
+                        'assets/images/pulse_link_logo.png',
+                        fit: BoxFit.contain,
+                        alignment: Alignment.centerLeft,
+                      ),
                     ),
                   ),
                 ),
@@ -89,7 +100,7 @@ class HeroPassCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${profile.totalDonations} lần hiến',
+                      '${profile.totalDonations} lần được ghi nhận',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -97,7 +108,7 @@ class HeroPassCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '$totalVolumeMl ml đã đóng góp',
+                      '$totalVolumeMl ml trong sổ hiến',
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 12,

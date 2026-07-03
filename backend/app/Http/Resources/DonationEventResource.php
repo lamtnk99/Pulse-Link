@@ -46,6 +46,8 @@ class DonationEventResource extends JsonResource
             'booked' => $booked,
             'appointment_status' => $appointment?->status,
             'is_published' => $this->is_published,
+            'cancelled_at' => $this->cancelled_at?->toIso8601String(),
+            'cancel_reason' => $this->cancel_reason,
         ];
     }
 }

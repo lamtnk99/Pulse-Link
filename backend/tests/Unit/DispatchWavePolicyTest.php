@@ -24,8 +24,8 @@ class DispatchWavePolicyTest extends TestCase
             new User([
                 'name' => 'Local Donor',
                 'province_code' => '79',
-                'latitude' => 10.7727,
-                'longitude' => 106.6663,
+                'latitude' => 10.8450,
+                'longitude' => 106.6600,
             ]),
             new User([
                 'name' => 'Inter Province Donor',

@@ -46,6 +46,18 @@
             "@php artisan key:generate --ansi",
             "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
             "@php artisan migrate --ansi"
+        ],
+        "dev": [
+            "Composer\\Config::disableProcessTimeout",
+            "powershell -ExecutionPolicy Bypass -File ../scripts/dev.ps1"
+        ],
+        "dev:backend": [
+            "Composer\\Config::disableProcessTimeout",
+            "powershell -ExecutionPolicy Bypass -File ../scripts/dev.ps1 -NoAdmin -NoMobile"
+        ],
+        "dev:no-mobile": [
+            "Composer\\Config::disableProcessTimeout",
+            "powershell -ExecutionPolicy Bypass -File ../scripts/dev.ps1 -NoMobile"
         ]
     },
     "extra": {

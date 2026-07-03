@@ -9,12 +9,15 @@ defineProps<{
 const commitmentStatusLabels: Record<EmergencyCommitment['status'], string> = {
   committed: 'Đã cam kết',
   en_route: 'Đang di chuyển',
-  arrived: 'Đã đến viện',
+  donated: 'Đã hiến',
   cancelled: 'Đã hủy',
 }
 
 function alertStatusLabel(status: string) {
-  return status === 'active' ? 'Đang hoạt động' : status === 'resolved' ? 'Đã xử lý' : status
+  if (status === 'active') return 'Đang hoạt động'
+  if (status === 'fulfilled') return 'Hoàn thành'
+  if (status === 'resolved') return 'Đã xử lý'
+  return status
 }
 </script>
 

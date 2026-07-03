@@ -3,13 +3,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../core/enums/app_mode.dart';
+import '../core/location/geo_point.dart';
 import '../core/utils/blood_compatibility.dart';
 import '../features/community/domain/community_post.dart';
 import '../features/daily/domain/donation_event.dart';
 import '../features/daily/domain/past_donation.dart';
 import '../features/emergency/domain/dispatch_wave.dart';
 import '../features/emergency/domain/emergency_alert.dart';
-import '../features/profile/domain/donor_profile.dart';
+import '../features/emergency/domain/route_plan.dart';
 import '../services/donation_event_repository.dart';
 import '../services/donation_history_repository.dart';
 import '../services/donor_repository.dart';
@@ -49,36 +50,51 @@ class PulseLinkController extends ChangeNotifier {
   final EmergencyAudioService _audioService;
 
   StreamSubscription<EmergencyAlert>? _alertSubscription;
+  GeoPoint? _lastKnownLocation;
   PulseLinkState _state = PulseLinkState.initial();
 
   PulseLinkState get state => _state;
 
   Future<void> initialize() async {
-    final profile = await _donorRepository.getCurrentProfile();
-    final events = await _eventRepository.getUpcomingEvents();
-    final bookedAppointments = await _eventRepository.getBookedAppointments();
-    final communityPosts = await _communityPostRepository.getPublishedPosts();
-    final history = await _historyRepository.getDonationHistory();
-
-    _state = _state.copyWith(
-      isLoading: false,
-      profile: profile,
-      events: events,
-      bookedAppointments: bookedAppointments,
-      communityPosts: communityPosts,
-      donationHistory: history,
-    );
+    _state = _state.copyWith(isLoading: true, clearInitializationError: true);
     notifyListeners();
 
-    await _alertSubscription?.cancel();
-    _alertSubscription = _emergencySignalService
-        .watchAlerts(profile: profile)
-        .listen(_handleEmergencyAlert);
+    try {
+      final profile = await _donorRepository.getCurrentProfile();
+      final origin = await _resolveCurrentLocation();
+      final events = await _eventRepository.getUpcomingEvents(origin: origin);
+      final bookedAppointments = await _eventRepository.getBookedAppointments();
+      final communityPosts = await _communityPostRepository.getPublishedPosts();
+      final history = await _historyRepository.getDonationHistory();
+
+      _state = _state.copyWith(
+        isLoading: false,
+        profile: profile,
+        events: events,
+        bookedAppointments: bookedAppointments,
+        communityPosts: communityPosts,
+        donationHistory: history,
+        clearInitializationError: true,
+      );
+      notifyListeners();
+
+      await _alertSubscription?.cancel();
+      _alertSubscription = _emergencySignalService
+          .watchAlerts(profile: profile)
+          .listen(_handleEmergencyAlert);
+    } catch (error) {
+      _state = _state.copyWith(
+        isLoading: false,
+        initializationError: error.toString(),
+      );
+      notifyListeners();
+    }
   }
 
   Future<void> refreshDailyData() async {
     final profile = await _donorRepository.getCurrentProfile();
-    final events = await _eventRepository.getUpcomingEvents();
+    final origin = await _resolveCurrentLocation();
+    final events = await _eventRepository.getUpcomingEvents(origin: origin);
     final bookedAppointments = await _eventRepository.getBookedAppointments();
     final communityPosts = await _communityPostRepository.getPublishedPosts();
     final history = await _historyRepository.getDonationHistory();
@@ -94,9 +110,10 @@ class PulseLinkController extends ChangeNotifier {
   }
 
   Future<void> toggleBooking(DonationEvent event) async {
+    final origin = _lastKnownLocation;
     final updated = event.booked
-        ? await _eventRepository.cancelAppointment(event.id)
-        : await _eventRepository.bookAppointment(event.id);
+        ? await _eventRepository.cancelAppointment(event.id, origin: origin)
+        : await _eventRepository.bookAppointment(event.id, origin: origin);
     final bookedAppointments = await _eventRepository.getBookedAppointments();
 
     _state = _state.copyWith(
@@ -109,7 +126,20 @@ class PulseLinkController extends ChangeNotifier {
   }
 
   Future<DonationEvent> loadEventDetail(String eventId) {
-    return _eventRepository.getEventDetail(eventId);
+    return _eventRepository.getEventDetail(
+      eventId,
+      origin: _lastKnownLocation,
+    );
+  }
+
+  Future<GeoPoint?> _resolveCurrentLocation() async {
+    try {
+      _lastKnownLocation = await _locationService.getCurrentLocation();
+    } on Object {
+      // Location permission is optional for daily mode; backend can still fall
+      // back to the demo user's saved location.
+    }
+    return _lastKnownLocation;
   }
 
   Future<CommunityPost> loadCommunityPost(String slug) {
@@ -140,40 +170,57 @@ class PulseLinkController extends ChangeNotifier {
   }
 
   Future<void> _handleEmergencyAlert(EmergencyAlert alert) async {
-    final profile = _state.profile;
-    if (profile == null) return;
+    if (!alert.active || alert.isExpired) {
+      await _removeEmergencyAlert(alert.id);
+      return;
+    }
 
-    final isCompatible = BloodCompatibility.canDonateTo(
-      donorBloodType: profile.bloodType,
-      recipientBloodType: alert.requiredBloodType,
-    );
-    if (!isCompatible) return;
-
-    final currentLocation = await _locationService.getCurrentLocation();
-    final distanceKm = currentLocation.distanceKmTo(alert.hospitalLocation);
-    final dispatchMatch = DispatchWavePolicy.evaluate(
-      alert: alert,
-      donorLocation: currentLocation,
-      donorProvinceCode: profile.provinceCode,
-    );
-
-    if (!dispatchMatch.isEligible) return;
-
-    final routePlan = await _routePlannerService.planRoute(
-      origin: currentLocation,
-      destination: alert.hospitalLocation,
-      preferredDistanceKm: distanceKm,
-    );
+    final prepared = await _prepareEmergency(alert);
+    if (prepared == null) return;
 
     await _audioService.startHeartbeat(intensity: 0.35);
+
+    final nextAlerts = [
+      alert,
+      ..._state.activeAlerts.where((candidate) => candidate.id != alert.id),
+    ];
+    final shouldFocusAlert = _state.activeAlert == null;
+
+    _state = _state.copyWith(
+      activeMode: AppMode.sos,
+      activeAlerts: nextAlerts,
+      activeAlert: shouldFocusAlert ? alert : _state.activeAlert,
+      dispatchMatch:
+          shouldFocusAlert ? prepared.dispatchMatch : _state.dispatchMatch,
+      routePlan: shouldFocusAlert ? prepared.routePlan : _state.routePlan,
+      sosIntensity: 0.35,
+      emergencyCommitted: shouldFocusAlert
+          ? _state.committedAlertIds.contains(alert.id)
+          : _state.emergencyCommitted,
+    );
+    notifyListeners();
+  }
+
+  Future<void> selectEmergencyAlert(String alertId) async {
+    EmergencyAlert? alert;
+    for (final candidate in _state.activeAlerts) {
+      if (candidate.id == alertId) {
+        alert = candidate;
+        break;
+      }
+    }
+    if (alert == null) return;
+
+    final prepared = await _prepareEmergency(alert);
+    if (prepared == null) return;
 
     _state = _state.copyWith(
       activeMode: AppMode.sos,
       activeAlert: alert,
-      dispatchMatch: dispatchMatch,
-      routePlan: routePlan,
-      sosIntensity: 0.35,
-      emergencyCommitted: false,
+      dispatchMatch: prepared.dispatchMatch,
+      routePlan: prepared.routePlan,
+      sosIntensity: _state.committedAlertIds.contains(alert.id) ? 1 : 0.35,
+      emergencyCommitted: _state.committedAlertIds.contains(alert.id),
     );
     notifyListeners();
   }
@@ -185,7 +232,9 @@ class PulseLinkController extends ChangeNotifier {
     await _emergencySignalService.confirmCommitment(alertId: alert.id);
     await _audioService.confirmedPulse();
 
+    final committedAlertIds = {..._state.committedAlertIds, alert.id};
     _state = _state.copyWith(
+      committedAlertIds: committedAlertIds,
       emergencyCommitted: true,
       sosIntensity: 1,
     );
@@ -200,9 +249,45 @@ class PulseLinkController extends ChangeNotifier {
   }
 
   Future<void> dismissEmergency() async {
+    final dismissedAlertId = _state.activeAlert?.id;
+    if (dismissedAlertId == null) return;
+    await _removeEmergencyAlert(dismissedAlertId);
+  }
+
+  Future<void> _removeEmergencyAlert(String alertId) async {
+    final wasFocusedAlert = _state.activeAlert?.id == alertId;
+    final remainingAlerts = _state.activeAlerts
+        .where((alert) => alert.id != alertId)
+        .toList(growable: false);
+
+    if (remainingAlerts.isNotEmpty && wasFocusedAlert) {
+      final nextAlert = remainingAlerts.first;
+      final prepared = await _prepareEmergency(nextAlert);
+      if (prepared != null) {
+        _state = _state.copyWith(
+          activeAlerts: remainingAlerts,
+          activeAlert: nextAlert,
+          dispatchMatch: prepared.dispatchMatch,
+          routePlan: prepared.routePlan,
+          sosIntensity:
+              _state.committedAlertIds.contains(nextAlert.id) ? 1 : 0.35,
+          emergencyCommitted: _state.committedAlertIds.contains(nextAlert.id),
+        );
+        notifyListeners();
+        return;
+      }
+    }
+
+    if (remainingAlerts.isNotEmpty) {
+      _state = _state.copyWith(activeAlerts: remainingAlerts);
+      notifyListeners();
+      return;
+    }
+
     await _audioService.stop();
     _state = _state.copyWith(
       activeMode: AppMode.daily,
+      activeAlerts: const [],
       clearActiveAlert: true,
       clearDispatchMatch: true,
       clearRoutePlan: true,
@@ -212,10 +297,52 @@ class PulseLinkController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<_PreparedEmergency?> _prepareEmergency(EmergencyAlert alert) async {
+    final profile = _state.profile;
+    if (profile == null) return null;
+
+    final isCompatible = BloodCompatibility.canDonateTo(
+      donorBloodType: profile.bloodType,
+      recipientBloodType: alert.requiredBloodType,
+    );
+    if (!isCompatible) return null;
+
+    final currentLocation = await _locationService.getCurrentLocation();
+    final distanceKm = currentLocation.distanceKmTo(alert.hospitalLocation);
+    final dispatchMatch = DispatchWavePolicy.evaluate(
+      alert: alert,
+      donorLocation: currentLocation,
+      donorProvinceCode: profile.provinceCode,
+    );
+
+    if (!dispatchMatch.isEligible) return null;
+
+    final routePlan = await _routePlannerService.planRoute(
+      origin: currentLocation,
+      destination: alert.hospitalLocation,
+      preferredDistanceKm: distanceKm,
+    );
+
+    return _PreparedEmergency(
+      dispatchMatch: dispatchMatch,
+      routePlan: routePlan,
+    );
+  }
+
   @override
   void dispose() {
     _alertSubscription?.cancel();
     _audioService.dispose();
     super.dispose();
   }
+}
+
+class _PreparedEmergency {
+  const _PreparedEmergency({
+    required this.dispatchMatch,
+    required this.routePlan,
+  });
+
+  final DispatchMatch dispatchMatch;
+  final RoutePlan routePlan;
 }

@@ -21,6 +21,8 @@ class DonationEvent {
     this.appointmentStatus,
     this.capacity,
     this.bookedCount,
+    this.cancelledAt,
+    this.cancelReason,
   });
 
   factory DonationEvent.fromJson(Map<String, dynamic> json) {
@@ -40,7 +42,8 @@ class DonationEvent {
       booked: json['booked'] as bool? ?? false,
       description: json['description'] as String?,
       province: json['province'] is Map<String, dynamic>
-          ? AdministrativeArea.fromJson(json['province'] as Map<String, dynamic>)
+          ? AdministrativeArea.fromJson(
+              json['province'] as Map<String, dynamic>)
           : null,
       ward: json['ward'] is Map<String, dynamic>
           ? AdministrativeArea.fromJson(json['ward'] as Map<String, dynamic>)
@@ -51,6 +54,10 @@ class DonationEvent {
       appointmentStatus: json['appointment_status'] as String?,
       capacity: json['capacity'] as int?,
       bookedCount: json['booked_count'] as int?,
+      cancelledAt: json['cancelled_at'] == null
+          ? null
+          : DateTime.parse(json['cancelled_at'] as String),
+      cancelReason: json['cancel_reason'] as String?,
     );
   }
 
@@ -73,6 +80,8 @@ class DonationEvent {
   final String? appointmentStatus;
   final int? capacity;
   final int? bookedCount;
+  final DateTime? cancelledAt;
+  final String? cancelReason;
 
   Map<String, dynamic> toJson() {
     return {
@@ -95,6 +104,8 @@ class DonationEvent {
       'appointment_status': appointmentStatus,
       'capacity': capacity,
       'booked_count': bookedCount,
+      'cancelled_at': cancelledAt?.toIso8601String(),
+      'cancel_reason': cancelReason,
     };
   }
 
@@ -118,6 +129,8 @@ class DonationEvent {
     String? appointmentStatus,
     int? capacity,
     int? bookedCount,
+    DateTime? cancelledAt,
+    String? cancelReason,
   }) {
     return DonationEvent(
       id: id ?? this.id,
@@ -139,6 +152,8 @@ class DonationEvent {
       appointmentStatus: appointmentStatus ?? this.appointmentStatus,
       capacity: capacity ?? this.capacity,
       bookedCount: bookedCount ?? this.bookedCount,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
+      cancelReason: cancelReason ?? this.cancelReason,
     );
   }
 }

@@ -119,8 +119,17 @@ class DailyScenarioSeeder extends Seeder
             DonationAppointment::query()->updateOrCreate(
                 ['donation_event_id' => $event->id, 'user_id' => $donor->id],
                 [
-                    'status' => ['booked', 'booked', 'completed', 'cancelled'][$index % 4],
+                    'status' => ['booked', 'checked_in', 'completed', 'cancelled', 'deferred', 'no_show'][$index % 6],
                     'booked_at' => now()->subDays($index % 5),
+                    'checked_in_at' => in_array($index % 6, [1, 2, 4], true) ? now()->subHours(2) : null,
+                    'completed_at' => $index % 6 === 2 ? now()->subHour() : null,
+                    'cancelled_at' => $index % 6 === 3 ? now()->subHour() : null,
+                    'no_show_at' => $index % 6 === 5 ? now()->subMinutes(45) : null,
+                    'volume_ml' => $index % 6 === 2 ? [250, 350, 450][$index % 3] : null,
+                    'screening_status' => $index % 6 === 4 ? 'ineligible' : ($index % 6 === 2 ? 'eligible' : null),
+                    'screening_notes' => $index % 6 === 4 ? 'Tạm hoãn sau khám sàng lọc tại điểm hiến.' : null,
+                    'result_summary' => $index % 6 === 2 ? 'Kết quả sàng lọc đã ghi nhận, người hiến đủ điều kiện.' : null,
+                    'result_published_at' => $index % 6 === 2 ? now()->subMinutes(20) : null,
                 ],
             );
         }
@@ -135,9 +144,7 @@ class DailyScenarioSeeder extends Seeder
         }
 
         foreach ($events as $event) {
-            $event->update([
-                'booked_count' => $event->appointments()->where('status', 'booked')->count(),
-            ]);
+            $event->refreshBookedCount();
         }
     }
 }

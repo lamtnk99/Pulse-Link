@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
+use App\Services\Donations\DonationRecognitionService;
 use App\Services\Mobile\MobileUserResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,7 @@ class MobileProfileController extends Controller
 {
     public function __construct(
         private readonly MobileUserResolver $mobileUserResolver,
+        private readonly DonationRecognitionService $recognitionService,
     ) {}
 
     public function heroPass(Request $request): JsonResponse
@@ -30,6 +32,7 @@ class MobileProfileController extends Controller
                 'last_donation_date' => $user->last_donation_date?->toIso8601String() ?? now()->subMonths(3)->toIso8601String(),
                 'points' => $user->points,
                 'province_code' => $user->province_code,
+                'recognition' => $this->recognitionService->recognitionFor($user),
                 'province' => $user->province ? [
                     'code' => $user->province->code,
                     'name' => $user->province->name,

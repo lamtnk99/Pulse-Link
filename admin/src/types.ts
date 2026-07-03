@@ -34,18 +34,76 @@ export interface Hospital {
   address: string
   latitude: number
   longitude: number
+  contact_phone?: string | null
+  contact_email?: string | null
+  is_active?: boolean
 }
 
 export interface DashboardStats {
   active_alerts: number
   notified_donors: number
   committed_donors: number
-  arrived_donors: number
+  donated_donors?: number
+  upcoming_events?: number
+  scheduled_appointments?: number
+  completed_appointments?: number
+  verified_volume_ml?: number
+}
+
+export type DonationAppointmentStatus =
+  | 'booked'
+  | 'cancelled'
+  | 'checked_in'
+  | 'deferred'
+  | 'completed'
+  | 'no_show'
+
+export interface PaginationMeta {
+  current_page: number
+  last_page: number
+  per_page: number
+  total: number
+  from?: number | null
+  to?: number | null
+}
+
+export interface PaginatedResponse<T> {
+  data: T[]
+  links?: Record<string, string | null>
+  meta: PaginationMeta
+}
+
+export interface UploadResponse {
+  data: {
+    path: string
+    url: string
+  }
+}
+
+export type AdminPermission =
+  | 'dashboard.view'
+  | 'sos.activate'
+  | 'events.manage'
+  | 'posts.manage'
+  | 'staff.manage'
+
+export interface AdminUser {
+  id: number
+  name: string
+  email: string
+  phone?: string | null
+  role: 'system_admin' | 'hospital_staff' | 'hospital_admin'
+  hospital_id?: number | null
+  hospital?: Hospital | null
+  permissions: AdminPermission[]
+  active: boolean
+  scope_label: string
 }
 
 export interface Donor {
   id: number
   name: string
+  phone?: string | null
   blood_type: string
   hero_level: string
   province_code?: string | null
@@ -66,12 +124,17 @@ export interface EmergencyRecipient {
 export interface EmergencyCommitment {
   id: number
   alert_id: string
-  status: 'committed' | 'en_route' | 'arrived' | 'cancelled'
+  status: 'committed' | 'en_route' | 'donated' | 'cancelled'
   latitude: number | null
   longitude: number | null
   eta_minutes: number | null
+  donation_volume_ml?: number | null
   committed_at: string | null
   last_location_at: string | null
+  donated_at?: string | null
+  verified_at?: string | null
+  verified_by?: number | null
+  donation_history_id?: number | null
   donor: Donor
 }
 
@@ -125,6 +188,44 @@ export interface DonationEvent {
   capacity: number
   booked_count: number
   hospital?: Hospital | null
+  cancelled_at?: string | null
+  cancel_reason?: string | null
+  appointment_stats?: {
+    booked: number
+    checked_in: number
+    deferred: number
+    no_show: number
+    completed: number
+    cancelled: number
+    total_volume_ml: number
+  } | null
+  appointments?: DonationAppointment[]
+}
+
+export interface DonationAppointment {
+  id: string
+  status: DonationAppointmentStatus
+  booked_at: string | null
+  checked_in_at?: string | null
+  cancelled_at?: string | null
+  cancel_reason?: string | null
+  completed_at?: string | null
+  no_show_at?: string | null
+  volume_ml?: number | null
+  screening_status?: 'pending' | 'eligible' | 'ineligible' | null
+  screening_notes?: string | null
+  result_summary?: string | null
+  result_published_at?: string | null
+  certificate?: {
+    id: string
+    certificate_id: string
+    certificate_title?: string | null
+    certificate_issued_at?: string | null
+    certificate_verify_url?: string | null
+    donation_type?: string | null
+  } | null
+  user?: Donor | null
+  event?: DonationEvent
 }
 
 export interface CommunityPost {

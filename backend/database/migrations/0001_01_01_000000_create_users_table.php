@@ -18,7 +18,7 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->string('phone', 24)->nullable();
-            $table->enum('role', ['donor', 'hospital_admin', 'system_admin'])
+            $table->enum('role', ['donor', 'hospital_staff', 'hospital_admin', 'system_admin'])
                 ->default('donor')
                 ->index();
             $table->enum('blood_type', ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'])

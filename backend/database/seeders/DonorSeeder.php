@@ -13,19 +13,152 @@ class DonorSeeder extends Seeder
     public function run(): void
     {
         $hospital = Hospital::query()->where('code', 'CR-79')->firstOrFail();
+        $bloodCenter = Hospital::query()->where('code', 'TMHH-79')->firstOrFail();
+        $bachMai = Hospital::query()->where('code', 'BM-01')->firstOrFail();
+        $staffHospitals = Hospital::query()
+            ->whereIn('code', [
+                'TMHH-79',
+                'BM-01',
+                'VD-01',
+                'QD108-01',
+                'TWH-46',
+                'DN-48',
+                'UMC-79',
+                'ND1-79',
+                'TN-79',
+                'CT-92',
+            ])
+            ->get()
+            ->keyBy('code');
+        $allPermissions = [
+            'dashboard.view',
+            'sos.activate',
+            'events.manage',
+            'posts.manage',
+            'staff.manage',
+        ];
+
+        User::query()->updateOrCreate(
+            ['email' => 'system@pulselink.test'],
+            [
+                'name' => 'Quản trị hệ thống Pulse Link',
+                'password' => Hash::make('password'),
+                'role' => 'system_admin',
+                'hospital_id' => null,
+                'permissions' => $allPermissions,
+                'province_code' => '79',
+                'ward_code' => '27301',
+                'latitude' => $hospital->latitude,
+                'longitude' => $hospital->longitude,
+                'last_seen_at' => now()->subMinutes(2),
+            ],
+        );
 
         User::query()->updateOrCreate(
             ['email' => 'admin@pulselink.test'],
             [
                 'name' => 'BS Nguyễn Minh An',
                 'password' => Hash::make('password'),
-                'role' => 'hospital_admin',
+                'role' => 'hospital_staff',
+                'hospital_id' => $hospital->id,
+                'permissions' => $allPermissions,
                 'province_code' => '79',
                 'ward_code' => '27301',
                 'latitude' => $hospital->latitude,
                 'longitude' => $hospital->longitude,
+                'last_seen_at' => now()->subMinutes(6),
             ],
         );
+
+        foreach ([
+            [
+                'email' => 'dieuphoi@pulselink.test',
+                'name' => 'ĐD Lê Thị Hồng',
+                'hospital' => $bloodCenter,
+                'phone' => '0902100101',
+                'permissions' => ['dashboard.view', 'events.manage', 'posts.manage'],
+            ],
+            [
+                'email' => 'sos.bachmai@pulselink.test',
+                'name' => 'BS Trần Tiến Dũng',
+                'hospital' => $bachMai,
+                'phone' => '0902100102',
+                'permissions' => ['dashboard.view', 'sos.activate'],
+            ],
+            [
+                'email' => 'sos.vietduc@pulselink.test',
+                'name' => 'BS Phạm Quốc Khánh',
+                'hospital' => $staffHospitals['VD-01'],
+                'phone' => '0902100103',
+                'permissions' => ['dashboard.view', 'sos.activate', 'events.manage'],
+            ],
+            [
+                'email' => 'admin.108@pulselink.test',
+                'name' => 'ĐD Nguyễn Thu Trang',
+                'hospital' => $staffHospitals['QD108-01'],
+                'phone' => '0902100104',
+                'permissions' => ['dashboard.view', 'sos.activate', 'posts.manage'],
+            ],
+            [
+                'email' => 'sos.hue@pulselink.test',
+                'name' => 'BS Hoàng Minh Châu',
+                'hospital' => $staffHospitals['TWH-46'],
+                'phone' => '0902100105',
+                'permissions' => ['dashboard.view', 'sos.activate'],
+            ],
+            [
+                'email' => 'admin.danang@pulselink.test',
+                'name' => 'ĐD Võ Thanh Sơn',
+                'hospital' => $staffHospitals['DN-48'],
+                'phone' => '0902100106',
+                'permissions' => ['dashboard.view', 'events.manage', 'posts.manage'],
+            ],
+            [
+                'email' => 'admin.umc@pulselink.test',
+                'name' => 'BS Lê Bảo Ngọc',
+                'hospital' => $staffHospitals['UMC-79'],
+                'phone' => '0902100107',
+                'permissions' => ['dashboard.view', 'sos.activate', 'events.manage', 'posts.manage'],
+            ],
+            [
+                'email' => 'sos.nhidong1@pulselink.test',
+                'name' => 'ĐD Trần Mỹ Duyên',
+                'hospital' => $staffHospitals['ND1-79'],
+                'phone' => '0902100108',
+                'permissions' => ['dashboard.view', 'sos.activate'],
+            ],
+            [
+                'email' => 'admin.thongnhat@pulselink.test',
+                'name' => 'BS Mai Anh Tuấn',
+                'hospital' => $staffHospitals['TN-79'],
+                'phone' => '0902100109',
+                'permissions' => ['dashboard.view', 'events.manage', 'posts.manage'],
+            ],
+            [
+                'email' => 'sos.cantho@pulselink.test',
+                'name' => 'BS Cao Minh Thư',
+                'hospital' => $staffHospitals['CT-92'],
+                'phone' => '0902100110',
+                'permissions' => ['dashboard.view', 'sos.activate', 'events.manage'],
+            ],
+        ] as $index => $staff) {
+            User::query()->updateOrCreate(
+                ['email' => $staff['email']],
+                [
+                    'name' => $staff['name'],
+                    'password' => Hash::make('password'),
+                    'phone' => $staff['phone'],
+                    'role' => 'hospital_staff',
+                    'hospital_id' => $staff['hospital']->id,
+                    'permissions' => $staff['permissions'],
+                    'province_code' => $staff['hospital']->province_code,
+                    'ward_code' => $staff['hospital']->ward_code,
+                    'latitude' => $staff['hospital']->latitude,
+                    'longitude' => $staff['hospital']->longitude,
+                    'last_seen_at' => now()->subMinutes(15 + ($index * 3)),
+                ],
+            );
+        }
 
         foreach ($this->donors() as $index => $donor) {
             $user = User::query()->updateOrCreate(

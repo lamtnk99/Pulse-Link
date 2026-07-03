@@ -1,7 +1,16 @@
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 import { computed, ref, watch } from 'vue'
-import type { DashboardStats, EmergencyAlert, EmergencyCommitment, Hospital, Province, SosPayload, Ward } from '../types'
+import type {
+  AdminUser,
+  DashboardStats,
+  EmergencyAlert,
+  EmergencyCommitment,
+  Hospital,
+  Province,
+  SosPayload,
+  Ward,
+} from '../types'
 
 interface DashboardResponse {
   data: {
@@ -9,6 +18,7 @@ interface DashboardResponse {
     stats: DashboardStats
     alerts: EmergencyAlert[]
     commitments: EmergencyCommitment[]
+    current_admin?: AdminUser
   }
 }
 
@@ -22,35 +32,68 @@ export function useEmergencyDashboard(apiBaseUrl: string) {
     active_alerts: 0,
     notified_donors: 0,
     committed_donors: 0,
-    arrived_donors: 0,
+    donated_donors: 0,
+    upcoming_events: 0,
+    scheduled_appointments: 0,
+    completed_appointments: 0,
+    verified_volume_ml: 0,
   })
+  const currentAdmin = ref<AdminUser | null>(null)
   const selectedHospitalId = ref<number | null>(null)
+  const selectedAlertId = ref<string | null>(null)
   const isLoading = ref(false)
   const echo = ref<Echo<'reverb'> | null>(null)
+  let dashboardRequestId = 0
 
+  const normalizedSelectedHospitalId = computed(() => {
+    if (selectedHospitalId.value === null) return null
+    const id = Number(selectedHospitalId.value)
+    return Number.isFinite(id) ? id : null
+  })
   const selectedHospital = computed(() =>
-    hospitals.value.find((hospital) => hospital.id === selectedHospitalId.value) ?? hospitals.value[0],
+    hospitals.value.find((hospital) => hospital.id === normalizedSelectedHospitalId.value) ?? hospitals.value[0],
   )
-  const activeAlerts = computed(() => alerts.value.filter((alert) => alert.status === 'active'))
-  const activeAlert = computed(() => activeAlerts.value[0] ?? null)
+  const visibleAlerts = computed(() =>
+    alerts.value.filter((alert) => alertBelongsToSelectedHospital(alert)),
+  )
+  const visibleCommitments = computed(() =>
+    commitments.value.filter((commitment) => visibleAlerts.value.some((alert) => alert.id === commitment.alert_id)),
+  )
+  const activeAlerts = computed(() =>
+    visibleAlerts.value.filter((alert) => alert.status === 'active'),
+  )
+  const activeAlert = computed(() =>
+    activeAlerts.value.find((alert) => alert.id === selectedAlertId.value) ?? activeAlerts.value[0] ?? null,
+  )
+  const activeAlertCommitments = computed(() =>
+    activeAlert.value
+      ? visibleCommitments.value.filter((commitment) => commitment.alert_id === activeAlert.value?.id)
+      : [],
+  )
   const notifiedDonorsCount = computed(() => stats.value.notified_donors)
   const committedDonorsCount = computed(() => stats.value.committed_donors)
-  const arrivedDonorsCount = computed(() => stats.value.arrived_donors)
 
   async function loadDashboard() {
+    const requestId = ++dashboardRequestId
     isLoading.value = true
     try {
-      const params = selectedHospitalId.value ? `?hospital_id=${selectedHospitalId.value}` : ''
+      const params = normalizedSelectedHospitalId.value ? `?hospital_id=${normalizedSelectedHospitalId.value}` : ''
       const response = await fetch(`${apiBaseUrl}/api/admin/dashboard${params}`)
       const payload = (await response.json()) as DashboardResponse
+      if (requestId !== dashboardRequestId) return
+
       hospitals.value = payload.data.hospitals
       stats.value = payload.data.stats
       alerts.value = payload.data.alerts
       commitments.value = payload.data.commitments
+      currentAdmin.value = payload.data.current_admin ?? null
       selectedHospitalId.value = selectedHospitalId.value ?? hospitals.value[0]?.id ?? null
+      syncSelectedAlert()
       connectRealtime()
     } finally {
-      isLoading.value = false
+      if (requestId === dashboardRequestId) {
+        isLoading.value = false
+      }
     }
   }
 
@@ -82,13 +125,72 @@ export function useEmergencyDashboard(apiBaseUrl: string) {
       },
       body: JSON.stringify(payload),
     })
+    if (!response.ok) throw new Error(await resolveApiError(response, 'Không thể phát lệnh SOS.'))
+
     const created = (await response.json()) as { data: EmergencyAlert }
     upsertAlert(created.data)
+    selectedAlertId.value = created.data.id
     await loadDashboard()
   }
 
+  async function cancelSos(alert: EmergencyAlert) {
+    const response = await fetch(`${apiBaseUrl}/api/admin/emergency-alerts/${alert.id}/cancel`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+    })
+    if (!response.ok) throw new Error(await resolveApiError(response, 'Không thể hủy ca SOS.'))
+
+    const payload = (await response.json()) as { data: EmergencyAlert }
+    upsertAlert(payload.data)
+    syncSelectedAlert()
+    await loadDashboard()
+  }
+
+  async function completeSos(alert: EmergencyAlert) {
+    const response = await fetch(`${apiBaseUrl}/api/admin/emergency-alerts/${alert.id}/complete`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+    })
+    if (!response.ok) throw new Error(await resolveApiError(response, 'Không thể hoàn thành ca SOS.'))
+
+    const payload = (await response.json()) as { data: EmergencyAlert }
+    upsertAlert(payload.data)
+    syncSelectedAlert()
+    await loadDashboard()
+  }
+
+  async function markCommitmentDonated(alert: EmergencyAlert, commitment: EmergencyCommitment, volumeMl: number) {
+    const response = await fetch(`${apiBaseUrl}/api/admin/emergency-alerts/${alert.id}/commitments/${commitment.id}/donated`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ volume_ml: volumeMl }),
+    })
+    if (!response.ok) throw new Error(await resolveApiError(response, 'Không thể xác nhận hiến máu SOS.'))
+
+    const payload = (await response.json()) as { data: EmergencyCommitment }
+    upsertCommitment(payload.data)
+    await loadDashboard()
+  }
+
+  async function resolveApiError(response: Response, fallback: string) {
+    try {
+      const payload = await response.json() as { message?: string; errors?: Record<string, string[]> }
+      const firstFieldError = payload.errors ? Object.values(payload.errors)[0]?.[0] : null
+      return firstFieldError ?? payload.message ?? fallback
+    } catch {
+      return fallback
+    }
+  }
+
+  function selectAlert(alertId: string) {
+    selectedAlertId.value = alertId
+  }
+
   function connectRealtime() {
-    if (!selectedHospitalId.value || echo.value) return
+    if (!normalizedSelectedHospitalId.value || echo.value) return
 
     window.Pusher = Pusher
     echo.value = new Echo({
@@ -102,19 +204,22 @@ export function useEmergencyDashboard(apiBaseUrl: string) {
     })
 
     echo.value
-      .channel(`hospital.${selectedHospitalId.value}`)
+      .channel(`hospital.${normalizedSelectedHospitalId.value}`)
       .listen('.emergency.alert.activated', (event: { alert: EmergencyAlert }) => {
+        if (!alertBelongsToSelectedHospital(event.alert)) return
         upsertAlert(event.alert)
-        stats.value.active_alerts = alerts.value.filter((alert) => alert.status === 'active').length
-        stats.value.notified_donors = alerts.value.reduce(
+        selectedAlertId.value = event.alert.id
+        stats.value.active_alerts = activeAlerts.value.length
+        stats.value.notified_donors = visibleAlerts.value.reduce(
           (total, alert) => total + (alert.recipients?.length ?? 0),
           0,
         )
       })
       .listen('.emergency.commitment.updated', (event: { commitment: EmergencyCommitment }) => {
+        if (!activeAlerts.value.some((alert) => alert.id === event.commitment.alert_id)) return
         upsertCommitment(event.commitment)
-        stats.value.committed_donors = commitments.value.length
-        stats.value.arrived_donors = commitments.value.filter((commitment) => commitment.status === 'arrived').length
+        stats.value.committed_donors = visibleCommitments.value.filter((commitment) => commitment.status !== 'cancelled').length
+        stats.value.donated_donors = visibleCommitments.value.filter((commitment) => commitment.status === 'donated').length
       })
   }
 
@@ -122,6 +227,7 @@ export function useEmergencyDashboard(apiBaseUrl: string) {
     const index = alerts.value.findIndex((item) => item.id === alert.id)
     if (index >= 0) alerts.value[index] = alert
     else alerts.value.unshift(alert)
+    syncSelectedAlert()
   }
 
   function upsertCommitment(commitment: EmergencyCommitment) {
@@ -130,7 +236,20 @@ export function useEmergencyDashboard(apiBaseUrl: string) {
     else commitments.value.unshift(commitment)
   }
 
+  function syncSelectedAlert() {
+    if (activeAlerts.value.some((alert) => alert.id === selectedAlertId.value)) return
+    selectedAlertId.value = activeAlerts.value[0]?.id ?? null
+  }
+
+  function alertBelongsToSelectedHospital(alert: EmergencyAlert) {
+    const hospitalId = normalizedSelectedHospitalId.value
+    if (!hospitalId) return true
+
+    return Number(alert.hospital?.id) === hospitalId
+  }
+
   watch(selectedHospital, () => {
+    selectedAlertId.value = null
     if (!echo.value) return
     echo.value.disconnect()
     echo.value = null
@@ -141,21 +260,27 @@ export function useEmergencyDashboard(apiBaseUrl: string) {
     hospitals,
     provinces,
     wardsByProvince,
-    alerts,
+    alerts: visibleAlerts,
     activeAlerts,
     activeAlert,
+    activeAlertCommitments,
     commitments,
     stats,
+    currentAdmin,
     notifiedDonorsCount,
     committedDonorsCount,
-    arrivedDonorsCount,
     selectedHospitalId,
     selectedHospital,
+    selectedAlertId,
     isLoading,
     loadDashboard,
     loadProvinces,
     loadWards,
     activateSos,
+    cancelSos,
+    completeSos,
+    markCommitmentDonated,
+    selectAlert,
   }
 }
 

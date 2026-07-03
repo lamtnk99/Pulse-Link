@@ -14,7 +14,10 @@ class CommunityPostSeeder extends Seeder
         $choRay = Hospital::query()->where('code', 'CR-79')->firstOrFail();
         $bloodCenter = Hospital::query()->where('code', 'TMHH-79')->firstOrFail();
         $bachMai = Hospital::query()->where('code', 'BM-01')->firstOrFail();
-        $admin = User::query()->where('role', 'hospital_admin')->first();
+        $admin = User::query()
+            ->whereIn('role', ['hospital_staff', 'system_admin'])
+            ->orderByRaw("case when email = 'admin@pulselink.test' then 0 else 1 end")
+            ->first();
 
         $posts = [
             [

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../app/pulse_link_controller.dart';
 import '../../../core/theme/pulse_link_theme.dart';
 import '../domain/donation_event.dart';
+import 'utils/map_launcher.dart';
 import 'widgets/event_map_preview.dart';
 
 class DonationEventDetailScreen extends StatefulWidget {
@@ -32,19 +33,93 @@ class _DonationEventDetailScreenState extends State<DonationEventDetailScreen> {
 
   Future<void> _toggleBooking(DonationEvent event) async {
     final wasBooked = event.booked;
+    if (wasBooked) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Hủy lịch này?'),
+          content: Text(
+            'Nếu hôm đó bạn chưa khỏe hoặc có việc bận, cứ hủy lịch. Bạn luôn có thể đặt lại khi sẵn sàng.\n\n${event.title}',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Giữ lịch'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Hủy lịch'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    } else {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Giữ một chỗ cho bạn?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(event.title),
+              const SizedBox(height: 12),
+              const _DetailPreparationChecklist(compact: true),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Để sau'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Đặt lịch'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true) return;
+    }
+
     await widget.controller.toggleBooking(event);
     final updated = await widget.controller.loadEventDetail(event.id);
     if (!mounted) return;
     setState(() {
       _future = Future.value(updated);
     });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          wasBooked ? 'Đã hủy lịch hiến.' : 'Đặt lịch hiến máu thành công.',
+    if (wasBooked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lịch đã được hủy. Hẹn bạn khi cơ thể sẵn sàng hơn.'),
         ),
-      ),
-    );
+      );
+    } else {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Lịch đã được giữ cho bạn'),
+          content: Text(
+            'Trước ngày hiến, hãy ngủ đủ, ăn nhẹ và uống nước. Nếu thấy người không ổn, hủy lịch cũng là một lựa chọn đúng.\n\n${DateFormat('HH:mm dd/MM/yyyy').format(updated.startsAt)} · ${updated.locationName}',
+          ),
+          actions: [
+            TextButton.icon(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                openDonationEventDirections(updated);
+              },
+              icon: const Icon(Icons.directions_outlined),
+              label: const Text('Chỉ đường'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Đã rõ'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override
@@ -104,10 +179,15 @@ class _DonationEventDetailScreenState extends State<DonationEventDetailScreen> {
               const SizedBox(height: 18),
               _InfoPanel(event: event),
               const SizedBox(height: 16),
-              EventMapPreview(events: [event]),
+              EventMapPreview(
+                events: [event],
+                onOpenDirections: openDonationEventDirections,
+              ),
               const SizedBox(height: 16),
               if (event.description != null && event.description!.isNotEmpty)
                 _DescriptionPanel(description: event.description!),
+              const SizedBox(height: 16),
+              const _DetailPreparationChecklist(),
               const SizedBox(height: 16),
               _HospitalPanel(event: event),
             ],
@@ -119,26 +199,44 @@ class _DonationEventDetailScreenState extends State<DonationEventDetailScreen> {
         initialData: widget.initialEvent,
         builder: (context, snapshot) {
           final event = snapshot.data ?? widget.initialEvent;
+          final lockedAppointment = event.appointmentStatus != null &&
+              event.appointmentStatus != 'booked' &&
+              event.appointmentStatus != 'cancelled';
+          final buttonLabel = event.booked
+              ? 'Hủy lịch đã đặt'
+              : lockedAppointment
+                  ? _appointmentStatusLabel(event.appointmentStatus!)
+                  : 'Đặt lịch hiến máu';
           return SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
               child: FilledButton.icon(
-                onPressed: event.slotsLeft <= 0 && !event.booked
-                    ? null
-                    : () => _toggleBooking(event),
+                onPressed:
+                    lockedAppointment || (event.slotsLeft <= 0 && !event.booked)
+                        ? null
+                        : () => _toggleBooking(event),
                 icon: Icon(
                   event.booked
                       ? Icons.event_busy_outlined
                       : Icons.calendar_month_outlined,
                 ),
-                label:
-                    Text(event.booked ? 'Hủy lịch đã đặt' : 'Đặt lịch hiến máu'),
+                label: Text(buttonLabel),
               ),
             ),
           );
         },
       ),
     );
+  }
+
+  String _appointmentStatusLabel(String status) {
+    return switch (status) {
+      'checked_in' => 'Đã check-in tại điểm hiến',
+      'deferred' => 'Tạm hoãn sau khám',
+      'completed' => 'Đã hoàn thành hiến máu',
+      'no_show' => 'Đã ghi nhận không đến',
+      _ => 'Không thể thay đổi lịch',
+    };
   }
 }
 
@@ -255,6 +353,77 @@ class _DescriptionPanel extends StatelessWidget {
           color: Colors.white70,
           height: 1.5,
         ),
+      ),
+    );
+  }
+}
+
+class _DetailPreparationChecklist extends StatelessWidget {
+  const _DetailPreparationChecklist({
+    this.compact = false,
+  });
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      'Ngủ đủ và ăn nhẹ trước khi đến.',
+      'Uống nước, tránh rượu bia trước ngày hiến.',
+      'Mang giấy tờ tùy thân hoặc mã Hero Pass.',
+      'Nếu thấy mệt, sốt hoặc chưa yên tâm, hãy dời lịch.',
+    ];
+
+    return Container(
+      padding: EdgeInsets.all(compact ? 0 : 16),
+      decoration: compact
+          ? null
+          : BoxDecoration(
+              color: PulseLinkTheme.cardBackground,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white.withOpacity(0.06)),
+            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!compact) ...[
+            const Text(
+              'Trước khi đến điểm hiến',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          for (final item in items) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: PulseLinkTheme.successGreen,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item,
+                    style: TextStyle(
+                      color: compact
+                          ? const Color(0xFF475569)
+                          : PulseLinkTheme.mutedText,
+                      height: 1.35,
+                      fontSize: compact ? 13 : 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (item != items.last) const SizedBox(height: 7),
+          ],
+        ],
       ),
     );
   }

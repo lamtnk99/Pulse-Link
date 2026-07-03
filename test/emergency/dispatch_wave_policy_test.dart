@@ -5,11 +5,23 @@ import 'package:pulse_link/features/emergency/domain/emergency_alert.dart';
 
 void main() {
   group('DispatchWavePolicy', () {
-    test('matches level 1 donors inside 5 km', () {
+    test('matches level 1 donors inside 15 km', () {
       final alert = _alert(EmergencyLevel.level1);
       final match = DispatchWavePolicy.evaluate(
         alert: alert,
-        donorLocation: const GeoPoint(latitude: 10.7727, longitude: 106.6663),
+        donorLocation: const GeoPoint(latitude: 10.8450, longitude: 106.6600),
+        donorProvinceCode: 'HCM',
+      );
+
+      expect(match.isEligible, isTrue);
+      expect(match.wave, DispatchWave.local5km);
+    });
+
+    test('keeps nearby donors in the first wave for expanded alerts', () {
+      final alert = _alert(EmergencyLevel.level2);
+      final match = DispatchWavePolicy.evaluate(
+        alert: alert,
+        donorLocation: const GeoPoint(latitude: 10.8450, longitude: 106.6600),
         donorProvinceCode: 'HCM',
       );
 

@@ -17,11 +17,14 @@ class PulseLinkState {
     this.bookedAppointments = const [],
     this.communityPosts = const [],
     this.donationHistory = const [],
+    this.activeAlerts = const [],
     this.activeAlert,
     this.dispatchMatch,
     this.routePlan,
     this.sosIntensity = 0,
     this.emergencyCommitted = false,
+    this.committedAlertIds = const {},
+    this.initializationError,
   });
 
   factory PulseLinkState.initial() {
@@ -38,11 +41,14 @@ class PulseLinkState {
   final List<DonationAppointment> bookedAppointments;
   final List<CommunityPost> communityPosts;
   final List<PastDonation> donationHistory;
+  final List<EmergencyAlert> activeAlerts;
   final EmergencyAlert? activeAlert;
   final DispatchMatch? dispatchMatch;
   final RoutePlan? routePlan;
   final double sosIntensity;
   final bool emergencyCommitted;
+  final Set<String> committedAlertIds;
+  final String? initializationError;
 
   int get totalVolumeMl {
     return donationHistory.fold<int>(
@@ -59,6 +65,7 @@ class PulseLinkState {
     List<DonationAppointment>? bookedAppointments,
     List<CommunityPost>? communityPosts,
     List<PastDonation>? donationHistory,
+    List<EmergencyAlert>? activeAlerts,
     EmergencyAlert? activeAlert,
     bool clearActiveAlert = false,
     DispatchMatch? dispatchMatch,
@@ -67,6 +74,9 @@ class PulseLinkState {
     bool clearRoutePlan = false,
     double? sosIntensity,
     bool? emergencyCommitted,
+    Set<String>? committedAlertIds,
+    String? initializationError,
+    bool clearInitializationError = false,
   }) {
     return PulseLinkState(
       activeMode: activeMode ?? this.activeMode,
@@ -76,12 +86,17 @@ class PulseLinkState {
       bookedAppointments: bookedAppointments ?? this.bookedAppointments,
       communityPosts: communityPosts ?? this.communityPosts,
       donationHistory: donationHistory ?? this.donationHistory,
+      activeAlerts: activeAlerts ?? this.activeAlerts,
       activeAlert: clearActiveAlert ? null : activeAlert ?? this.activeAlert,
       dispatchMatch:
           clearDispatchMatch ? null : dispatchMatch ?? this.dispatchMatch,
       routePlan: clearRoutePlan ? null : routePlan ?? this.routePlan,
       sosIntensity: sosIntensity ?? this.sosIntensity,
       emergencyCommitted: emergencyCommitted ?? this.emergencyCommitted,
+      committedAlertIds: committedAlertIds ?? this.committedAlertIds,
+      initializationError: clearInitializationError
+          ? null
+          : initializationError ?? this.initializationError,
     );
   }
 }

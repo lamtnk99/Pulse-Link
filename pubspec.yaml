@@ -14,12 +14,15 @@ dependencies:
   cupertino_icons: ^1.0.8
   firebase_core: ^3.9.0
   firebase_messaging: ^15.1.6
+  flutter_map: ^7.0.2
   geolocator: ^13.0.2
   google_maps_flutter: ^2.10.0
   http: ^1.2.2
   intl: ^0.19.0
   just_audio: ^0.9.42
+  latlong2: ^0.9.1
   qr_flutter: ^4.1.0
+  url_launcher: ^6.3.1
   uuid: ^4.5.1
 
 dev_dependencies:

@@ -22,6 +22,8 @@ class User extends Authenticatable
         'password',
         'phone',
         'role',
+        'hospital_id',
+        'permissions',
         'blood_type',
         'hero_level',
         'badge_title',
@@ -56,6 +58,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'permissions' => 'array',
             'last_donation_date' => 'date',
             'latitude' => 'float',
             'longitude' => 'float',
@@ -66,6 +69,11 @@ class User extends Authenticatable
     public function commitments()
     {
         return $this->hasMany(EmergencyCommitment::class, 'donor_id');
+    }
+
+    public function hospital()
+    {
+        return $this->belongsTo(Hospital::class);
     }
 
     public function province()

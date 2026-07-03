@@ -42,14 +42,19 @@ return new class extends Migration
             $table->id();
             $table->foreignId('emergency_alert_id')->constrained()->cascadeOnDelete();
             $table->foreignId('donor_id')->references('id')->on('users')->cascadeOnDelete();
-            $table->enum('status', ['committed', 'en_route', 'arrived', 'cancelled'])
+            $table->enum('status', ['committed', 'en_route', 'donated', 'cancelled'])
                 ->default('committed')
                 ->index();
             $table->decimal('latitude', 10, 7)->nullable();
             $table->decimal('longitude', 10, 7)->nullable();
             $table->unsignedSmallInteger('eta_minutes')->nullable();
+            $table->unsignedSmallInteger('donation_volume_ml')->nullable();
             $table->timestamp('committed_at')->nullable();
             $table->timestamp('last_location_at')->nullable();
+            $table->timestamp('donated_at')->nullable();
+            $table->timestamp('verified_at')->nullable();
+            $table->foreignId('verified_by')->nullable()->references('id')->on('users')->nullOnDelete();
+            $table->foreignId('donation_history_id')->nullable()->references('id')->on('donation_histories')->nullOnDelete();
             $table->timestamps();
 
             $table->unique(['emergency_alert_id', 'donor_id']);

@@ -44,12 +44,12 @@ class DispatchWavePolicy {
     final distanceKm = donorLocation.distanceKmTo(alert.hospitalLocation);
     final sameProvince = donorProvinceCode == alert.hospitalProvinceCode;
 
-    if (alert.level == EmergencyLevel.level1 && distanceKm <= 5) {
+    if (distanceKm <= 15) {
       return DispatchMatch(
         wave: DispatchWave.local5km,
         distanceKm: distanceKm,
         isEligible: true,
-        reason: 'Bạn nằm trong bán kính phản ứng nhanh 5 km.',
+        reason: 'Bạn nằm trong bán kính phản ứng nhanh 15 km.',
       );
     }
 

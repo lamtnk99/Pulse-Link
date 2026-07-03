@@ -80,6 +80,17 @@ class _SosModeScreenState extends State<SosModeScreen>
                         alert: alert,
                         onClose: widget.controller.dismissEmergency,
                       ),
+                      if (state.activeAlerts.length > 1) ...[
+                        const SizedBox(height: 12),
+                        _SosCaseSwitcher(
+                          alerts: state.activeAlerts,
+                          activeAlertId: alert.id,
+                          committedAlertIds: state.committedAlertIds,
+                          onSelected: (alertId) {
+                            widget.controller.selectEmergencyAlert(alertId);
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       LivingPulseWave(
                         progress: _ambientController.value,
@@ -104,6 +115,8 @@ class _SosModeScreenState extends State<SosModeScreen>
                         onConfirmed: widget.controller.commitToEmergency,
                       ),
                       const SizedBox(height: 14),
+                      _SosGuidanceCard(committed: state.emergencyCommitted),
+                      const SizedBox(height: 14),
                       _FooterCopy(committed: state.emergencyCommitted),
                     ],
                   ),
@@ -113,6 +126,95 @@ class _SosModeScreenState extends State<SosModeScreen>
           },
         );
       },
+    );
+  }
+}
+
+class _SosCaseSwitcher extends StatelessWidget {
+  const _SosCaseSwitcher({
+    required this.alerts,
+    required this.activeAlertId,
+    required this.committedAlertIds,
+    required this.onSelected,
+  });
+
+  final List<EmergencyAlert> alerts;
+  final String activeAlertId;
+  final Set<String> committedAlertIds;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 78,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: alerts.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final alert = alerts[index];
+          final selected = alert.id == activeAlertId;
+          final committed = committedAlertIds.contains(alert.id);
+
+          return InkWell(
+            onTap: () => onSelected(alert.id),
+            borderRadius: BorderRadius.circular(18),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 210,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: selected
+                    ? Colors.white.withValues(alpha: 0.16)
+                    : Colors.white.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: selected
+                      ? PulseLinkTheme.alertRed
+                      : Colors.white.withValues(alpha: 0.12),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${alert.requiredBloodType} · ${alert.unitsNeeded} đơn vị',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      if (committed)
+                        const Icon(
+                          Icons.check_circle,
+                          color: Color(0xFF34D399),
+                          size: 16,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    VietnameseLabels.text(alert.hospitalName),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
@@ -211,6 +313,76 @@ class _FooterCopy extends StatelessWidget {
         color: PulseLinkTheme.mutedText,
         fontSize: 12,
         height: 1.45,
+      ),
+    );
+  }
+}
+
+class _SosGuidanceCard extends StatelessWidget {
+  const _SosGuidanceCard({
+    required this.committed,
+  });
+
+  final bool committed;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = committed
+        ? [
+            'Đi theo tuyến đường được gợi ý và giữ điện thoại bên mình.',
+            'Khi tới nơi, báo với quầy tiếp nhận rằng bạn đến theo ca SOS Pulse Link.',
+            'Nếu thấy không khỏe trên đường đi, dừng lại và liên hệ bệnh viện.',
+          ]
+        : [
+            'Chỉ xác nhận khi bạn thật sự có thể di chuyển ngay.',
+            'Nếu vừa ốm, thiếu ngủ hoặc thấy không ổn, hãy bỏ qua ca này.',
+            'Một xác nhận chắc chắn giúp bệnh viện điều phối chính xác hơn.',
+          ];
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            committed ? 'Bạn đã nhận ca này' : 'Trước khi xác nhận',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          for (final item in items) ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.check_circle_outline,
+                  color: Color(0xFF34D399),
+                  size: 17,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      height: 1.35,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (item != items.last) const SizedBox(height: 7),
+          ],
+        ],
       ),
     );
   }

@@ -5,26 +5,52 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CommunityPostResource;
 use App\Models\CommunityPost;
+use App\Services\Admin\AdminUserResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class CommunityPostController extends Controller
 {
-    public function index()
+    public function __construct(
+        private readonly AdminUserResolver $adminUserResolver,
+    ) {}
+
+    public function index(Request $request)
     {
+        $admin = $this->adminUserResolver->resolve($request);
+        $perPage = min(max($request->integer('per_page', 10), 1), 50);
+        $status = $request->query('status');
+        $keyword = trim((string) $request->query('q', ''));
+
         return CommunityPostResource::collection(
             CommunityPost::query()
                 ->with('province', 'ward', 'hospital.province', 'hospital.ward', 'author')
+                ->when($admin->role !== 'system_admin', fn ($query) => $query->where('hospital_id', $admin->hospital_id))
+                ->when(in_array($status, ['draft', 'published'], true), fn ($query) => $query->where('status', $status))
+                ->when($keyword !== '', function ($query) use ($keyword): void {
+                    $query->where(function ($query) use ($keyword): void {
+                        $query
+                            ->where('title', 'like', "%{$keyword}%")
+                            ->orWhere('excerpt', 'like', "%{$keyword}%")
+                            ->orWhere('content', 'like', "%{$keyword}%");
+                    });
+                })
                 ->latest('published_at')
                 ->latest()
-                ->get()
+                ->paginate($perPage)
         );
     }
 
     public function store(Request $request): JsonResponse
     {
+        $admin = $this->adminUserResolver->resolve($request);
+        abort_unless($this->adminUserResolver->hasPermission($admin, 'posts.manage'), 403);
+
         $payload = $this->validatedPayload($request);
+        $payload['hospital_id'] ??= $admin->hospital_id;
+        $payload['author_id'] ??= $admin->id;
+        abort_unless($this->adminUserResolver->canAccessHospital($admin, $payload['hospital_id'] ?? null), 403);
         $payload['slug'] = $this->uniqueSlug($payload['title']);
         $payload = $this->normalizePublishState($payload);
 
@@ -39,7 +65,14 @@ class CommunityPostController extends Controller
 
     public function update(Request $request, CommunityPost $post): CommunityPostResource
     {
+        $admin = $this->adminUserResolver->resolve($request);
+        abort_unless($this->adminUserResolver->hasPermission($admin, 'posts.manage'), 403);
+        abort_unless($this->adminUserResolver->canAccessHospital($admin, $post->hospital_id), 403);
+
         $payload = $this->validatedPayload($request, partial: true);
+        if (array_key_exists('hospital_id', $payload)) {
+            abort_unless($this->adminUserResolver->canAccessHospital($admin, $payload['hospital_id']), 403);
+        }
         if (array_key_exists('title', $payload)) {
             $payload['slug'] = $this->uniqueSlug($payload['title'], $post->id);
         }
@@ -51,8 +84,12 @@ class CommunityPostController extends Controller
         );
     }
 
-    public function destroy(CommunityPost $post): JsonResponse
+    public function destroy(Request $request, CommunityPost $post): JsonResponse
     {
+        $admin = $this->adminUserResolver->resolve($request);
+        abort_unless($this->adminUserResolver->hasPermission($admin, 'posts.manage'), 403);
+        abort_unless($this->adminUserResolver->canAccessHospital($admin, $post->hospital_id), 403);
+
         $post->delete();
 
         return response()->json(status: 204);

@@ -10,6 +10,8 @@ use Illuminate\Support\Collection;
 
 final class DispatchWavePolicy
 {
+    private const LOCAL_RADIUS_KM = 15;
+
     public function __construct(
         private readonly DistanceCalculator $distanceCalculator,
     ) {}
@@ -61,7 +63,7 @@ final class DispatchWavePolicy
 
     private function waveFor(float $distanceKm, ?string $donorProvince, string $hospitalProvince, string $level): ?string
     {
-        if ($distanceKm <= 5) {
+        if ($distanceKm <= self::LOCAL_RADIUS_KM) {
             return 'local5km';
         }
 

@@ -26,6 +26,8 @@ class DonationEvent extends Model
         'capacity',
         'booked_count',
         'is_published',
+        'cancelled_at',
+        'cancel_reason',
     ];
 
     protected function casts(): array
@@ -36,6 +38,7 @@ class DonationEvent extends Model
             'latitude' => 'float',
             'longitude' => 'float',
             'is_published' => 'boolean',
+            'cancelled_at' => 'datetime',
         ];
     }
 
@@ -62,5 +65,14 @@ class DonationEvent extends Model
     public function getSlotsLeftAttribute(): int
     {
         return max(0, $this->capacity - $this->booked_count);
+    }
+
+    public function refreshBookedCount(): void
+    {
+        $this->update([
+            'booked_count' => $this->appointments()
+                ->whereIn('status', ['booked', 'checked_in', 'completed'])
+                ->count(),
+        ]);
     }
 }

@@ -6,11 +6,13 @@ class PulseLinkTheme {
   const PulseLinkTheme._();
 
   static const primaryRed = Color(0xFFE31837);
-  static const alertRed = Color(0xFFFF334B);
+  static const alertRed = Color(0xFFFF2D45);
   static const deepBloodRed = Color(0xFF8A0012);
-  static const dailyBackground = Color(0xFF101113);
-  static const cardBackground = Color(0xFF191B1F);
-  static const mutedText = Color(0xFF9DA3AF);
+  static const pulseNavy = Color(0xFF082348);
+  static const deepNavy = Color(0xFF03162E);
+  static const dailyBackground = Color(0xFF061A33);
+  static const cardBackground = Color(0xFF0B2747);
+  static const mutedText = Color(0xFFB8C4D6);
   static const successGreen = Color(0xFF10B981);
 
   static ThemeData themeForMode(AppMode mode) {
@@ -22,8 +24,9 @@ class PulseLinkTheme {
       scaffoldBackgroundColor: dailyBackground,
       colorScheme: ColorScheme.dark(
         primary: seed,
-        secondary: deepBloodRed,
+        secondary: pulseNavy,
         surface: cardBackground,
+        onSurface: Colors.white,
       ),
       fontFamily: 'Roboto',
       appBarTheme: const AppBarTheme(

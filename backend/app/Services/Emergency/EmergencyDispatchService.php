@@ -15,6 +15,8 @@ use App\Services\Contracts\PushNotificationGateway;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class EmergencyDispatchService
 {
@@ -66,7 +68,7 @@ class EmergencyDispatchService
 
         $this->pushNotifications->sendEmergencyAlert($alert, $alert->recipients);
         $this->realtimeGateway->publish($alert);
-        broadcast(new EmergencyAlertActivated($alert));
+        $this->broadcastAlert($alert);
 
         return $alert;
     }
@@ -88,11 +90,23 @@ class EmergencyDispatchService
             'stats' => [
                 'active_alerts' => $alerts->count(),
                 'notified_donors' => $alerts->sum(fn (EmergencyAlert $alert) => $alert->recipients->count()),
-                'committed_donors' => $commitments->count(),
-                'arrived_donors' => $commitments->where('status', 'arrived')->count(),
+                'committed_donors' => $commitments->where('status', '!=', 'cancelled')->count(),
+                'donated_donors' => $commitments->where('status', 'donated')->count(),
             ],
             'alerts' => $alerts,
             'commitments' => $commitments->values(),
         ];
+    }
+
+    private function broadcastAlert(EmergencyAlert $alert): void
+    {
+        try {
+            broadcast(new EmergencyAlertActivated($alert));
+        } catch (Throwable $exception) {
+            Log::warning('Emergency alert broadcast skipped.', [
+                'alert_id' => $alert->public_id,
+                'message' => $exception->getMessage(),
+            ]);
+        }
     }
 }

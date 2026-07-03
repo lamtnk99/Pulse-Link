@@ -20,13 +20,10 @@ class FirebaseEmergencySignalService implements EmergencySignalService {
   }) {
     return firestore
         .collection('sos_alerts')
-        .where('active', isEqualTo: true)
         .where('blood_types', arrayContains: profile.bloodType)
         .snapshots()
         .expand((snapshot) => snapshot.docChanges)
-        .where((change) => change.type != DocumentChangeType.removed)
-        .map((change) => EmergencyAlert.fromJson(change.doc.data()!))
-        .where((alert) => !alert.isExpired);
+        .map((change) => EmergencyAlert.fromJson(change.doc.data()!));
   }
 
   @override
@@ -65,6 +62,7 @@ class FirebaseEmergencySignalService implements EmergencySignalService {
       'created_at': alert.createdAt.toIso8601String(),
       'expires_at': alert.expiresAt.toIso8601String(),
       'message': alert.message,
+      'active': alert.active,
     };
   }
 }

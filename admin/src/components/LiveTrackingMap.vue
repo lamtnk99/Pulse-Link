@@ -16,7 +16,7 @@ let layerGroup: L.LayerGroup | null = null
 const statusLabels: Record<EmergencyCommitment['status'], string> = {
   committed: 'Đã cam kết',
   en_route: 'Đang di chuyển',
-  arrived: 'Đã đến viện',
+  donated: 'Đã hiến',
   cancelled: 'Đã hủy',
 }
 
@@ -79,7 +79,7 @@ function renderMarkers() {
 </script>
 
 <template>
-  <section class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+  <section class="relative z-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
     <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
       <div>
         <h2 class="text-base font-black text-slate-950">Bản đồ theo dõi tình nguyện viên</h2>
@@ -89,6 +89,6 @@ function renderMarkers() {
         {{ loading ? 'Đang đồng bộ' : 'Trực tuyến' }}
       </span>
     </div>
-    <div ref="mapEl" class="h-[520px]"></div>
+    <div ref="mapEl" class="relative z-0 h-[520px]"></div>
   </section>
 </template>

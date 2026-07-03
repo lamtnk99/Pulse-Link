@@ -14,12 +14,27 @@ class DonationAppointment extends Model
         'user_id',
         'status',
         'booked_at',
+        'checked_in_at',
+        'cancelled_at',
+        'cancel_reason',
+        'completed_at',
+        'no_show_at',
+        'volume_ml',
+        'screening_status',
+        'screening_notes',
+        'result_summary',
+        'result_published_at',
     ];
 
     protected function casts(): array
     {
         return [
             'booked_at' => 'datetime',
+            'checked_in_at' => 'datetime',
+            'cancelled_at' => 'datetime',
+            'completed_at' => 'datetime',
+            'no_show_at' => 'datetime',
+            'result_published_at' => 'datetime',
         ];
     }
 
@@ -31,5 +46,10 @@ class DonationAppointment extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function donationHistory()
+    {
+        return $this->hasOne(DonationHistory::class);
     }
 }

@@ -3,6 +3,7 @@ import '../../features/daily/domain/donation_appointment.dart';
 import '../../features/daily/domain/donation_event.dart';
 import '../../features/daily/domain/past_donation.dart';
 import '../../features/profile/domain/donor_profile.dart';
+import '../../core/location/geo_point.dart';
 import '../../services/donation_event_repository.dart';
 import '../../services/donation_history_repository.dart';
 import '../../services/donor_repository.dart';
@@ -35,8 +36,11 @@ class LaravelDonationEventRepository implements DonationEventRepository {
   final LaravelApiClient _client;
 
   @override
-  Future<List<DonationEvent>> getUpcomingEvents() async {
-    final json = await _client.getList('/api/mobile/donation-events');
+  Future<List<DonationEvent>> getUpcomingEvents({GeoPoint? origin}) async {
+    final json = await _client.getList(_withOrigin(
+      '/api/mobile/donation-events',
+      origin,
+    ));
     return json
         .cast<Map<String, dynamic>>()
         .map(DonationEvent.fromJson)
@@ -44,8 +48,12 @@ class LaravelDonationEventRepository implements DonationEventRepository {
   }
 
   @override
-  Future<DonationEvent> getEventDetail(String eventId) async {
-    final json = await _client.getJson('/api/mobile/donation-events/$eventId');
+  Future<DonationEvent> getEventDetail(String eventId,
+      {GeoPoint? origin}) async {
+    final json = await _client.getJson(_withOrigin(
+      '/api/mobile/donation-events/$eventId',
+      origin,
+    ));
     return DonationEvent.fromJson(_unwrapData(json));
   }
 
@@ -59,20 +67,28 @@ class LaravelDonationEventRepository implements DonationEventRepository {
   }
 
   @override
-  Future<DonationEvent> bookAppointment(String eventId) async {
+  Future<DonationEvent> bookAppointment(String eventId,
+      {GeoPoint? origin}) async {
     final json = await _client.postJson(
-      '/api/mobile/donation-events/$eventId/book',
+      _withOrigin('/api/mobile/donation-events/$eventId/book', origin),
     );
     return DonationEvent.fromJson(_unwrapData(json));
   }
 
   @override
-  Future<DonationEvent> cancelAppointment(String eventId) async {
+  Future<DonationEvent> cancelAppointment(String eventId,
+      {GeoPoint? origin}) async {
     final json = await _client.postJson(
-      '/api/mobile/donation-events/$eventId/cancel',
+      _withOrigin('/api/mobile/donation-events/$eventId/cancel', origin),
     );
     return DonationEvent.fromJson(_unwrapData(json));
   }
+}
+
+String _withOrigin(String path, GeoPoint? origin) {
+  if (origin == null) return path;
+  final separator = path.contains('?') ? '&' : '?';
+  return '$path${separator}latitude=${origin.latitude}&longitude=${origin.longitude}';
 }
 
 class LaravelCommunityPostRepository implements CommunityPostRepository {

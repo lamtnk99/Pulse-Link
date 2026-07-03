@@ -25,6 +25,8 @@ return new class extends Migration
             $table->unsignedInteger('capacity')->default(0);
             $table->unsignedInteger('booked_count')->default(0);
             $table->boolean('is_published')->default(true)->index();
+            $table->timestamp('cancelled_at')->nullable()->index();
+            $table->text('cancel_reason')->nullable();
             $table->timestamps();
         });
 
@@ -32,10 +34,20 @@ return new class extends Migration
             $table->id();
             $table->foreignId('donation_event_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->enum('status', ['booked', 'cancelled', 'completed', 'no_show'])
+            $table->enum('status', ['booked', 'cancelled', 'checked_in', 'deferred', 'completed', 'no_show'])
                 ->default('booked')
                 ->index();
             $table->timestamp('booked_at')->nullable();
+            $table->timestamp('checked_in_at')->nullable();
+            $table->timestamp('cancelled_at')->nullable();
+            $table->text('cancel_reason')->nullable();
+            $table->timestamp('completed_at')->nullable();
+            $table->timestamp('no_show_at')->nullable();
+            $table->unsignedSmallInteger('volume_ml')->nullable();
+            $table->string('screening_status')->nullable()->index();
+            $table->text('screening_notes')->nullable();
+            $table->text('result_summary')->nullable();
+            $table->timestamp('result_published_at')->nullable();
             $table->timestamps();
 
             $table->unique(['donation_event_id', 'user_id']);
@@ -44,6 +56,7 @@ return new class extends Migration
         Schema::create('donation_histories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('donation_appointment_id')->nullable()->unique()->constrained()->nullOnDelete();
             $table->foreignId('hospital_id')->nullable()->constrained()->nullOnDelete();
             $table->date('donated_at')->index();
             $table->string('location_name');

@@ -16,8 +16,13 @@ class EmergencyCommitment extends Model
         'latitude',
         'longitude',
         'eta_minutes',
+        'donation_volume_ml',
         'committed_at',
         'last_location_at',
+        'donated_at',
+        'verified_at',
+        'verified_by',
+        'donation_history_id',
     ];
 
     protected function casts(): array
@@ -27,6 +32,8 @@ class EmergencyCommitment extends Model
             'longitude' => 'float',
             'committed_at' => 'datetime',
             'last_location_at' => 'datetime',
+            'donated_at' => 'datetime',
+            'verified_at' => 'datetime',
         ];
     }
 
@@ -38,5 +45,15 @@ class EmergencyCommitment extends Model
     public function alert()
     {
         return $this->belongsTo(EmergencyAlert::class, 'emergency_alert_id');
+    }
+
+    public function donationHistory()
+    {
+        return $this->belongsTo(DonationHistory::class);
+    }
+
+    public function verifier()
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 }

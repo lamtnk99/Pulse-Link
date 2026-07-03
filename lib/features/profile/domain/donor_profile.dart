@@ -12,6 +12,7 @@ class DonorProfile {
     required this.points,
     required this.provinceCode,
     required this.heroPassCode,
+    this.recognition = const DonorRecognition.empty(),
   });
 
   factory DonorProfile.fromJson(Map<String, dynamic> json) {
@@ -26,6 +27,9 @@ class DonorProfile {
       points: json['points'] as int,
       provinceCode: json['province_code'] as String,
       heroPassCode: json['hero_pass_code'] as String,
+      recognition: DonorRecognition.fromJson(
+        json['recognition'] as Map<String, dynamic>?,
+      ),
     );
   }
 
@@ -39,6 +43,7 @@ class DonorProfile {
   final int points;
   final String provinceCode;
   final String heroPassCode;
+  final DonorRecognition recognition;
 
   DateTime get nextEligibleDate {
     return lastDonationDate.add(const Duration(days: 84));
@@ -65,6 +70,7 @@ class DonorProfile {
       'points': points,
       'province_code': provinceCode,
       'hero_pass_code': heroPassCode,
+      'recognition': recognition.toJson(),
     };
   }
 
@@ -79,6 +85,7 @@ class DonorProfile {
     int? points,
     String? provinceCode,
     String? heroPassCode,
+    DonorRecognition? recognition,
   }) {
     return DonorProfile(
       id: id ?? this.id,
@@ -91,6 +98,103 @@ class DonorProfile {
       points: points ?? this.points,
       provinceCode: provinceCode ?? this.provinceCode,
       heroPassCode: heroPassCode ?? this.heroPassCode,
+      recognition: recognition ?? this.recognition,
     );
+  }
+}
+
+class DonorRecognition {
+  const DonorRecognition({
+    required this.level,
+    required this.badgeTitle,
+    required this.totalDonations,
+    required this.totalVolumeMl,
+    required this.sosDonations,
+    required this.points,
+    required this.globalRank,
+    required this.provinceRank,
+    required this.badges,
+  });
+
+  const DonorRecognition.empty()
+      : level = '',
+        badgeTitle = '',
+        totalDonations = 0,
+        totalVolumeMl = 0,
+        sosDonations = 0,
+        points = 0,
+        globalRank = 0,
+        provinceRank = 0,
+        badges = const [];
+
+  factory DonorRecognition.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const DonorRecognition.empty();
+
+    return DonorRecognition(
+      level: json['level'] as String? ?? '',
+      badgeTitle: json['badge_title'] as String? ?? '',
+      totalDonations: json['total_donations'] as int? ?? 0,
+      totalVolumeMl: json['total_volume_ml'] as int? ?? 0,
+      sosDonations: json['sos_donations'] as int? ?? 0,
+      points: json['points'] as int? ?? 0,
+      globalRank: json['global_rank'] as int? ?? 0,
+      provinceRank: json['province_rank'] as int? ?? 0,
+      badges: (json['badges'] as List<dynamic>? ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(DonorBadge.fromJson)
+          .toList(growable: false),
+    );
+  }
+
+  final String level;
+  final String badgeTitle;
+  final int totalDonations;
+  final int totalVolumeMl;
+  final int sosDonations;
+  final int points;
+  final int globalRank;
+  final int provinceRank;
+  final List<DonorBadge> badges;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'level': level,
+      'badge_title': badgeTitle,
+      'total_donations': totalDonations,
+      'total_volume_ml': totalVolumeMl,
+      'sos_donations': sosDonations,
+      'points': points,
+      'global_rank': globalRank,
+      'province_rank': provinceRank,
+      'badges': badges.map((badge) => badge.toJson()).toList(growable: false),
+    };
+  }
+}
+
+class DonorBadge {
+  const DonorBadge({
+    required this.code,
+    required this.name,
+    required this.description,
+  });
+
+  factory DonorBadge.fromJson(Map<String, dynamic> json) {
+    return DonorBadge(
+      code: json['code'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+    );
+  }
+
+  final String code;
+  final String name;
+  final String description;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'code': code,
+      'name': name,
+      'description': description,
+    };
   }
 }

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
 import {
-  Activity,
   AlertTriangle,
   Bell,
   Building2,
@@ -20,11 +19,14 @@ import { useEmergencyDashboard } from './composables/useEmergencyDashboard'
 import CommunityPosts from './views/CommunityPosts.vue'
 import Dashboard from './views/Dashboard.vue'
 import DonationEvents from './views/DonationEvents.vue'
+import HospitalManagement from './views/HospitalManagement.vue'
 import RbacManagement from './views/RbacManagement.vue'
 import SosAlerts from './views/SosAlerts.vue'
 import type { SosPayload } from './types'
+import pulseLinkIcon from './assets/pulse_link_icon.png'
+import pulseLinkLogo from './assets/pulse_link_logo.png'
 
-type ViewKey = 'dashboard' | 'sos' | 'events' | 'community' | 'rbac'
+type ViewKey = 'dashboard' | 'hospitals' | 'sos' | 'events' | 'community' | 'rbac'
 
 interface NavItem {
   key: ViewKey
@@ -40,23 +42,33 @@ const {
   alerts,
   activeAlerts,
   activeAlert,
+  activeAlertCommitments,
   commitments,
+  currentAdmin,
+  selectedAlertId,
   selectedHospitalId,
   selectedHospital,
   isLoading,
   loadDashboard,
   loadProvinces,
   activateSos,
+  cancelSos,
+  completeSos,
+  markCommitmentDonated,
+  selectAlert,
 } = useEmergencyDashboard(apiBaseUrl)
 
 const currentView = ref<ViewKey>('dashboard')
 const showSosModal = ref(false)
 const mobileMenuOpen = ref(false)
 const currentTime = ref(new Date())
+const sosSubmitError = ref<string | null>(null)
+const isSubmittingSos = ref(false)
 let clockTimer: number | undefined
 
 const navigation: NavItem[] = [
   { key: 'dashboard', label: 'Tổng quan', shortLabel: 'Tổng quan', icon: LayoutDashboard },
+  { key: 'hospitals', label: 'Bệnh viện', shortLabel: 'BV', icon: Building2 },
   { key: 'sos', label: 'Cấp cứu SOS', shortLabel: 'SOS', icon: AlertTriangle },
   { key: 'events', label: 'Lịch hiến máu', shortLabel: 'Sự kiện', icon: CalendarRange },
   { key: 'community', label: 'Bài viết cộng đồng', shortLabel: 'Bài viết', icon: FileText },
@@ -75,6 +87,14 @@ const formattedTime = computed(() =>
   }),
 )
 const activeViewLabel = computed(() => navigation.find((item) => item.key === currentView.value)?.label ?? 'Tổng quan')
+const adminInitials = computed(() => {
+  const words = (currentAdmin.value?.name ?? 'Pulse Link')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+  return words.slice(-2).map((word) => word[0]).join('').toUpperCase()
+})
 
 function switchView(view: ViewKey) {
   currentView.value = view
@@ -82,13 +102,22 @@ function switchView(view: ViewKey) {
 }
 
 function openSosModal() {
+  sosSubmitError.value = null
   showSosModal.value = true
 }
 
 async function submitSos(payload: SosPayload) {
-  await activateSos(payload)
-  showSosModal.value = false
-  switchView('sos')
+  sosSubmitError.value = null
+  isSubmittingSos.value = true
+  try {
+    await activateSos(payload)
+    showSosModal.value = false
+    switchView('sos')
+  } catch (error) {
+    sosSubmitError.value = error instanceof Error ? error.message : 'Không thể phát lệnh SOS.'
+  } finally {
+    isSubmittingSos.value = false
+  }
 }
 
 onMounted(async () => {
@@ -107,8 +136,8 @@ onBeforeUnmount(() => {
   <div class="flex min-h-screen bg-[#F8FAFC] text-slate-950">
     <aside class="hidden w-72 shrink-0 border-r border-neutral-800 bg-[#1A1A1A] text-white md:flex md:flex-col">
       <div class="flex h-16 items-center gap-3 border-b border-neutral-800 px-5">
-        <div class="relative grid h-9 w-9 place-items-center rounded-md bg-[#E31837]/15 text-[#E31837]">
-          <Activity class="h-5 w-5" />
+        <div class="relative grid h-10 w-10 place-items-center rounded-md bg-white p-1.5">
+          <img :src="pulseLinkIcon" alt="Pulse Link" class="max-h-full max-w-full object-contain" />
           <span class="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#E31837]" />
         </div>
         <div>
@@ -149,10 +178,10 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="flex items-center gap-3 border-t border-neutral-800 bg-black/20 p-4">
-        <div class="grid h-9 w-9 place-items-center rounded-full bg-[#E31837] text-xs font-black">NM</div>
+        <div class="grid h-9 w-9 place-items-center rounded-full bg-[#E31837] text-xs font-black">{{ adminInitials }}</div>
         <div class="min-w-0">
-          <p class="truncate text-xs font-black text-white">BS. Nguyễn Minh An</p>
-          <p class="truncate text-[10px] font-semibold text-neutral-500">Điều phối bệnh viện</p>
+          <p class="truncate text-xs font-black text-white">{{ currentAdmin?.name ?? 'Quản trị Pulse Link' }}</p>
+          <p class="truncate text-[10px] font-semibold text-neutral-500">{{ currentAdmin?.scope_label ?? 'Đang đồng bộ phân quyền' }}</p>
         </div>
       </div>
     </aside>
@@ -163,8 +192,8 @@ onBeforeUnmount(() => {
           <button class="grid h-9 w-9 place-items-center rounded-md border border-slate-200 text-slate-600 md:hidden" @click="mobileMenuOpen = !mobileMenuOpen">
             <component :is="mobileMenuOpen ? X : Menu" class="h-5 w-5" />
           </button>
-          <div class="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-red-50 text-[#E31837]">
-            <Building2 class="h-5 w-5" />
+          <div class="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white p-1 shadow-sm ring-1 ring-slate-200">
+            <img :src="pulseLinkIcon" alt="Pulse Link" class="max-h-full max-w-full object-contain" />
           </div>
           <div class="min-w-0">
             <p class="truncate text-sm font-black uppercase tracking-wide text-slate-900">
@@ -213,7 +242,10 @@ onBeforeUnmount(() => {
       </header>
 
       <div v-if="mobileMenuOpen" class="border-b border-neutral-800 bg-[#1A1A1A] p-2 md:hidden">
-        <div class="grid grid-cols-5 gap-1">
+        <div class="mb-2 rounded-md bg-white p-2">
+          <img :src="pulseLinkLogo" alt="Pulse Link" class="h-10 w-auto object-contain" />
+        </div>
+        <div class="grid grid-cols-3 gap-1 sm:grid-cols-6">
           <button
             v-for="item in navigation"
             :key="item.key"
@@ -239,12 +271,19 @@ onBeforeUnmount(() => {
         <SosAlerts
           v-else-if="currentView === 'sos'"
           :alerts="alerts"
+          :active-alerts="activeAlerts"
           :active-alert="activeAlert"
-          :commitments="commitments"
+          :selected-alert-id="selectedAlertId"
+          :commitments="activeAlertCommitments"
           :stats="stats"
           :is-loading="isLoading"
           @open-sos="openSosModal"
+          @select-alert="selectAlert"
+          @cancel-alert="cancelSos"
+          @complete-alert="completeSos"
+          @mark-commitment-donated="markCommitmentDonated"
         />
+        <HospitalManagement v-else-if="currentView === 'hospitals'" />
         <DonationEvents v-else-if="currentView === 'events'" />
         <CommunityPosts v-else-if="currentView === 'community'" />
         <RbacManagement v-else />
@@ -255,6 +294,8 @@ onBeforeUnmount(() => {
       v-if="showSosModal"
       :hospitals="hospitals"
       :default-hospital-id="selectedHospitalId"
+      :error-message="sosSubmitError"
+      :submitting="isSubmittingSos"
       @close="showSosModal = false"
       @submit="submitSos"
     />

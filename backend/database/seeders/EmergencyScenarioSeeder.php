@@ -110,10 +110,14 @@ class EmergencyScenarioSeeder extends Seeder
             );
 
             if ($status === 'active' && $recipient->id % 3 === 0) {
+                $commitmentStatus = ['committed', 'en_route', 'donated'][$candidate->donor->id % 3];
                 EmergencyCommitment::query()->updateOrCreate(
                     ['emergency_alert_id' => $alert->id, 'donor_id' => $candidate->donor->id],
                     [
-                        'status' => ['committed', 'en_route', 'arrived'][$recipient->id % 3],
+                        'status' => $commitmentStatus,
+                        'donation_volume_ml' => $commitmentStatus === 'donated' ? 350 : null,
+                        'donated_at' => $commitmentStatus === 'donated' ? now()->subMinutes(random_int(1, 10)) : null,
+                        'verified_at' => $commitmentStatus === 'donated' ? now()->subMinutes(random_int(1, 8)) : null,
                         'latitude' => $candidate->donor->latitude,
                         'longitude' => $candidate->donor->longitude,
                         'eta_minutes' => max(5, (int) ceil($candidate->distanceKm / 24 * 60)),

@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 
+import '../../core/location/geo_point.dart';
 import '../../features/community/domain/community_post.dart';
 import '../../features/daily/domain/donation_appointment.dart';
 import '../../features/daily/domain/donation_event.dart';
@@ -32,15 +33,27 @@ class MockDonationEventRepository implements DonationEventRepository {
   );
 
   @override
-  Future<List<DonationEvent>> getUpcomingEvents() async {
+  Future<List<DonationEvent>> getUpcomingEvents({GeoPoint? origin}) async {
     await Future<void>.delayed(const Duration(milliseconds: 180));
-    return List<DonationEvent>.unmodifiable(_events);
+    final events = _events
+        .map(
+          (event) => origin == null
+              ? event
+              : event.copyWith(distanceKm: origin.distanceKmTo(event.location)),
+        )
+        .toList(growable: false)
+      ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+    return List<DonationEvent>.unmodifiable(events);
   }
 
   @override
-  Future<DonationEvent> getEventDetail(String eventId) async {
+  Future<DonationEvent> getEventDetail(String eventId,
+      {GeoPoint? origin}) async {
     await Future<void>.delayed(const Duration(milliseconds: 140));
-    return _events.firstWhere((event) => event.id == eventId);
+    final event = _events.firstWhere((event) => event.id == eventId);
+    return origin == null
+        ? event
+        : event.copyWith(distanceKm: origin.distanceKmTo(event.location));
   }
 
   @override
@@ -60,18 +73,21 @@ class MockDonationEventRepository implements DonationEventRepository {
   }
 
   @override
-  Future<DonationEvent> bookAppointment(String eventId) async {
-    return _setBooking(eventId: eventId, booked: true);
+  Future<DonationEvent> bookAppointment(String eventId,
+      {GeoPoint? origin}) async {
+    return _setBooking(eventId: eventId, booked: true, origin: origin);
   }
 
   @override
-  Future<DonationEvent> cancelAppointment(String eventId) async {
-    return _setBooking(eventId: eventId, booked: false);
+  Future<DonationEvent> cancelAppointment(String eventId,
+      {GeoPoint? origin}) async {
+    return _setBooking(eventId: eventId, booked: false, origin: origin);
   }
 
   Future<DonationEvent> _setBooking({
     required String eventId,
     required bool booked,
+    GeoPoint? origin,
   }) async {
     final index = _events.indexWhere((event) => event.id == eventId);
     if (index == -1) {
@@ -87,7 +103,9 @@ class MockDonationEventRepository implements DonationEventRepository {
     );
     _events[index] = updated;
     await Future<void>.delayed(const Duration(milliseconds: 160));
-    return updated;
+    return origin == null
+        ? updated
+        : updated.copyWith(distanceKm: origin.distanceKmTo(updated.location));
   }
 }
 
