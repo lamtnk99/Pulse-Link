@@ -90,7 +90,7 @@ class MockData {
       distanceKm: 6.5,
       urgency: EventUrgency.high,
       imageUrl:
-          'https://images.unsplash.com/photo-1579154204601-01588f351167?auto=format&fit=crop&q=80&w=600',
+          'https://images.unsplash.com/photo-1584516150909-c43483ee7932?auto=format&fit=crop&q=80&w=600',
       slotsLeft: 15,
       province: AdministrativeArea(
         code: '79',

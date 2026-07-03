@@ -61,8 +61,16 @@ class _HoldToConfirmButtonState extends State<HoldToConfirmButton>
   Future<void> _confirmCommitment() async {
     setState(() => _confirming = true);
     HapticFeedback.heavyImpact();
-    await widget.onConfirmed();
-    if (mounted) setState(() => _confirming = false);
+    try {
+      await widget.onConfirmed();
+    } catch (_) {
+      HapticFeedback.mediumImpact();
+      if (mounted && !widget.committed) {
+        _controller.reverse();
+      }
+    } finally {
+      if (mounted) setState(() => _confirming = false);
+    }
   }
 
   void _startHold(_) {

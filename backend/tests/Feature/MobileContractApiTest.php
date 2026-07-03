@@ -10,6 +10,7 @@ use App\Models\EmergencyAlert;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class MobileContractApiTest extends TestCase
@@ -285,6 +286,34 @@ class MobileContractApiTest extends TestCase
 
         $this->assertContains('mobile.emergency-alerts', $alertChannels);
         $this->assertContains('mobile.donor.'.$donor->id, $commitmentChannels);
+    }
+
+    public function test_mobile_sos_commit_still_works_before_cancel_reason_migration(): void
+    {
+        Event::fake();
+        $this->seed();
+        Schema::table('emergency_commitments', function ($table): void {
+            $table->dropColumn('cancel_reason');
+        });
+
+        $alert = EmergencyAlert::query()->where('status', 'active')->firstOrFail();
+        $donor = User::query()->where('role', 'donor')->whereNotNull('latitude')->firstOrFail();
+
+        $this->postJson("/api/mobile/sos-alerts/{$alert->public_id}/commit", [
+            'donor_id' => $donor->id,
+            'latitude' => $donor->latitude,
+            'longitude' => $donor->longitude,
+            'eta_minutes' => 12,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'committed')
+            ->assertJsonPath('data.alert_id', $alert->public_id);
+
+        $this->assertDatabaseHas('emergency_commitments', [
+            'emergency_alert_id' => $alert->id,
+            'donor_id' => $donor->id,
+            'status' => 'committed',
+        ]);
     }
 
     public function test_mobile_can_cancel_sos_commitment_with_reason(): void

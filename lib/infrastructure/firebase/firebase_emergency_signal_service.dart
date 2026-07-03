@@ -25,6 +25,7 @@ class FirebaseEmergencySignalService implements EmergencySignalService {
   @override
   Future<EmergencyCommitment> confirmCommitment({
     required String alertId,
+    required String donorId,
     GeoPoint? location,
     int? etaMinutes,
   }) async {
@@ -41,6 +42,7 @@ class FirebaseEmergencySignalService implements EmergencySignalService {
   @override
   Future<void> updateCommitmentLocation({
     required String alertId,
+    required String donorId,
     required GeoPoint location,
     int? etaMinutes,
     EmergencyCommitmentStatus status = EmergencyCommitmentStatus.enRoute,
@@ -51,6 +53,7 @@ class FirebaseEmergencySignalService implements EmergencySignalService {
   @override
   Future<EmergencyCommitment> cancelCommitment({
     required String alertId,
+    required String donorId,
     required String reason,
   }) async {
     return EmergencyCommitment(

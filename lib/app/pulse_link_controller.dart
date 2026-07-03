@@ -326,41 +326,55 @@ class PulseLinkController extends ChangeNotifier {
 
   Future<void> commitToEmergency() async {
     final alert = _state.activeAlert;
-    if (alert == null) return;
+    final profile = _state.profile;
+    if (alert == null || profile == null) return;
 
-    final location = await _tryCurrentLocation();
-    final routePlan = _state.routePlan;
-    final commitment = await _emergencySignalService.confirmCommitment(
-      alertId: alert.id,
-      location: location,
-      etaMinutes: routePlan?.estimatedMinutes,
-    );
-    await _audioService.confirmedPulse();
+    try {
+      final location = await _tryCurrentLocation();
+      final routePlan = _state.routePlan;
+      final commitment = await _emergencySignalService.confirmCommitment(
+        alertId: alert.id,
+        donorId: profile.id,
+        location: location,
+        etaMinutes: routePlan?.estimatedMinutes,
+      );
+      await _audioService.confirmedPulse();
 
-    final committedAlertIds = {..._state.committedAlertIds, alert.id};
-    _state = _state.copyWith(
-      committedAlertIds: committedAlertIds,
-      emergencyCommitted: true,
-      sosMissionPhase: SosMissionPhase.missionActive,
-      activeEmergencyCommitment: commitment,
-      emergencyLocation: location,
-      locationSyncError: location == null
-          ? 'Chưa lấy được vị trí hiện tại. Bạn vẫn có thể mở chỉ đường tới bệnh viện.'
-          : null,
-      clearLocationSyncError: location != null,
-      sosIntensity: 1,
-    );
-    notifyListeners();
-    _startEmergencyLocationSync();
+      final committedAlertIds = {..._state.committedAlertIds, alert.id};
+      _state = _state.copyWith(
+        committedAlertIds: committedAlertIds,
+        emergencyCommitted: true,
+        sosMissionPhase: SosMissionPhase.missionActive,
+        activeEmergencyCommitment: commitment,
+        emergencyLocation: location,
+        locationSyncError: location == null
+            ? 'Chưa lấy được vị trí hiện tại. Bạn vẫn có thể mở chỉ đường tới bệnh viện.'
+            : null,
+        clearLocationSyncError: location != null,
+        sosIntensity: 1,
+      );
+      notifyListeners();
+      _startEmergencyLocationSync();
+    } on Object {
+      _state = _state.copyWith(
+        sosIntensity: 0,
+        locationSyncError:
+            'Chưa xác nhận được cam kết SOS. Kiểm tra kết nối rồi giữ lại một lần nữa.',
+      );
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> cancelEmergencyCommitment(String reason) async {
     final alert = _state.activeAlert;
-    if (alert == null) return;
+    final profile = _state.profile;
+    if (alert == null || profile == null) return;
 
     _stopEmergencyLocationSync();
     final commitment = await _emergencySignalService.cancelCommitment(
       alertId: alert.id,
+      donorId: profile.id,
       reason: reason,
     );
     final committedAlertIds = {..._state.committedAlertIds}..remove(alert.id);
@@ -632,6 +646,8 @@ class PulseLinkController extends ChangeNotifier {
 
     _isSyncingEmergencyLocation = true;
     try {
+      final profile = _state.profile;
+      if (profile == null) return;
       final location = await _locationService.getCurrentLocation();
       _lastKnownLocation = location;
       final distanceKm = location.distanceKmTo(alert.hospitalLocation);
@@ -642,6 +658,7 @@ class PulseLinkController extends ChangeNotifier {
       );
       await _emergencySignalService.updateCommitmentLocation(
         alertId: alert.id,
+        donorId: profile.id,
         location: location,
         etaMinutes: routePlan.estimatedMinutes,
       );

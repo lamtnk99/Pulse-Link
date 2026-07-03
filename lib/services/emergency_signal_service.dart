@@ -15,12 +15,14 @@ abstract interface class EmergencySignalService {
 
   Future<EmergencyCommitment> confirmCommitment({
     required String alertId,
+    required String donorId,
     GeoPoint? location,
     int? etaMinutes,
   });
 
   Future<void> updateCommitmentLocation({
     required String alertId,
+    required String donorId,
     required GeoPoint location,
     int? etaMinutes,
     EmergencyCommitmentStatus status = EmergencyCommitmentStatus.enRoute,
@@ -28,6 +30,7 @@ abstract interface class EmergencySignalService {
 
   Future<EmergencyCommitment> cancelCommitment({
     required String alertId,
+    required String donorId,
     required String reason,
   });
 

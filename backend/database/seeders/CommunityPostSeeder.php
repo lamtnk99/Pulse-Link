@@ -60,7 +60,7 @@ class CommunityPostSeeder extends Seeder
                 'slug' => 'mot-lan-giu-loi-hen-nhieu-ca-benh-co-them-co-hoi',
                 'excerpt' => 'Câu chuyện từ các tình nguyện viên duy trì lịch hiến đều đặn và cách họ chuẩn bị trước ngày hiến máu.',
                 'content' => "Điều quý nhất trong một lịch hiến máu không chỉ là lượng máu được tiếp nhận, mà còn là sự đúng hẹn. Khi bạn xác nhận tham gia, ekip y tế có thể chuẩn bị vật tư, nhân sự và phân luồng tiếp nhận phù hợp hơn.\n\nTrước ngày hiến máu, hãy ăn nhẹ, tránh rượu bia, ngủ đủ và mang giấy tờ tùy thân. Sau khi hiến, bạn nên nghỉ tại điểm tiếp nhận ít nhất 10 phút và theo dõi phản ứng cơ thể.",
-                'image_url' => 'https://images.unsplash.com/photo-1579154204601-01588f351167?auto=format&fit=crop&q=80&w=900',
+                'image_url' => 'https://images.unsplash.com/photo-1584516150909-c43483ee7932?auto=format&fit=crop&q=80&w=900',
                 'status' => 'published',
                 'published_at' => now()->subDays(3),
                 'audience_type' => 'all',

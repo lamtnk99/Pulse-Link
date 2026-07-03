@@ -23,6 +23,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Throwable;
 
@@ -286,20 +287,24 @@ class EmergencyController extends Controller
 
         abort_if($commitment?->status === 'donated', 409, 'Ca SOS này đã được bệnh viện ghi nhận hiến máu.');
 
+        $commitmentValues = [
+            'status' => 'committed',
+            'latitude' => $payload['latitude'] ?? $commitment?->latitude,
+            'longitude' => $payload['longitude'] ?? $commitment?->longitude,
+            'eta_minutes' => $payload['eta_minutes'] ?? $commitment?->eta_minutes,
+            'committed_at' => $commitment?->committed_at ?? now(),
+            'last_location_at' => $hasLocation ? now() : $commitment?->last_location_at,
+        ];
+        if ($this->supportsCommitmentCancelReason()) {
+            $commitmentValues['cancel_reason'] = null;
+        }
+
         $commitment = EmergencyCommitment::query()->updateOrCreate(
             [
                 'emergency_alert_id' => $alert->id,
                 'donor_id' => $donor->id,
             ],
-            [
-                'status' => 'committed',
-                'cancel_reason' => null,
-                'latitude' => $payload['latitude'] ?? $commitment?->latitude,
-                'longitude' => $payload['longitude'] ?? $commitment?->longitude,
-                'eta_minutes' => $payload['eta_minutes'] ?? $commitment?->eta_minutes,
-                'committed_at' => $commitment?->committed_at ?? now(),
-                'last_location_at' => $hasLocation ? now() : $commitment?->last_location_at,
-            ],
+            $commitmentValues,
         );
 
         $commitment->load('donor.province', 'donor.ward', 'alert.hospital');
@@ -360,11 +365,15 @@ class EmergencyController extends Controller
 
         abort_if($commitment->status === 'donated', 409, 'Ca SOS này đã được bệnh viện ghi nhận hiến máu.');
 
-        $commitment->update([
+        $commitmentValues = [
             'status' => 'cancelled',
-            'cancel_reason' => $payload['cancel_reason'],
             'last_location_at' => now(),
-        ]);
+        ];
+        if ($this->supportsCommitmentCancelReason()) {
+            $commitmentValues['cancel_reason'] = $payload['cancel_reason'];
+        }
+
+        $commitment->update($commitmentValues);
 
         $commitment->load('donor.province', 'donor.ward', 'alert.hospital');
         $this->broadcastCommitment($commitment);
@@ -396,5 +405,10 @@ class EmergencyController extends Controller
                 'message' => $exception->getMessage(),
             ]);
         }
+    }
+
+    private function supportsCommitmentCancelReason(): bool
+    {
+        return Schema::hasColumn('emergency_commitments', 'cancel_reason');
     }
 }

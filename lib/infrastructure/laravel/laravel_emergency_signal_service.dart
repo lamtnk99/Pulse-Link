@@ -62,18 +62,21 @@ class LaravelBackedEmergencySignalService implements EmergencySignalService {
   @override
   Future<EmergencyCommitment> confirmCommitment({
     required String alertId,
+    required String donorId,
     GeoPoint? location,
     int? etaMinutes,
   }) async {
     final json = await _apiClient.postJson(
       '/api/mobile/sos-alerts/$alertId/commit',
       body: {
+        'donor_id': int.tryParse(donorId) ?? donorId,
         if (location != null) ...location.toJson(),
         if (etaMinutes != null) 'eta_minutes': etaMinutes,
       },
     );
     await _firebaseSignalService?.confirmCommitment(
       alertId: alertId,
+      donorId: donorId,
       location: location,
       etaMinutes: etaMinutes,
     );
@@ -87,6 +90,7 @@ class LaravelBackedEmergencySignalService implements EmergencySignalService {
   @override
   Future<void> updateCommitmentLocation({
     required String alertId,
+    required String donorId,
     required GeoPoint location,
     int? etaMinutes,
     EmergencyCommitmentStatus status = EmergencyCommitmentStatus.enRoute,
@@ -94,6 +98,7 @@ class LaravelBackedEmergencySignalService implements EmergencySignalService {
     await _apiClient.postJson(
       '/api/mobile/sos-alerts/$alertId/location',
       body: {
+        'donor_id': int.tryParse(donorId) ?? donorId,
         ...location.toJson(),
         if (etaMinutes != null) 'eta_minutes': etaMinutes,
         'status': status.apiName,
@@ -104,11 +109,15 @@ class LaravelBackedEmergencySignalService implements EmergencySignalService {
   @override
   Future<EmergencyCommitment> cancelCommitment({
     required String alertId,
+    required String donorId,
     required String reason,
   }) async {
     final json = await _apiClient.postJson(
       '/api/mobile/sos-alerts/$alertId/cancel',
-      body: {'cancel_reason': reason},
+      body: {
+        'donor_id': int.tryParse(donorId) ?? donorId,
+        'cancel_reason': reason,
+      },
     );
     final data = json['data'];
     return EmergencyCommitment.fromJson(
