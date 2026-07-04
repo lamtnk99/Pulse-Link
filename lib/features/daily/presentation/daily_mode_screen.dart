@@ -833,11 +833,6 @@ class _HistoryTab extends StatelessWidget {
         _ScreenTitle(
           title: 'Sổ hiến máu',
           subtitle: 'Chứng chỉ, thành tích và kết quả sau mỗi lần hiến.',
-          trailing: IconButton.filled(
-            onPressed: () => _showAddDonationSheet(context),
-            icon: const Icon(Icons.add),
-            tooltip: 'Thêm lần hiến máu',
-          ),
         ),
         const SizedBox(height: 12),
         _RecognitionSummaryCard(
