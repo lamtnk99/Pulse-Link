@@ -3,6 +3,7 @@ import 'dart:async';
 import '../../features/emergency/domain/emergency_alert.dart';
 import '../../features/emergency/domain/emergency_commitment.dart';
 import '../../features/emergency/domain/emergency_mission_resume.dart';
+import '../../features/notifications/domain/mobile_notification.dart';
 import '../../features/profile/domain/donor_profile.dart';
 import '../../core/location/geo_point.dart';
 import '../../services/emergency_signal_service.dart';
@@ -57,6 +58,48 @@ class LaravelBackedEmergencySignalService implements EmergencySignalService {
     }
 
     return EmergencyMissionResume.fromJson(data);
+  }
+
+  @override
+  Stream<MobileNotification> watchNotifications({
+    required DonorProfile profile,
+  }) async* {
+    final config = await _fetchRealtimeConfig();
+    if (config == null || !config.enabled) return;
+
+    await for (final event in _reverbRealtimeClient.watch(
+      config: config,
+      channels: {config.donorChannelTemplate.replaceAll('{donor_id}', profile.id)},
+    )) {
+      if (event.name != config.notificationCreatedEvent) continue;
+      final notification = event.data['notification'];
+      if (notification is Map<String, dynamic>) {
+        yield MobileNotification.fromJson(notification);
+      }
+    }
+  }
+
+  @override
+  Future<List<MobileNotification>> fetchNotifications({
+    required DonorProfile profile,
+  }) async {
+    final notifications = await _apiClient.getList(
+      '/api/mobile/me/notifications?user_id=${Uri.encodeComponent(profile.id)}',
+    );
+    return notifications
+        .whereType<Map<String, dynamic>>()
+        .map(MobileNotification.fromJson)
+        .toList(growable: false);
+  }
+
+  @override
+  Future<void> markNotificationRead({
+    required DonorProfile profile,
+    required String notificationId,
+  }) async {
+    await _apiClient.postJson(
+      '/api/mobile/me/notifications/$notificationId/read?user_id=${Uri.encodeComponent(profile.id)}',
+    );
   }
 
   @override

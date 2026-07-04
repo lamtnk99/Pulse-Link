@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,7 +16,9 @@ import '../features/emergency/domain/emergency_alert.dart';
 import '../features/emergency/domain/emergency_commitment.dart';
 import '../features/emergency/domain/emergency_mission_resume.dart';
 import '../features/emergency/domain/route_plan.dart';
+import '../features/notifications/domain/mobile_notification.dart';
 import '../features/profile/domain/donor_profile.dart';
+import '../infrastructure/laravel/laravel_api_client.dart';
 import '../services/donation_event_repository.dart';
 import '../services/donation_history_repository.dart';
 import '../services/donor_repository.dart';
@@ -55,6 +58,7 @@ class PulseLinkController extends ChangeNotifier {
   final EmergencyAudioService _audioService;
 
   StreamSubscription<EmergencyAlert>? _alertSubscription;
+  StreamSubscription<MobileNotification>? _notificationSubscription;
   Timer? _locationSyncTimer;
   bool _isSyncingEmergencyLocation = false;
   GeoPoint? _lastKnownLocation;
@@ -79,6 +83,9 @@ class PulseLinkController extends ChangeNotifier {
       final bookedAppointments = await _eventRepository.getBookedAppointments();
       final communityPosts = await _communityPostRepository.getPublishedPosts();
       final history = await _historyRepository.getDonationHistory();
+      final notifications = await _emergencySignalService.fetchNotifications(
+        profile: profile,
+      );
 
       _state = _state.copyWith(
         isLoading: false,
@@ -87,6 +94,7 @@ class PulseLinkController extends ChangeNotifier {
         bookedAppointments: bookedAppointments,
         communityPosts: communityPosts,
         donationHistory: history,
+        notifications: notifications,
         clearInitializationError: true,
       );
       notifyListeners();
@@ -97,6 +105,10 @@ class PulseLinkController extends ChangeNotifier {
       _alertSubscription = _emergencySignalService
           .watchAlerts(profile: profile)
           .listen(_handleEmergencyAlert);
+      await _notificationSubscription?.cancel();
+      _notificationSubscription = _emergencySignalService
+          .watchNotifications(profile: profile)
+          .listen(_handleMobileNotification);
     } catch (error) {
       _state = _state.copyWith(
         isLoading: false,
@@ -121,6 +133,9 @@ class PulseLinkController extends ChangeNotifier {
     final bookedAppointments = await _eventRepository.getBookedAppointments();
     final communityPosts = await _communityPostRepository.getPublishedPosts();
     final history = await _historyRepository.getDonationHistory();
+    final notifications = await _emergencySignalService.fetchNotifications(
+      profile: profile,
+    );
 
     _state = _state.copyWith(
       profile: profile,
@@ -128,6 +143,7 @@ class PulseLinkController extends ChangeNotifier {
       bookedAppointments: bookedAppointments,
       communityPosts: communityPosts,
       donationHistory: history,
+      notifications: notifications,
     );
     notifyListeners();
   }
@@ -209,6 +225,43 @@ class PulseLinkController extends ChangeNotifier {
       profile: updatedProfile,
       donationHistory: [donation, ..._state.donationHistory],
     );
+    notifyListeners();
+  }
+
+  Future<void> markNotificationRead(String notificationId) async {
+    final profile = _state.profile;
+    if (profile == null) return;
+
+    await _emergencySignalService.markNotificationRead(
+      profile: profile,
+      notificationId: notificationId,
+    );
+    _state = _state.copyWith(
+      notifications: _state.notifications
+          .map(
+            (notification) => notification.id == notificationId
+                ? MobileNotification(
+                    id: notification.id,
+                    type: notification.type,
+                    title: notification.title,
+                    body: notification.body,
+                    payload: notification.payload,
+                    readAt: DateTime.now(),
+                    createdAt: notification.createdAt,
+                  )
+                : notification,
+          )
+          .toList(growable: false),
+    );
+    notifyListeners();
+  }
+
+  void _handleMobileNotification(MobileNotification notification) {
+    final notifications = [
+      notification,
+      ..._state.notifications.where((item) => item.id != notification.id),
+    ];
+    _state = _state.copyWith(notifications: notifications);
     notifyListeners();
   }
 
@@ -355,6 +408,15 @@ class PulseLinkController extends ChangeNotifier {
       );
       notifyListeners();
       _startEmergencyLocationSync();
+    } on LaravelApiException catch (error) {
+      final message = _laravelMessage(error) ??
+          'Ca SOS này hiện không còn nhận thêm cam kết.';
+      _state = _state.copyWith(
+        sosIntensity: 0,
+        locationSyncError: message,
+      );
+      notifyListeners();
+      rethrow;
     } on Object {
       _state = _state.copyWith(
         sosIntensity: 0,
@@ -690,6 +752,7 @@ class PulseLinkController extends ChangeNotifier {
   void dispose() {
     _stopEmergencyLocationSync();
     _alertSubscription?.cancel();
+    _notificationSubscription?.cancel();
     _audioService.dispose();
     super.dispose();
   }
@@ -706,6 +769,19 @@ class PulseLinkController extends ChangeNotifier {
       return AppThemePreference.light;
     }
   }
+}
+
+String? _laravelMessage(LaravelApiException error) {
+  try {
+    final decoded = jsonDecode(error.body);
+    if (decoded is Map<String, dynamic>) {
+      final message = decoded['message'];
+      return message is String && message.isNotEmpty ? message : null;
+    }
+  } on Object {
+    return null;
+  }
+  return null;
 }
 
 class _PreparedEmergency {

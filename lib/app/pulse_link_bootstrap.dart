@@ -78,6 +78,7 @@ class PulseLinkBootstrap {
             donorChannelTemplate: 'mobile.donor.{donor_id}',
             alertActivatedEvent: 'emergency.alert.activated',
             commitmentUpdatedEvent: 'emergency.commitment.updated',
+            notificationCreatedEvent: 'mobile.notification.created',
           );
 
     return PulseLinkController(

@@ -14,6 +14,7 @@ class LaravelRealtimeConfig {
     required this.donorChannelTemplate,
     required this.alertActivatedEvent,
     required this.commitmentUpdatedEvent,
+    required this.notificationCreatedEvent,
   });
 
   factory LaravelRealtimeConfig.fromJson(Map<String, dynamic> json) {
@@ -37,6 +38,8 @@ class LaravelRealtimeConfig {
           events['alert_activated'] as String? ?? 'emergency.alert.activated',
       commitmentUpdatedEvent: events['commitment_updated'] as String? ??
           'emergency.commitment.updated',
+      notificationCreatedEvent: events['notification_created'] as String? ??
+          'mobile.notification.created',
     );
   }
 
@@ -49,6 +52,7 @@ class LaravelRealtimeConfig {
   final String donorChannelTemplate;
   final String alertActivatedEvent;
   final String commitmentUpdatedEvent;
+  final String notificationCreatedEvent;
 
   Uri get websocketUri {
     final websocketScheme = scheme == 'https' ? 'wss' : 'ws';
@@ -124,7 +128,8 @@ class ReverbRealtimeClient {
           }
 
           if (eventName == config.alertActivatedEvent ||
-              eventName == config.commitmentUpdatedEvent) {
+              eventName == config.commitmentUpdatedEvent ||
+              eventName == config.notificationCreatedEvent) {
             yield ReverbRealtimeEvent(
               name: eventName,
               data: _decodeData(message['data']),

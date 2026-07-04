@@ -55,6 +55,7 @@ const {
   cancelSos,
   completeSos,
   markCommitmentDonated,
+  updateCommitmentJourney,
   selectAlert,
 } = useEmergencyDashboard(apiBaseUrl)
 
@@ -282,6 +283,7 @@ onBeforeUnmount(() => {
           @cancel-alert="cancelSos"
           @complete-alert="completeSos"
           @mark-commitment-donated="markCommitmentDonated"
+          @update-commitment-journey="updateCommitmentJourney"
         />
         <HospitalManagement v-else-if="currentView === 'hospitals'" />
         <DonationEvents v-else-if="currentView === 'events'" />

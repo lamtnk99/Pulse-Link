@@ -79,13 +79,15 @@ enum EmergencyCommitmentStatus {
   committed,
   enRoute,
   donated,
-  cancelled;
+  cancelled,
+  notNeeded;
 
   static EmergencyCommitmentStatus fromName(String name) {
     return switch (name) {
       'en_route' => EmergencyCommitmentStatus.enRoute,
       'donated' => EmergencyCommitmentStatus.donated,
       'cancelled' => EmergencyCommitmentStatus.cancelled,
+      'not_needed' => EmergencyCommitmentStatus.notNeeded,
       _ => EmergencyCommitmentStatus.committed,
     };
   }
@@ -96,6 +98,7 @@ enum EmergencyCommitmentStatus {
       EmergencyCommitmentStatus.enRoute => 'en_route',
       EmergencyCommitmentStatus.donated => 'donated',
       EmergencyCommitmentStatus.cancelled => 'cancelled',
+      EmergencyCommitmentStatus.notNeeded => 'not_needed',
     };
   }
 }

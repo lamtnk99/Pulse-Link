@@ -574,3 +574,54 @@ Lưu ý:
 - Android emulator phải dùng LARAVEL_API_BASE_URL=http://10.0.2.2:8000.
 - Không revert các thay đổi dirty nếu không được yêu cầu; workspace đang có nhiều file đã chỉnh cho các batch trước.
 ```
+## Handoff 2026-07-04 - SOS Fulfillment & Blood Journey
+
+Trang thai trien khai gan nhat:
+
+- Backend da them vong doi SOS dua tren `donated` that su, khong tinh nguoi chi moi cam ket.
+- `emergency_commitments.status` co them `not_needed` de danh dau nguoi da cam ket/di chuyen nhung ca da du mau.
+- Khi so commitment `donated` dat `emergency_alerts.units_needed`, backend tu chuyen alert sang `fulfilled`, broadcast realtime va tao notification mem cho nguoi chua hien:
+  - "Cam on ban, ca hien mau nay da nhan du don vi mau can thiet. He thong da luu ghi nhan va xin hen ban o luot tiep theo nhe!"
+- Them DB/model/resource cho:
+  - `blood_journeys`
+  - `blood_journey_steps`
+  - `mobile_notifications`
+- Khi admin xac nhan commitment `donated`, backend tao/cap nhat `DonationHistory` nhu cu va tao `BloodJourney` mac dinh.
+- Them API:
+  - `GET /api/blood-journeys/{publicId}`
+  - `GET /api/mobile/me/notifications`
+  - `POST /api/mobile/me/notifications/{notification}/read`
+  - `POST /api/admin/emergency-alerts/{alert:public_id}/commitments/{commitment}/journey`
+  - `GET /journeys/{publicId}` public web page cho QR/fallback.
+- Certificate API payload da co them `blood_journey` neu donation history co journey.
+- Mobile parse them `BloodJourney`, `MobileNotification`, `EmergencyCommitmentStatus.notNeeded`.
+- Mobile home nut chuong da doi sang mo bottom sheet notification; long-press debug SOS can duoc tinh lai neu van can giu shortcut test.
+- Mobile donation history card co panel "Hanh trinh giot mau" khi `PastDonation.bloodJourney != null`.
+- Admin SOS da co:
+  - ty le `Da hien / Can` tren card ca SOS.
+  - badge `Da du mau` cho alert `fulfilled`.
+  - label `not_needed` trong SOS table/timeline/map.
+  - modal "Hanh trinh giot mau" cho commitment da `donated`, chon `patient`/`reserve`, step hien tai, location label va publish notification.
+
+Da kiem tra:
+
+- `cd backend && php artisan test --filter=EmergencyAlertApiTest`: pass 7 tests.
+- `cd backend && php artisan test`: pass 30 tests, 339 assertions.
+- `cd admin && npm run build`: pass sau khi bo sung label `not_needed`.
+- `flutter analyze --no-fatal-infos --no-fatal-warnings`: exit 0; con cac info/warning cu ve `withOpacity`, mock `_intensity`, v.v.
+
+Dang do / can agent sau lam tiep:
+
+- Chay lai format backend: `cd backend && vendor\bin\pint`. Lan truoc bi user interrupt khi dang chay, nen can rerun va sau do chay `vendor\bin\pint --test`.
+- Sau Pint, chay lai:
+  - `cd backend && php artisan test`
+  - `cd admin && npm run build`
+  - `flutter analyze --no-fatal-infos --no-fatal-warnings`
+- Kiem tra lai Admin SOS UI bang trinh duyet: do da chen them nut "Hanh trinh" thanh cot thu 5, can xem table co can gom action lai cho dep hon khong.
+- Kiem tra mobile donation history: panel journey dang duoc chen kha som trong card; neu UI thay hoi day, chuyen panel xuong duoi result summary/gan nut certificate.
+- Certificate web da co payload `blood_journey`, public journey page da co; tuy nhien link "Theo doi hanh trinh" tren blade certificate chua chen duoc do file cu bi encoding/mojibake khi patch. Can sua bang editor/patch ky hon.
+- Mobile certificate screen chua co panel journey rieng; hien moi co trong history tile. Nen them mot panel tuong tu vao `DonationCertificateScreen`.
+- Realtime notification backend da broadcast event `mobile.notification.created`, mobile service da nghe event; can test manual voi Reverb that tren web/apk.
+- Native push FCM/APNs chua lam; V1 dang la in-app notification + realtime/polling.
+- Nen them badge unread ro hon tren nut chuong mobile; hien moi doi click mo sheet, chua them badge vi patch block UI bi can encoding.
+- Co mot so chuoi tieng Viet cu trong project dang hien mojibake khi doc qua PowerShell. Neu agent tiep theo dung formatter/editor, can can than khong lam hong them encoding.

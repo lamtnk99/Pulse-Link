@@ -6,6 +6,7 @@ import type {
   DashboardStats,
   EmergencyAlert,
   EmergencyCommitment,
+  BloodJourney,
   Hospital,
   Province,
   SosPayload,
@@ -60,7 +61,7 @@ export function useEmergencyDashboard(apiBaseUrl: string) {
     commitments.value.filter((commitment) => visibleAlerts.value.some((alert) => alert.id === commitment.alert_id)),
   )
   const activeAlerts = computed(() =>
-    visibleAlerts.value.filter((alert) => alert.status === 'active'),
+    visibleAlerts.value.filter((alert) => ['active', 'fulfilled'].includes(alert.status)),
   )
   const activeAlert = computed(() =>
     activeAlerts.value.find((alert) => alert.id === selectedAlertId.value) ?? activeAlerts.value[0] ?? null,
@@ -175,6 +176,34 @@ export function useEmergencyDashboard(apiBaseUrl: string) {
     await loadDashboard()
   }
 
+  async function updateCommitmentJourney(
+    alert: EmergencyAlert,
+    commitment: EmergencyCommitment,
+    payload: {
+      destination_type?: 'patient' | 'reserve'
+      current_step?: string
+      location_label?: string
+      publish?: boolean
+    },
+  ) {
+    const response = await fetch(`${apiBaseUrl}/api/admin/emergency-alerts/${alert.id}/commitments/${commitment.id}/journey`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    if (!response.ok) throw new Error(await resolveApiError(response, 'Không thể cập nhật hành trình giọt máu.'))
+
+    const result = (await response.json()) as { data: BloodJourney }
+    upsertCommitment({
+      ...commitment,
+      blood_journey: result.data,
+    })
+    await loadDashboard()
+  }
+
   async function resolveApiError(response: Response, fallback: string) {
     try {
       const payload = await response.json() as { message?: string; errors?: Record<string, string[]> }
@@ -280,6 +309,7 @@ export function useEmergencyDashboard(apiBaseUrl: string) {
     cancelSos,
     completeSos,
     markCommitmentDonated,
+    updateCommitmentJourney,
     selectAlert,
   }
 }

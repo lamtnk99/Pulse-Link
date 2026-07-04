@@ -76,7 +76,7 @@ class EmergencyDispatchService
     public function activeDashboardPayload(?int $hospitalId = null): array
     {
         $alerts = EmergencyAlert::query()
-            ->with(['hospital.province', 'hospital.ward', 'recipients.donor.province', 'commitments.donor.province'])
+            ->with(['hospital.province', 'hospital.ward', 'recipients.donor.province', 'commitments.donor.province', 'commitments.bloodJourney.steps'])
             ->where('status', 'active')
             ->when($hospitalId, fn ($query) => $query->where('hospital_id', $hospitalId))
             ->latest()

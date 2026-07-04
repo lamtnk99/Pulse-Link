@@ -10,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         if (DB::getDriverName() === 'mysql') {
-            DB::statement("ALTER TABLE emergency_commitments MODIFY status ENUM('committed','en_route','donated','cancelled') NOT NULL DEFAULT 'committed'");
+            DB::statement("ALTER TABLE emergency_commitments MODIFY status ENUM('committed','en_route','donated','cancelled','not_needed') NOT NULL DEFAULT 'committed'");
         }
 
         Schema::table('emergency_commitments', function (Blueprint $table) {

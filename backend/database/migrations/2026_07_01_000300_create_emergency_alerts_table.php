@@ -42,7 +42,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('emergency_alert_id')->constrained()->cascadeOnDelete();
             $table->foreignId('donor_id')->references('id')->on('users')->cascadeOnDelete();
-            $table->enum('status', ['committed', 'en_route', 'donated', 'cancelled'])
+            $table->enum('status', ['committed', 'en_route', 'donated', 'cancelled', 'not_needed'])
                 ->default('committed')
                 ->index();
             $table->decimal('latitude', 10, 7)->nullable();

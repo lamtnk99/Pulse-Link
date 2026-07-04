@@ -124,7 +124,7 @@ export interface EmergencyRecipient {
 export interface EmergencyCommitment {
   id: number
   alert_id: string
-  status: 'committed' | 'en_route' | 'donated' | 'cancelled'
+  status: 'committed' | 'en_route' | 'donated' | 'cancelled' | 'not_needed'
   cancel_reason?: string | null
   latitude: number | null
   longitude: number | null
@@ -136,7 +136,28 @@ export interface EmergencyCommitment {
   verified_at?: string | null
   verified_by?: number | null
   donation_history_id?: number | null
+  blood_journey?: BloodJourney | null
   donor: Donor
+}
+
+export interface BloodJourneyStep {
+  key: string
+  label: string
+  message?: string | null
+  occurred_at?: string | null
+  completed: boolean
+}
+
+export interface BloodJourney {
+  id: string
+  destination_type: 'patient' | 'reserve'
+  current_step: string
+  location_label?: string | null
+  final_message?: string | null
+  published_at?: string | null
+  completed_at?: string | null
+  verify_url?: string | null
+  steps: BloodJourneyStep[]
 }
 
 export interface EmergencyAlert {

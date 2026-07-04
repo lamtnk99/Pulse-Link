@@ -7,10 +7,12 @@ use App\Http\Controllers\Api\Admin\EmergencyController;
 use App\Http\Controllers\Api\Admin\HospitalController as AdminHospitalController;
 use App\Http\Controllers\Api\Admin\StaffController as AdminStaffController;
 use App\Http\Controllers\Api\Admin\UploadController as AdminUploadController;
+use App\Http\Controllers\Api\BloodJourneyController;
 use App\Http\Controllers\Api\CertificateController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\Mobile\CommunityPostController as MobileCommunityPostController;
 use App\Http\Controllers\Api\Mobile\MobileDonationController;
+use App\Http\Controllers\Api\Mobile\MobileNotificationController;
 use App\Http\Controllers\Api\Mobile\MobileProfileController;
 use App\Http\Controllers\Api\Mobile\RoutePlannerController;
 use Illuminate\Support\Facades\Route;
@@ -22,11 +24,14 @@ Route::prefix('locations')->group(function () {
 });
 
 Route::get('certificates/{certificateId}', [CertificateController::class, 'show']);
+Route::get('blood-journeys/{publicId}', [BloodJourneyController::class, 'show']);
 
 Route::prefix('mobile')->group(function () {
     Route::get('me/hero-pass', [MobileProfileController::class, 'heroPass']);
     Route::post('me/hero-pass', [MobileProfileController::class, 'updateHeroPass']);
     Route::get('me/donations', [MobileDonationController::class, 'history']);
+    Route::get('me/notifications', [MobileNotificationController::class, 'index']);
+    Route::post('me/notifications/{notification}/read', [MobileNotificationController::class, 'markRead']);
     Route::get('me/appointments', [MobileDonationController::class, 'appointments']);
     Route::get('me/sos-commitment', [EmergencyController::class, 'mobileActiveCommitment']);
     Route::get('realtime-config', [EmergencyController::class, 'mobileRealtimeConfig']);
@@ -65,4 +70,5 @@ Route::prefix('admin')->group(function () {
     Route::post('emergency-alerts/{alert:public_id}/cancel', [EmergencyController::class, 'cancel']);
     Route::post('emergency-alerts/{alert:public_id}/complete', [EmergencyController::class, 'complete']);
     Route::post('emergency-alerts/{alert:public_id}/commitments/{commitment}/donated', [EmergencyController::class, 'markCommitmentDonated']);
+    Route::post('emergency-alerts/{alert:public_id}/commitments/{commitment}/journey', [EmergencyController::class, 'updateCommitmentJourney']);
 });

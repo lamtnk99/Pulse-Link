@@ -100,6 +100,10 @@ class DonationHistoryTile extends StatelessWidget {
               ),
             ],
           ),
+          if (donation.bloodJourney != null) ...[
+            const SizedBox(height: 12),
+            _BloodJourneyPanel(donation: donation),
+          ],
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -266,6 +270,84 @@ class DonationHistoryTile extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _BloodJourneyPanel extends StatelessWidget {
+  const _BloodJourneyPanel({
+    required this.donation,
+  });
+
+  final PastDonation donation;
+
+  @override
+  Widget build(BuildContext context) {
+    final journey = donation.bloodJourney!;
+    final message = journey.publishedAt == null
+        ? 'Bệnh viện đang cập nhật hành trình giọt máu của bạn.'
+        : journey.finalMessage ?? 'Hành trình giọt máu đã được ghi nhận.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: PulseLinkTheme.primaryRed.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: PulseLinkTheme.primaryRed.withOpacity(0.16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Hành trình giọt máu',
+            style: TextStyle(
+              color: PulseLinkTheme.primaryRed,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...journey.steps.map(
+            (step) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(
+                    step.completed
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 16,
+                    color: step.completed
+                        ? PulseLinkTheme.successGreen
+                        : PulseLinkTheme.mutedColor(context),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      VietnameseLabels.text(step.label),
+                      style: TextStyle(
+                        color: PulseLinkTheme.textColor(context),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            VietnameseLabels.text(message),
+            style: TextStyle(
+              color: PulseLinkTheme.mutedColor(context),
+              fontSize: 12,
+              height: 1.35,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

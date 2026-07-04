@@ -9,6 +9,7 @@ import '../features/emergency/domain/dispatch_wave.dart';
 import '../features/emergency/domain/emergency_alert.dart';
 import '../features/emergency/domain/emergency_commitment.dart';
 import '../features/emergency/domain/route_plan.dart';
+import '../features/notifications/domain/mobile_notification.dart';
 import '../features/profile/domain/donor_profile.dart';
 
 class PulseLinkState {
@@ -21,6 +22,7 @@ class PulseLinkState {
     this.bookedAppointments = const [],
     this.communityPosts = const [],
     this.donationHistory = const [],
+    this.notifications = const [],
     this.activeAlerts = const [],
     this.activeAlert,
     this.sosMissionPhase = SosMissionPhase.alertPreview,
@@ -50,6 +52,7 @@ class PulseLinkState {
   final List<DonationAppointment> bookedAppointments;
   final List<CommunityPost> communityPosts;
   final List<PastDonation> donationHistory;
+  final List<MobileNotification> notifications;
   final List<EmergencyAlert> activeAlerts;
   final EmergencyAlert? activeAlert;
   final SosMissionPhase sosMissionPhase;
@@ -79,6 +82,7 @@ class PulseLinkState {
     List<DonationAppointment>? bookedAppointments,
     List<CommunityPost>? communityPosts,
     List<PastDonation>? donationHistory,
+    List<MobileNotification>? notifications,
     List<EmergencyAlert>? activeAlerts,
     EmergencyAlert? activeAlert,
     bool clearActiveAlert = false,
@@ -108,6 +112,7 @@ class PulseLinkState {
       bookedAppointments: bookedAppointments ?? this.bookedAppointments,
       communityPosts: communityPosts ?? this.communityPosts,
       donationHistory: donationHistory ?? this.donationHistory,
+      notifications: notifications ?? this.notifications,
       activeAlerts: activeAlerts ?? this.activeAlerts,
       activeAlert: clearActiveAlert ? null : activeAlert ?? this.activeAlert,
       sosMissionPhase: sosMissionPhase ?? this.sosMissionPhase,

@@ -1,6 +1,7 @@
 import '../features/emergency/domain/emergency_alert.dart';
 import '../features/emergency/domain/emergency_commitment.dart';
 import '../features/emergency/domain/emergency_mission_resume.dart';
+import '../features/notifications/domain/mobile_notification.dart';
 import '../features/profile/domain/donor_profile.dart';
 import '../core/location/geo_point.dart';
 
@@ -11,6 +12,19 @@ abstract interface class EmergencySignalService {
 
   Future<EmergencyMissionResume?> fetchActiveCommitment({
     required DonorProfile profile,
+  });
+
+  Stream<MobileNotification> watchNotifications({
+    required DonorProfile profile,
+  });
+
+  Future<List<MobileNotification>> fetchNotifications({
+    required DonorProfile profile,
+  });
+
+  Future<void> markNotificationRead({
+    required DonorProfile profile,
+    required String notificationId,
   });
 
   Future<EmergencyCommitment> confirmCommitment({

@@ -24,6 +24,7 @@ class EmergencyCommitmentResource extends JsonResource
             'verified_at' => $this->verified_at?->toIso8601String(),
             'verified_by' => $this->verified_by,
             'donation_history_id' => $this->donation_history_id,
+            'blood_journey' => BloodJourneyResource::make($this->whenLoaded('bloodJourney')),
             'donor' => UserDonorResource::make($this->whenLoaded('donor')),
         ];
     }

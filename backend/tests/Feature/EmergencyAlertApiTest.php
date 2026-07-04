@@ -256,4 +256,124 @@ class EmergencyAlertApiTest extends TestCase
                 'id' => $incompatibleAlert->public_id,
             ]);
     }
+
+    public function test_sos_is_fulfilled_only_after_required_donations_and_late_commit_is_soft_blocked(): void
+    {
+        Event::fake();
+        $fakeRealtimeGateway = new class implements EmergencyAlertRealtimeGateway
+        {
+            public int $published = 0;
+
+            public function publish(EmergencyAlert $alert): void
+            {
+                $this->published++;
+            }
+        };
+        $this->app->instance(EmergencyAlertRealtimeGateway::class, $fakeRealtimeGateway);
+
+        $this->seed();
+
+        $staff = User::query()->where('email', 'admin@pulselink.test')->firstOrFail();
+        $hospital = Hospital::query()->where('code', 'CR-79')->firstOrFail();
+        $donors = User::query()
+            ->where('role', 'donor')
+            ->where('blood_type', 'O+')
+            ->take(3)
+            ->get();
+
+        $alertId = $this->postJson("/api/admin/emergency-alerts?admin_user_id={$staff->id}", [
+            'hospital_id' => $hospital->id,
+            'required_blood_type' => 'O+',
+            'level' => 'level1',
+            'units_needed' => 1,
+            'message' => 'Can mot don vi mau O+ cho ca cap cuu.',
+            'expires_at' => now()->addMinutes(45)->toIso8601String(),
+        ])->assertCreated()->json('data.id');
+
+        foreach ($donors->take(2) as $donor) {
+            $this->postJson("/api/mobile/sos-alerts/{$alertId}/commit", [
+                'donor_id' => $donor->id,
+                'eta_minutes' => 10,
+            ])->assertOk();
+        }
+
+        $firstCommitment = EmergencyCommitment::query()
+            ->whereHas('alert', fn ($query) => $query->where('public_id', $alertId))
+            ->where('donor_id', $donors[0]->id)
+            ->firstOrFail();
+
+        $this->postJson("/api/admin/emergency-alerts/{$alertId}/commitments/{$firstCommitment->id}/donated?admin_user_id={$staff->id}", [
+            'volume_ml' => 350,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('emergency_alerts', [
+            'public_id' => $alertId,
+            'status' => 'fulfilled',
+        ]);
+        $this->assertDatabaseHas('emergency_commitments', [
+            'donor_id' => $donors[1]->id,
+            'status' => 'not_needed',
+        ]);
+        $this->assertDatabaseHas('mobile_notifications', [
+            'user_id' => $donors[1]->id,
+            'type' => 'sos_fulfilled',
+        ]);
+
+        $this->postJson("/api/mobile/sos-alerts/{$alertId}/commit", [
+            'donor_id' => $donors[2]->id,
+            'eta_minutes' => 20,
+        ])->assertStatus(409)
+            ->assertJsonPath('message', 'Cảm ơn bạn, ca hiến máu này đã nhận đủ đơn vị máu cần thiết. Hệ thống đã lưu ghi nhận và xin hẹn bạn ở lượt tiếp theo nhé!');
+    }
+
+    public function test_admin_can_publish_blood_journey_for_sos_donation(): void
+    {
+        Event::fake();
+        $this->seed();
+
+        $staff = User::query()->where('email', 'admin@pulselink.test')->firstOrFail();
+        $hospital = Hospital::query()->where('code', 'CR-79')->firstOrFail();
+        $donor = User::query()
+            ->where('role', 'donor')
+            ->where('blood_type', 'O+')
+            ->firstOrFail();
+
+        $alertId = $this->postJson("/api/admin/emergency-alerts?admin_user_id={$staff->id}", [
+            'hospital_id' => $hospital->id,
+            'required_blood_type' => 'O+',
+            'level' => 'level1',
+            'units_needed' => 2,
+            'message' => 'Can mau O+ cho hanh trinh mau.',
+            'expires_at' => now()->addMinutes(45)->toIso8601String(),
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/mobile/sos-alerts/{$alertId}/commit", [
+            'donor_id' => $donor->id,
+            'eta_minutes' => 10,
+        ])->assertOk();
+
+        $commitment = EmergencyCommitment::query()
+            ->whereHas('alert', fn ($query) => $query->where('public_id', $alertId))
+            ->where('donor_id', $donor->id)
+            ->firstOrFail();
+
+        $this->postJson("/api/admin/emergency-alerts/{$alertId}/commitments/{$commitment->id}/donated?admin_user_id={$staff->id}", [
+            'volume_ml' => 350,
+        ])->assertOk();
+
+        $this->postJson("/api/admin/emergency-alerts/{$alertId}/commitments/{$commitment->id}/journey?admin_user_id={$staff->id}", [
+            'destination_type' => 'reserve',
+            'current_step' => 'stored',
+            'location_label' => 'Kho máu bệnh viện',
+            'publish' => true,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.destination_type', 'reserve')
+            ->assertJsonPath('data.current_step', 'stored');
+
+        $this->assertDatabaseHas('mobile_notifications', [
+            'user_id' => $donor->id,
+            'type' => 'blood_journey_completed',
+        ]);
+    }
 }

@@ -1425,11 +1425,91 @@ class _DailyHeader extends StatelessWidget {
           ),
         ),
         IconButton.filledTonal(
-          onPressed: controller.simulateSosAlert,
+          onPressed: () => _showNotifications(context, controller),
           icon: const Icon(Icons.notifications_active_outlined),
           tooltip: 'Mô phỏng tín hiệu SOS',
         ),
       ],
+    );
+  }
+  Future<void> _showNotifications(
+    BuildContext context,
+    PulseLinkController controller,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: PulseLinkTheme.surfaceColor(context),
+      builder: (context) {
+        final notifications = controller.state.notifications;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Thông báo',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                if (notifications.isEmpty)
+                  Text(
+                    'Chưa có thông báo mới.',
+                    style: TextStyle(
+                      color: PulseLinkTheme.mutedColor(context),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: notifications.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final notification = notifications[index];
+                        return ListTile(
+                          contentPadding: const EdgeInsets.all(12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: PulseLinkTheme.subtleBorderColor(context),
+                            ),
+                          ),
+                          tileColor: notification.unread
+                              ? PulseLinkTheme.primaryRed.withOpacity(0.08)
+                              : PulseLinkTheme.surfaceColor(context),
+                          title: Text(
+                            notification.title,
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              notification.body,
+                              style: TextStyle(
+                                color: PulseLinkTheme.mutedColor(context),
+                                height: 1.35,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          onTap: () {
+                            controller.markNotificationRead(notification.id);
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -71,6 +71,11 @@ class User extends Authenticatable
         return $this->hasMany(EmergencyCommitment::class, 'donor_id');
     }
 
+    public function mobileNotifications()
+    {
+        return $this->hasMany(MobileNotification::class);
+    }
+
     public function hospital()
     {
         return $this->belongsTo(Hospital::class);

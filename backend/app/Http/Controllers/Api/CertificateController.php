@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BloodJourneyResource;
 use App\Models\DonationHistory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
@@ -27,7 +28,7 @@ class CertificateController extends Controller
     private function findCertificate(string $certificateId): DonationHistory
     {
         return DonationHistory::query()
-            ->with('user', 'hospital')
+            ->with('user', 'hospital', 'bloodJourney.hospital', 'bloodJourney.steps')
             ->where('certificate_id', $certificateId)
             ->firstOrFail();
     }
@@ -47,6 +48,9 @@ class CertificateController extends Controller
             'hospital_name' => $history->hospital?->name,
             'issued_at' => $history->certificate_issued_at?->toIso8601String(),
             'verified' => $history->status === 'verified',
+            'blood_journey' => $history->bloodJourney
+                ? BloodJourneyResource::make($history->bloodJourney)->resolve()
+                : null,
         ];
     }
 }

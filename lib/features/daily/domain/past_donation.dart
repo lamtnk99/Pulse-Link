@@ -1,3 +1,5 @@
+import 'blood_journey.dart';
+
 class PastDonation {
   const PastDonation({
     required this.id,
@@ -14,6 +16,7 @@ class PastDonation {
     this.notes,
     this.resultSummary,
     this.resultPublishedAt,
+    this.bloodJourney,
   });
 
   factory PastDonation.fromJson(Map<String, dynamic> json) {
@@ -37,6 +40,9 @@ class PastDonation {
       resultPublishedAt: json['result_published_at'] == null
           ? null
           : DateTime.parse(json['result_published_at'] as String),
+      bloodJourney: json['blood_journey'] is Map<String, dynamic>
+          ? BloodJourney.fromJson(json['blood_journey'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -54,6 +60,7 @@ class PastDonation {
   final String? notes;
   final String? resultSummary;
   final DateTime? resultPublishedAt;
+  final BloodJourney? bloodJourney;
 
   Map<String, dynamic> toJson() {
     return {
@@ -71,6 +78,7 @@ class PastDonation {
       'notes': notes,
       'result_summary': resultSummary,
       'result_published_at': resultPublishedAt?.toIso8601String(),
+      'blood_journey': bloodJourney,
     };
   }
 }

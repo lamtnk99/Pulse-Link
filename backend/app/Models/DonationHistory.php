@@ -63,4 +63,9 @@ class DonationHistory extends Model
     {
         return $this->belongsTo(Hospital::class);
     }
+
+    public function bloodJourney()
+    {
+        return $this->hasOne(BloodJourney::class);
+    }
 }

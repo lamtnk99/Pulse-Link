@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Mobile;
 use App\Domain\Geo\DistanceCalculator;
 use App\Domain\Geo\GeoPoint;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\BloodJourneyResource;
 use App\Http\Resources\DonationAppointmentResource;
 use App\Http\Resources\DonationEventDetailResource;
 use App\Http\Resources\DonationEventResource;
@@ -160,7 +161,7 @@ class MobileDonationController extends Controller
 
         return response()->json([
             'data' => DonationHistory::query()
-                ->with('appointment')
+                ->with('appointment', 'bloodJourney.hospital', 'bloodJourney.steps')
                 ->where('user_id', $userId)
                 ->latest('donated_at')
                 ->get()
@@ -240,6 +241,9 @@ class MobileDonationController extends Controller
             'certificate_title' => $history->certificate_title,
             'certificate_issued_at' => $history->certificate_issued_at?->toIso8601String(),
             'certificate_verify_url' => $request->getSchemeAndHttpHost().'/certificates/'.$history->certificate_id,
+            'blood_journey' => $history->bloodJourney
+                ? BloodJourneyResource::make($history->bloodJourney)->resolve()
+                : null,
             'status' => $history->status,
             'notes' => $history->notes,
             'result_summary' => $history->appointment?->result_published_at ? $history->appointment->result_summary : null,

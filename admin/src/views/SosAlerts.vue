@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, reactive, watch } from 'vue'
-import { AlertTriangle, BadgeCheck, CheckCircle2, Radio, ShieldAlert, XCircle } from '@lucide/vue'
+import { computed, reactive, ref, watch } from 'vue'
+import { AlertTriangle, BadgeCheck, CheckCircle2, MapPinned, Radio, ShieldAlert, XCircle } from '@lucide/vue'
 import AlertTimeline from '../components/AlertTimeline.vue'
 import LiveTrackingMap from '../components/LiveTrackingMap.vue'
 import type { DashboardStats, EmergencyAlert, EmergencyCommitment } from '../types'
@@ -21,16 +21,25 @@ const emit = defineEmits<{
   cancelAlert: [alert: EmergencyAlert]
   completeAlert: [alert: EmergencyAlert]
   markCommitmentDonated: [alert: EmergencyAlert, commitment: EmergencyCommitment, volumeMl: number]
+  updateCommitmentJourney: [alert: EmergencyAlert, commitment: EmergencyCommitment, payload: { destination_type?: 'patient' | 'reserve'; current_step?: string; location_label?: string; publish?: boolean }]
 }>()
 
 const waveSummary = computed(() => props.activeAlert?.dispatch_summary ?? {})
 const donationVolumes = reactive<Record<number, number>>({})
 const donationVolumeOptions = [250, 350, 450]
+const editingJourneyCommitment = ref<EmergencyCommitment | null>(null)
+const journeyForm = reactive({
+  destination_type: 'patient' as 'patient' | 'reserve',
+  current_step: 'received',
+  location_label: '',
+  publish: false,
+})
 const commitmentStatusLabels: Record<EmergencyCommitment['status'], string> = {
   committed: 'Đã cam kết',
   en_route: 'Đang di chuyển',
   donated: 'Đã hiến',
   cancelled: 'Đã hủy',
+  not_needed: 'Ca đã đủ',
 }
 const selectedAlertStats = computed(() => {
   const alert = props.activeAlert
@@ -39,9 +48,25 @@ const selectedAlertStats = computed(() => {
   return {
     active_alerts: alert?.status === 'active' ? 1 : 0,
     notified_donors: alert ? (alert.dispatch_summary?.recipient_count ?? alert.recipients?.length ?? 0) : 0,
-    committed_donors: commitments.filter((commitment) => commitment.status !== 'cancelled').length,
+    committed_donors: commitments.filter((commitment) => !['cancelled', 'not_needed'].includes(commitment.status)).length,
     donated_donors: commitments.filter((commitment) => commitment.status === 'donated').length,
   }
+})
+const journeyStepOptions = computed(() => {
+  if (journeyForm.destination_type === 'reserve') {
+    return [
+      { key: 'received', label: 'Đã tiếp nhận' },
+      { key: 'quality_check', label: 'Đang kiểm tra chất lượng' },
+      { key: 'stored', label: 'Đã lưu trữ an toàn tại kho máu bệnh viện/quốc gia' },
+    ]
+  }
+
+  return [
+    { key: 'received', label: 'Đã tiếp nhận' },
+    { key: 'quality_check', label: 'Đang kiểm tra chất lượng' },
+    { key: 'emergency_transport', label: 'Đang vận chuyển cấp cứu' },
+    { key: 'transfused', label: 'Đã truyền cho bệnh nhân thành công' },
+  ]
 })
 
 watch(
@@ -75,6 +100,33 @@ function normalizeDonationVolume(commitmentId: number) {
   const volume = donationVolumeOptions.includes(rawValue) ? rawValue : 350
   donationVolumes[commitmentId] = volume
   return volume
+}
+
+function donatedCount(alert: EmergencyAlert) {
+  return alert.commitments?.filter((commitment) => commitment.status === 'donated').length ?? 0
+}
+
+function openJourney(commitment: EmergencyCommitment) {
+  editingJourneyCommitment.value = commitment
+  journeyForm.destination_type = commitment.blood_journey?.destination_type ?? 'patient'
+  journeyForm.current_step = commitment.blood_journey?.current_step ?? 'received'
+  journeyForm.location_label = commitment.blood_journey?.location_label ?? props.activeAlert?.hospital?.name ?? ''
+  journeyForm.publish = Boolean(commitment.blood_journey?.published_at)
+}
+
+function closeJourney() {
+  editingJourneyCommitment.value = null
+}
+
+function saveJourney() {
+  if (!props.activeAlert || !editingJourneyCommitment.value) return
+  emit('updateCommitmentJourney', props.activeAlert, editingJourneyCommitment.value, {
+    destination_type: journeyForm.destination_type,
+    current_step: journeyForm.current_step,
+    location_label: journeyForm.location_label,
+    publish: journeyForm.publish,
+  })
+  closeJourney()
 }
 </script>
 
@@ -151,6 +203,15 @@ function normalizeDonationVolume(commitmentId: number) {
             <span class="rounded bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">
               Cam kết: {{ alert.commitments?.length ?? 0 }}
             </span>
+            <span
+              class="rounded px-2 py-1 text-[11px] font-bold"
+              :class="alert.status === 'fulfilled' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'"
+            >
+              Đã hiến: {{ donatedCount(alert) }}/{{ alert.units_needed }}
+            </span>
+            <span v-if="alert.status === 'fulfilled'" class="rounded bg-emerald-50 px-2 py-1 text-[11px] font-black uppercase text-emerald-700">
+              Đã đủ máu
+            </span>
           </div>
         </article>
       </div>
@@ -194,7 +255,7 @@ function normalizeDonationVolume(commitmentId: number) {
         <div
           v-for="commitment in commitments"
           :key="commitment.id"
-          class="grid min-h-28 gap-3 border-b border-slate-100 p-4 last:border-b-0 lg:grid-cols-[minmax(240px,1.4fr)_180px_220px_160px] lg:items-center"
+          class="grid min-h-28 gap-3 border-b border-slate-100 p-4 last:border-b-0 lg:grid-cols-[minmax(220px,1.4fr)_160px_190px_140px_140px] lg:items-center"
         >
           <div class="min-w-0">
             <p class="font-black text-slate-950">{{ commitment.donor?.name }}</p>
@@ -232,11 +293,19 @@ function normalizeDonationVolume(commitmentId: number) {
           <button
             class="inline-flex h-11 w-40 items-center justify-center gap-2 rounded-md px-3 text-xs font-black uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-60 lg:justify-self-end"
             :class="commitment.status === 'donated' ? 'bg-amber-50 text-amber-700' : 'bg-slate-950 text-white hover:bg-slate-800'"
-            :disabled="commitment.status === 'donated' || commitment.status === 'cancelled'"
+            :disabled="commitment.status === 'donated' || commitment.status === 'cancelled' || commitment.status === 'not_needed'"
             @click="markDonated(commitment)"
           >
             <BadgeCheck class="h-4 w-4" />
             {{ commitment.status === 'donated' ? 'Đã ghi nhận' : 'Đã hiến' }}
+          </button>
+          <button
+            v-if="commitment.status === 'donated'"
+            class="inline-flex h-11 w-40 items-center justify-center gap-2 rounded-md border border-red-100 bg-red-50 px-3 text-xs font-black uppercase tracking-wide text-[#E31837] transition hover:bg-white lg:justify-self-end"
+            @click="openJourney(commitment)"
+          >
+            <MapPinned class="h-4 w-4" />
+            Hành trình
           </button>
         </div>
       </div>
@@ -281,5 +350,61 @@ function normalizeDonationVolume(commitmentId: number) {
         <AlertTimeline :alerts="activeAlert ? [activeAlert] : alerts" :commitments="commitments" />
       </div>
     </section>
+
+    <div
+      v-if="editingJourneyCommitment"
+      class="fixed inset-0 z-50 grid place-items-center bg-slate-950/45 p-4"
+      @click.self="closeJourney"
+    >
+      <div class="w-full max-w-xl rounded-lg bg-white p-5 shadow-2xl">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-[#E31837]">Hành trình giọt máu</p>
+            <h3 class="mt-1 text-xl font-black text-slate-950">{{ editingJourneyCommitment.donor?.name }}</h3>
+          </div>
+          <button class="rounded-md border border-slate-200 px-3 py-2 text-xs font-black text-slate-500 hover:bg-slate-50" @click="closeJourney">
+            Đóng
+          </button>
+        </div>
+
+        <div class="mt-5 grid gap-4">
+          <label class="block">
+            <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Kịch bản</span>
+            <select v-model="journeyForm.destination_type" class="mt-1 h-11 w-full rounded-md border border-slate-200 px-3 text-sm font-bold outline-none focus:border-[#E31837]">
+              <option value="patient">Đến thẳng bệnh nhân</option>
+              <option value="reserve">Chuyển vào kho dự trữ</option>
+            </select>
+          </label>
+
+          <label class="block">
+            <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Tiến trình hiện tại</span>
+            <select v-model="journeyForm.current_step" class="mt-1 h-11 w-full rounded-md border border-slate-200 px-3 text-sm font-bold outline-none focus:border-[#E31837]">
+              <option v-for="step in journeyStepOptions" :key="step.key" :value="step.key">
+                {{ step.label }}
+              </option>
+            </select>
+          </label>
+
+          <label class="block">
+            <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Vị trí mô tả</span>
+            <input v-model="journeyForm.location_label" class="mt-1 h-11 w-full rounded-md border border-slate-200 px-3 text-sm font-bold outline-none focus:border-[#E31837]" placeholder="Khoa cấp cứu, kho máu bệnh viện..." />
+          </label>
+
+          <label class="flex items-center gap-3 rounded-md bg-red-50 p-3 text-sm font-bold text-red-900">
+            <input v-model="journeyForm.publish" type="checkbox" class="h-4 w-4 accent-[#E31837]" />
+            Công bố và gửi thông báo cho người hiến khi bước hiện tại là bước cuối
+          </label>
+        </div>
+
+        <div class="mt-5 flex justify-end gap-2">
+          <button class="rounded-md border border-slate-200 px-4 py-2 text-sm font-black text-slate-600 hover:bg-slate-50" @click="closeJourney">
+            Hủy
+          </button>
+          <button class="rounded-md bg-[#E31837] px-4 py-2 text-sm font-black text-white hover:bg-red-700" @click="saveJourney">
+            Lưu hành trình
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

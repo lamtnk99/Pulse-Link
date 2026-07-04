@@ -5,6 +5,7 @@ import '../../features/emergency/domain/emergency_alert.dart';
 import '../../features/emergency/domain/emergency_commitment.dart';
 import '../../features/emergency/domain/emergency_mission_resume.dart';
 import '../../features/emergency/domain/route_plan.dart';
+import '../../features/notifications/domain/mobile_notification.dart';
 import '../../features/profile/domain/donor_profile.dart';
 import '../../services/emergency_audio_service.dart';
 import '../../services/emergency_signal_service.dart';
@@ -28,6 +29,28 @@ class MockEmergencySignalService implements EmergencySignalService {
     required DonorProfile profile,
   }) async {
     return null;
+  }
+
+  @override
+  Stream<MobileNotification> watchNotifications({
+    required DonorProfile profile,
+  }) {
+    return const Stream<MobileNotification>.empty();
+  }
+
+  @override
+  Future<List<MobileNotification>> fetchNotifications({
+    required DonorProfile profile,
+  }) async {
+    return const [];
+  }
+
+  @override
+  Future<void> markNotificationRead({
+    required DonorProfile profile,
+    required String notificationId,
+  }) async {
+    return;
   }
 
   @override

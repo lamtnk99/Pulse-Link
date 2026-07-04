@@ -53,6 +53,11 @@ class EmergencyCommitment extends Model
         return $this->belongsTo(DonationHistory::class);
     }
 
+    public function bloodJourney()
+    {
+        return $this->hasOne(BloodJourney::class);
+    }
+
     public function verifier()
     {
         return $this->belongsTo(User::class, 'verified_by');
