@@ -446,6 +446,9 @@
 
         <div class="actions">
             <button class="btn primary" onclick="window.print()">In / lưu PDF</button>
+            @if (!empty($certificate['blood_journey']))
+                <a class="btn" href="{{ url('/journeys/'.$certificate['blood_journey']['public_id']) }}">Theo dõi hành trình</a>
+            @endif
             <a class="btn" href="{{ url('/api/certificates/'.$certificate['certificate_id']) }}">Dữ liệu xác thực</a>
         </div>
     </main>

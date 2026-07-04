@@ -80,6 +80,25 @@ class LaravelBackedEmergencySignalService implements EmergencySignalService {
   }
 
   @override
+  Stream<EmergencyCommitment> watchCommitments({
+    required DonorProfile profile,
+  }) async* {
+    final config = await _fetchRealtimeConfig();
+    if (config == null || !config.enabled) return;
+
+    await for (final event in _reverbRealtimeClient.watch(
+      config: config,
+      channels: {config.donorChannelTemplate.replaceAll('{donor_id}', profile.id)},
+    )) {
+      if (event.name != 'emergency.commitment.updated') continue;
+      final commitment = event.data['commitment'];
+      if (commitment is Map<String, dynamic>) {
+        yield EmergencyCommitment.fromJson(commitment);
+      }
+    }
+  }
+
+  @override
   Future<List<MobileNotification>> fetchNotifications({
     required DonorProfile profile,
   }) async {
@@ -255,7 +274,9 @@ class LaravelBackedEmergencySignalService implements EmergencySignalService {
       final signature = '${alert.active}:${alert.expiresAt.toIso8601String()}:'
           '${alert.currentCommitment?.id ?? ''}:'
           '${alert.currentCommitment?.status.apiName ?? ''}:'
-          '${alert.currentCommitment?.lastLocationAt?.toIso8601String() ?? ''}';
+          '${alert.currentCommitment?.lastLocationAt?.toIso8601String() ?? ''}:'
+          '${alert.currentCommitment?.bloodJourney?.currentStep ?? ''}:'
+          '${alert.currentCommitment?.bloodJourney?.completedAt?.toIso8601String() ?? ''}';
       if (seenSignatures[alert.id] == signature) continue;
 
       seenSignatures[alert.id] = signature;

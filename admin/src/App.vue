@@ -1,20 +1,19 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, type Component } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch, type Component } from 'vue'
 import {
   AlertTriangle,
   Bell,
   Building2,
   CalendarRange,
-  ChevronDown,
   Clock3,
   FileText,
   LayoutDashboard,
   Menu,
   ShieldAlert,
-  UserRound,
   X,
 } from '@lucide/vue'
 import SosModal from './components/SosModal.vue'
+import Login from './views/Login.vue'
 import { useEmergencyDashboard } from './composables/useEmergencyDashboard'
 import CommunityPosts from './views/CommunityPosts.vue'
 import Dashboard from './views/Dashboard.vue'
@@ -59,6 +58,7 @@ const {
   selectAlert,
 } = useEmergencyDashboard(apiBaseUrl)
 
+const isLoggedIn = ref(!!localStorage.getItem('admin_token'))
 const currentView = ref<ViewKey>('dashboard')
 const showSosModal = ref(false)
 const mobileMenuOpen = ref(false)
@@ -76,6 +76,38 @@ const navigation: NavItem[] = [
   { key: 'rbac', label: 'Nhân sự & RBAC', shortLabel: 'RBAC', icon: ShieldAlert },
 ]
 
+const filteredNavigation = computed(() => {
+  const user = currentAdmin.value
+  if (!user) return []
+
+  return navigation.filter((item) => {
+    if (user.role === 'system_admin') return true
+
+    switch (item.key) {
+      case 'dashboard':
+        return true
+      case 'hospitals':
+        return false // Chỉ có system_admin quản lý bệnh viện
+      case 'sos':
+        return user.permissions?.includes('sos.activate')
+      case 'events':
+        return user.permissions?.includes('events.manage')
+      case 'community':
+        return user.permissions?.includes('posts.manage')
+      case 'rbac':
+        return user.permissions?.includes('staff.manage')
+      default:
+        return false
+    }
+  })
+})
+
+watch(filteredNavigation, (nav) => {
+  if (nav.length > 0 && !nav.some((item) => item.key === currentView.value)) {
+    currentView.value = nav[0].key
+  }
+})
+
 const formattedTime = computed(() =>
   currentTime.value.toLocaleString('vi-VN', {
     year: 'numeric',
@@ -87,7 +119,7 @@ const formattedTime = computed(() =>
     hour12: false,
   }),
 )
-const activeViewLabel = computed(() => navigation.find((item) => item.key === currentView.value)?.label ?? 'Tổng quan')
+const activeViewLabel = computed(() => filteredNavigation.value.find((item) => item.key === currentView.value)?.label ?? 'Tổng quan')
 const adminInitials = computed(() => {
   const words = (currentAdmin.value?.name ?? 'Pulse Link')
     .trim()
@@ -121,8 +153,34 @@ async function submitSos(payload: SosPayload) {
   }
 }
 
+function handleLoginSuccess() {
+  isLoggedIn.value = true
+  loadDashboard()
+  loadProvinces()
+}
+
+async function handleLogout() {
+  try {
+    await fetch(`${apiBaseUrl}/api/auth/logout`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+    })
+  } catch (e) {
+    // Bỏ qua lỗi mạng khi đăng xuất
+  }
+  localStorage.removeItem('admin_token')
+  localStorage.removeItem('admin_user')
+  currentAdmin.value = null
+  isLoggedIn.value = false
+}
+
 onMounted(async () => {
-  await Promise.all([loadDashboard(), loadProvinces()])
+  if (isLoggedIn.value) {
+    await Promise.all([loadDashboard(), loadProvinces()])
+  }
   clockTimer = window.setInterval(() => {
     currentTime.value = new Date()
   }, 1000)
@@ -134,7 +192,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex min-h-screen bg-[#F8FAFC] text-slate-950">
+  <div v-if="!isLoggedIn" class="flex min-h-screen items-center justify-center bg-slate-950 p-4">
+    <Login @login-success="handleLoginSuccess" />
+  </div>
+  <div v-else class="flex min-h-screen bg-[#F8FAFC] text-slate-950">
     <aside class="hidden w-72 shrink-0 border-r border-neutral-800 bg-[#1A1A1A] text-white md:flex md:flex-col">
       <div class="flex h-16 items-center gap-3 border-b border-neutral-800 px-5">
         <div class="relative grid h-10 w-10 place-items-center rounded-md bg-white p-1.5">
@@ -145,13 +206,13 @@ onBeforeUnmount(() => {
           <p class="text-lg font-black uppercase tracking-wider">
             Pulse <span class="text-[#E31837]">Link</span>
           </p>
-          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500">Cổng quản trị bệnh viện</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-neutral-500">Mạch Sống - Cổng bệnh viện</p>
         </div>
       </div>
 
       <nav class="flex-1 space-y-1.5 overflow-y-auto px-4 py-6">
         <button
-          v-for="item in navigation"
+          v-for="item in filteredNavigation"
           :key="item.key"
           class="flex w-full items-center gap-3 rounded-md px-4 py-3 text-left text-sm font-bold transition"
           :class="currentView === item.key ? 'border-l-4 border-[#E31837] bg-white/10 pl-3 text-white' : 'text-neutral-400 hover:bg-white/5 hover:text-white'"
@@ -182,7 +243,7 @@ onBeforeUnmount(() => {
         <div class="grid h-9 w-9 place-items-center rounded-full bg-[#E31837] text-xs font-black">{{ adminInitials }}</div>
         <div class="min-w-0">
           <p class="truncate text-xs font-black text-white">{{ currentAdmin?.name ?? 'Quản trị Pulse Link' }}</p>
-          <p class="truncate text-[10px] font-semibold text-neutral-500">{{ currentAdmin?.scope_label ?? 'Đang đồng bộ phân quyền' }}</p>
+          <p class="truncate text-[10px] font-semibold text-neutral-500">{{ currentAdmin?.scope_label ?? 'Mạch Sống - Điều phối' }}</p>
         </div>
       </div>
     </aside>
@@ -235,9 +296,11 @@ onBeforeUnmount(() => {
             <span class="hidden sm:inline">Phát lệnh SOS</span>
           </button>
 
-          <button class="hidden h-10 items-center gap-2 rounded-md border border-slate-200 px-2 text-slate-600 sm:flex" aria-label="Tài khoản quản trị">
-            <UserRound class="h-5 w-5" />
-            <ChevronDown class="h-4 w-4 text-slate-400" />
+          <button
+            class="hidden h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-xs font-black uppercase tracking-wide text-slate-600 hover:bg-slate-50 sm:flex"
+            @click="handleLogout"
+          >
+            Đăng xuất
           </button>
         </div>
       </header>
@@ -248,7 +311,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="grid grid-cols-3 gap-1 sm:grid-cols-6">
           <button
-            v-for="item in navigation"
+            v-for="item in filteredNavigation"
             :key="item.key"
             class="flex flex-col items-center gap-1 rounded-md p-2 text-[10px] font-bold"
             :class="currentView === item.key ? 'bg-white/10 text-white' : 'text-neutral-400'"
@@ -258,6 +321,12 @@ onBeforeUnmount(() => {
             {{ item.shortLabel }}
           </button>
         </div>
+        <button
+          class="mt-2 flex w-full h-9 items-center justify-center gap-1.5 rounded-md bg-[#E31837]/10 text-[10px] font-bold uppercase tracking-wider text-[#E31837] hover:bg-[#E31837]/20"
+          @click="handleLogout"
+        >
+          Đăng xuất
+        </button>
       </div>
 
       <main class="flex-1 overflow-y-auto p-4 md:p-6">

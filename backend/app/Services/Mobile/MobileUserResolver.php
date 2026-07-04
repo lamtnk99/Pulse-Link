@@ -19,6 +19,11 @@ class MobileUserResolver
             }
         }
 
+        $authenticatedUser = request()->user();
+        if ($authenticatedUser && $authenticatedUser->role === 'donor') {
+            return $authenticatedUser;
+        }
+
         return User::query()
             ->where('role', 'donor')
             ->orderBy('id')

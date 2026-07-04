@@ -11,6 +11,7 @@ import '../core/utils/blood_compatibility.dart';
 import '../features/community/domain/community_post.dart';
 import '../features/daily/domain/donation_event.dart';
 import '../features/daily/domain/past_donation.dart';
+import '../features/daily/domain/blood_journey.dart';
 import '../features/emergency/domain/dispatch_wave.dart';
 import '../features/emergency/domain/emergency_alert.dart';
 import '../features/emergency/domain/emergency_commitment.dart';
@@ -58,12 +59,14 @@ class PulseLinkController extends ChangeNotifier {
   final EmergencyAudioService _audioService;
 
   StreamSubscription<EmergencyAlert>? _alertSubscription;
+  StreamSubscription<EmergencyCommitment>? _commitmentSubscription;
   StreamSubscription<MobileNotification>? _notificationSubscription;
   Timer? _locationSyncTimer;
   bool _isSyncingEmergencyLocation = false;
   GeoPoint? _lastKnownLocation;
   PulseLinkState _state = PulseLinkState.initial();
   static const _themePreferenceKey = 'pulse_link_theme_preference';
+  static const _acknowledgedJourneysKey = 'acknowledged_blood_journeys';
 
   PulseLinkState get state => _state;
 
@@ -77,6 +80,17 @@ class PulseLinkController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('auth_token');
+      if (token == null || token.isEmpty) {
+        _state = _state.copyWith(
+          isLoading: false,
+          profile: null,
+        );
+        notifyListeners();
+        return;
+      }
+
       final profile = await _donorRepository.getCurrentProfile();
       final origin = await _resolveCurrentLocation();
       final events = await _eventRepository.getUpcomingEvents(origin: origin);
@@ -100,22 +114,68 @@ class PulseLinkController extends ChangeNotifier {
       notifyListeners();
 
       await _restoreActiveEmergencyMission(profile);
+      await _checkAndShowUnacknowledgedJourney();
 
       await _alertSubscription?.cancel();
       _alertSubscription = _emergencySignalService
           .watchAlerts(profile: profile)
           .listen(_handleEmergencyAlert);
+      await _commitmentSubscription?.cancel();
+      _commitmentSubscription = _emergencySignalService
+          .watchCommitments(profile: profile)
+          .listen(_handleEmergencyCommitmentUpdate);
       await _notificationSubscription?.cancel();
       _notificationSubscription = _emergencySignalService
           .watchNotifications(profile: profile)
           .listen(_handleMobileNotification);
     } catch (error) {
+      if (error is LaravelApiException && error.statusCode == 401) {
+        await logout();
+        return;
+      }
+      if (error.toString().contains('401')) {
+        await logout();
+        return;
+      }
+
       _state = _state.copyWith(
         isLoading: false,
         initializationError: error.toString(),
       );
       notifyListeners();
     }
+  }
+
+  Future<void> logout() async {
+    _stopEmergencyLocationSync();
+    await _alertSubscription?.cancel();
+    await _commitmentSubscription?.cancel();
+    await _notificationSubscription?.cancel();
+    _alertSubscription = null;
+    _commitmentSubscription = null;
+    _notificationSubscription = null;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('auth_token');
+
+    _state = _state.copyWith(
+      profile: null,
+      events: const [],
+      bookedAppointments: const [],
+      communityPosts: const [],
+      donationHistory: const [],
+      notifications: const [],
+      activeAlerts: const [],
+      activeAlert: null,
+      activeEmergencyCommitment: null,
+      routePlan: null,
+      emergencyCommitted: false,
+      clearActiveAlert: true,
+      clearActiveEmergencyCommitment: true,
+      clearEmergencyLocation: true,
+      clearRoutePlan: true,
+    );
+    notifyListeners();
   }
 
   Future<void> setThemePreference(AppThemePreference preference) async {
@@ -280,6 +340,12 @@ class PulseLinkController extends ChangeNotifier {
       await _removeEmergencyAlert(alert.id);
       if (alert.currentCommitment?.status ==
           EmergencyCommitmentStatus.donated) {
+        final commitment = alert.currentCommitment!;
+        _state = _state.copyWith(
+          activeLiveBloodJourney: commitment.bloodJourney,
+          activeLiveBloodJourneyHospitalName: alert.hospitalName,
+          activeLiveBloodJourneyBloodType: alert.requiredBloodType,
+        );
         unawaited(refreshDailyData());
       }
       return;
@@ -752,6 +818,7 @@ class PulseLinkController extends ChangeNotifier {
   void dispose() {
     _stopEmergencyLocationSync();
     _alertSubscription?.cancel();
+    _commitmentSubscription?.cancel();
     _notificationSubscription?.cancel();
     _audioService.dispose();
     super.dispose();
@@ -768,6 +835,73 @@ class PulseLinkController extends ChangeNotifier {
     } on Object {
       return AppThemePreference.light;
     }
+  }
+
+  void _handleEmergencyCommitmentUpdate(EmergencyCommitment commitment) {
+    if (commitment.status == EmergencyCommitmentStatus.donated && commitment.bloodJourney != null) {
+      _state = _state.copyWith(
+        activeLiveBloodJourney: commitment.bloodJourney,
+        activeLiveBloodJourneyHospitalName: _state.activeAlert?.hospitalName ?? 'Bệnh viện',
+        activeLiveBloodJourneyBloodType: _state.activeAlert?.requiredBloodType ?? 'O',
+      );
+      unawaited(refreshDailyData());
+      notifyListeners();
+    } else if (commitment.status == EmergencyCommitmentStatus.donated) {
+      unawaited(refreshDailyData());
+    } else if (_state.activeLiveBloodJourney != null && commitment.bloodJourney != null && commitment.bloodJourney!.id == _state.activeLiveBloodJourney!.id) {
+      _state = _state.copyWith(
+        activeLiveBloodJourney: commitment.bloodJourney,
+      );
+      notifyListeners();
+    }
+  }
+
+  void showLiveBloodJourney(BloodJourney journey, String hospitalName, String bloodType) {
+    _state = _state.copyWith(
+      activeLiveBloodJourney: journey,
+      activeLiveBloodJourneyHospitalName: hospitalName,
+      activeLiveBloodJourneyBloodType: bloodType,
+    );
+    notifyListeners();
+  }
+
+  Future<void> _checkAndShowUnacknowledgedJourney() async {
+    final history = _state.donationHistory;
+    if (history.isNotEmpty) {
+      final latest = history.first;
+      if (latest.bloodJourney != null) {
+        final journeyId = latest.bloodJourney!.id;
+        final prefs = await SharedPreferences.getInstance();
+        final acknowledged = prefs.getStringList(_acknowledgedJourneysKey) ?? [];
+        if (!acknowledged.contains(journeyId)) {
+          _state = _state.copyWith(
+            activeLiveBloodJourney: latest.bloodJourney,
+            activeLiveBloodJourneyHospitalName: latest.locationName,
+            activeLiveBloodJourneyBloodType: latest.bloodType,
+          );
+          notifyListeners();
+        }
+      }
+    }
+  }
+
+  void clearActiveLiveBloodJourney() {
+    final currentJourney = _state.activeLiveBloodJourney;
+    if (currentJourney != null) {
+      SharedPreferences.getInstance().then((prefs) {
+        final acknowledged = prefs.getStringList(_acknowledgedJourneysKey) ?? [];
+        if (!acknowledged.contains(currentJourney.id)) {
+          prefs.setStringList(_acknowledgedJourneysKey, [...acknowledged, currentJourney.id]);
+        }
+      });
+    }
+
+    _state = _state.copyWith(
+      clearActiveLiveBloodJourney: true,
+      clearActiveLiveBloodJourneyHospitalName: true,
+      clearActiveLiveBloodJourneyBloodType: true,
+    );
+    notifyListeners();
   }
 }
 

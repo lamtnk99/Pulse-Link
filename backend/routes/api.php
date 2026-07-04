@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Admin\EmergencyController;
 use App\Http\Controllers\Api\Admin\HospitalController as AdminHospitalController;
 use App\Http\Controllers\Api\Admin\StaffController as AdminStaffController;
 use App\Http\Controllers\Api\Admin\UploadController as AdminUploadController;
+use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BloodJourneyController;
 use App\Http\Controllers\Api\CertificateController;
 use App\Http\Controllers\Api\LocationController;
@@ -17,6 +18,12 @@ use App\Http\Controllers\Api\Mobile\MobileProfileController;
 use App\Http\Controllers\Api\Mobile\RoutePlannerController;
 use Illuminate\Support\Facades\Route;
 
+Route::post('auth/login', [AuthController::class, 'login']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::get('auth/me', [AuthController::class, 'me']);
+});
+
 Route::prefix('locations')->group(function () {
     Route::get('provinces', [LocationController::class, 'provinces']);
     Route::get('provinces/{province:code}/wards', [LocationController::class, 'wards']);
@@ -26,7 +33,7 @@ Route::prefix('locations')->group(function () {
 Route::get('certificates/{certificateId}', [CertificateController::class, 'show']);
 Route::get('blood-journeys/{publicId}', [BloodJourneyController::class, 'show']);
 
-Route::prefix('mobile')->group(function () {
+Route::prefix('mobile')->middleware(['role:donor'])->group(function () {
     Route::get('me/hero-pass', [MobileProfileController::class, 'heroPass']);
     Route::post('me/hero-pass', [MobileProfileController::class, 'updateHeroPass']);
     Route::get('me/donations', [MobileDonationController::class, 'history']);
@@ -49,7 +56,7 @@ Route::prefix('mobile')->group(function () {
     Route::post('sos-alerts/{alert:public_id}/cancel', [EmergencyController::class, 'cancelCommitment']);
 });
 
-Route::prefix('admin')->group(function () {
+Route::prefix('admin')->middleware(['role:admin'])->group(function () {
     Route::get('dashboard', [AdminDashboardController::class, 'show']);
     Route::post('uploads', [AdminUploadController::class, 'store']);
     Route::apiResource('hospitals', AdminHospitalController::class)->except(['show']);

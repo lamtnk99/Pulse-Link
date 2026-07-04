@@ -250,12 +250,11 @@ function saveJourney() {
           {{ activeAlert ? activeAlert.required_blood_type : '--' }}
         </span>
       </div>
-
       <div v-if="activeAlert && commitments.length" class="mt-4 overflow-hidden rounded-lg border border-slate-200">
         <div
           v-for="commitment in commitments"
           :key="commitment.id"
-          class="grid min-h-28 gap-3 border-b border-slate-100 p-4 last:border-b-0 lg:grid-cols-[minmax(220px,1.4fr)_160px_190px_140px_140px] lg:items-center"
+          class="grid min-h-28 gap-3 border-b border-slate-100 p-4 last:border-b-0 lg:grid-cols-[minmax(220px,1.4fr)_160px_190px_160px] lg:items-center"
         >
           <div class="min-w-0">
             <p class="font-black text-slate-950">{{ commitment.donor?.name }}</p>
@@ -290,23 +289,25 @@ function saveJourney() {
             </div>
             <p class="mt-1 text-xs font-bold text-slate-500">ETA {{ commitment.eta_minutes ?? '--' }} phút</p>
           </div>
-          <button
-            class="inline-flex h-11 w-40 items-center justify-center gap-2 rounded-md px-3 text-xs font-black uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-60 lg:justify-self-end"
-            :class="commitment.status === 'donated' ? 'bg-amber-50 text-amber-700' : 'bg-slate-950 text-white hover:bg-slate-800'"
-            :disabled="commitment.status === 'donated' || commitment.status === 'cancelled' || commitment.status === 'not_needed'"
-            @click="markDonated(commitment)"
-          >
-            <BadgeCheck class="h-4 w-4" />
-            {{ commitment.status === 'donated' ? 'Đã ghi nhận' : 'Đã hiến' }}
-          </button>
-          <button
-            v-if="commitment.status === 'donated'"
-            class="inline-flex h-11 w-40 items-center justify-center gap-2 rounded-md border border-red-100 bg-red-50 px-3 text-xs font-black uppercase tracking-wide text-[#E31837] transition hover:bg-white lg:justify-self-end"
-            @click="openJourney(commitment)"
-          >
-            <MapPinned class="h-4 w-4" />
-            Hành trình
-          </button>
+          <div class="flex flex-col gap-2 lg:items-end">
+            <button
+              class="inline-flex h-11 w-40 items-center justify-center gap-2 rounded-md px-3 text-xs font-black uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-60 lg:justify-self-end"
+              :class="commitment.status === 'donated' ? 'bg-amber-50 text-amber-700' : 'bg-slate-950 text-white hover:bg-slate-800'"
+              :disabled="commitment.status === 'donated' || commitment.status === 'cancelled' || commitment.status === 'not_needed'"
+              @click="markDonated(commitment)"
+            >
+              <BadgeCheck class="h-4 w-4" />
+              {{ commitment.status === 'donated' ? 'Đã ghi nhận' : 'Đã hiến' }}
+            </button>
+            <button
+              v-if="commitment.status === 'donated'"
+              class="inline-flex h-11 w-40 items-center justify-center gap-2 rounded-md border border-red-100 bg-red-50 px-3 text-xs font-black uppercase tracking-wide text-[#E31837] transition hover:bg-white lg:justify-self-end"
+              @click="openJourney(commitment)"
+            >
+              <MapPinned class="h-4 w-4" />
+              Hành trình
+            </button>
+          </div>
         </div>
       </div>
 

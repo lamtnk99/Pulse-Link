@@ -22,6 +22,11 @@ class AdminUserResolver
             }
         }
 
+        $authenticatedUser = $request->user();
+        if ($authenticatedUser && in_array($authenticatedUser->role, ['system_admin', 'hospital_admin', 'hospital_staff'], true)) {
+            return $authenticatedUser;
+        }
+
         return User::query()
             ->where('role', 'system_admin')
             ->orderBy('id')

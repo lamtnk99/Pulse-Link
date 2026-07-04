@@ -5,6 +5,7 @@ import '../features/community/domain/community_post.dart';
 import '../features/daily/domain/donation_appointment.dart';
 import '../features/daily/domain/donation_event.dart';
 import '../features/daily/domain/past_donation.dart';
+import '../features/daily/domain/blood_journey.dart';
 import '../features/emergency/domain/dispatch_wave.dart';
 import '../features/emergency/domain/emergency_alert.dart';
 import '../features/emergency/domain/emergency_commitment.dart';
@@ -35,6 +36,9 @@ class PulseLinkState {
     this.emergencyCommitted = false,
     this.committedAlertIds = const {},
     this.initializationError,
+    this.activeLiveBloodJourney,
+    this.activeLiveBloodJourneyHospitalName,
+    this.activeLiveBloodJourneyBloodType,
   });
 
   factory PulseLinkState.initial() {
@@ -65,6 +69,15 @@ class PulseLinkState {
   final bool emergencyCommitted;
   final Set<String> committedAlertIds;
   final String? initializationError;
+
+  // Empathy features: Live Blood Journey Tracking override
+  final BloodJourney? activeLiveBloodJourney;
+  final String? activeLiveBloodJourneyHospitalName;
+  final String? activeLiveBloodJourneyBloodType;
+
+  bool get hasActiveSosAlert => activeAlerts.any((alert) => alert.active && !alert.isExpired);
+
+  int get totalDonationsCount => donationHistory.length;
 
   int get totalVolumeMl {
     return donationHistory.fold<int>(
@@ -102,6 +115,12 @@ class PulseLinkState {
     Set<String>? committedAlertIds,
     String? initializationError,
     bool clearInitializationError = false,
+    BloodJourney? activeLiveBloodJourney,
+    bool clearActiveLiveBloodJourney = false,
+    String? activeLiveBloodJourneyHospitalName,
+    bool clearActiveLiveBloodJourneyHospitalName = false,
+    String? activeLiveBloodJourneyBloodType,
+    bool clearActiveLiveBloodJourneyBloodType = false,
   }) {
     return PulseLinkState(
       activeMode: activeMode ?? this.activeMode,
@@ -134,6 +153,15 @@ class PulseLinkState {
       initializationError: clearInitializationError
           ? null
           : initializationError ?? this.initializationError,
+      activeLiveBloodJourney: clearActiveLiveBloodJourney
+          ? null
+          : activeLiveBloodJourney ?? this.activeLiveBloodJourney,
+      activeLiveBloodJourneyHospitalName: clearActiveLiveBloodJourneyHospitalName
+          ? null
+          : activeLiveBloodJourneyHospitalName ?? this.activeLiveBloodJourneyHospitalName,
+      activeLiveBloodJourneyBloodType: clearActiveLiveBloodJourneyBloodType
+          ? null
+          : activeLiveBloodJourneyBloodType ?? this.activeLiveBloodJourneyBloodType,
     );
   }
 }

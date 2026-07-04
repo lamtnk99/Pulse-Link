@@ -46,6 +46,10 @@ class DonationCertificateScreen extends StatelessWidget {
             donation: donation,
             typeLabel: typeLabel,
           ),
+          if (donation.bloodJourney != null) ...[
+            const SizedBox(height: 16),
+            _BloodJourneyPanel(donation: donation),
+          ],
           const SizedBox(height: 16),
           if (verifyUrl != null && verifyUrl.isNotEmpty)
             _VerifyPanel(
@@ -311,6 +315,85 @@ class _VerifyPanel extends StatelessWidget {
             ),
             icon: const Icon(Icons.open_in_new_rounded),
             label: const Text('Mở bản web'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BloodJourneyPanel extends StatelessWidget {
+  const _BloodJourneyPanel({
+    required this.donation,
+  });
+
+  final PastDonation donation;
+
+  @override
+  Widget build(BuildContext context) {
+    final journey = donation.bloodJourney!;
+    final message = journey.publishedAt == null
+        ? 'Bệnh viện đang cập nhật hành trình giọt máu của bạn.'
+        : journey.finalMessage ?? 'Hành trình giọt máu đã được ghi nhận.';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: PulseLinkTheme.primaryRed.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: PulseLinkTheme.primaryRed.withOpacity(0.16)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Hành trình giọt máu',
+            style: TextStyle(
+              color: PulseLinkTheme.primaryRed,
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...journey.steps.map(
+            (step) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    step.completed
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 18,
+                    color: step.completed
+                        ? PulseLinkTheme.successGreen
+                        : PulseLinkTheme.mutedColor(context),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      VietnameseLabels.text(step.label),
+                      style: TextStyle(
+                        color: PulseLinkTheme.textColor(context),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            VietnameseLabels.text(message),
+            style: TextStyle(
+              color: PulseLinkTheme.mutedColor(context),
+              fontSize: 13,
+              height: 1.4,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),

@@ -100,10 +100,6 @@ class DonationHistoryTile extends StatelessWidget {
               ),
             ],
           ),
-          if (donation.bloodJourney != null) ...[
-            const SizedBox(height: 12),
-            _BloodJourneyPanel(donation: donation),
-          ],
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -147,6 +143,10 @@ class DonationHistoryTile extends StatelessWidget {
                 fontWeight: FontWeight.w700,
               ),
             ),
+          if (donation.bloodJourney != null) ...[
+            const SizedBox(height: 12),
+            _BloodJourneyPanel(donation: donation),
+          ],
           const SizedBox(height: 12),
           Row(
             children: [

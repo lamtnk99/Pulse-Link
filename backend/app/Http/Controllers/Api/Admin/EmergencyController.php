@@ -329,6 +329,8 @@ class EmergencyController extends Controller
             return $journey->refresh()->load('hospital', 'steps');
         });
 
+        $this->broadcastCommitment($commitment);
+
         return BloodJourneyResource::make($journey);
     }
 

@@ -34,7 +34,7 @@ function formatVolume(value: number | undefined) {
     <section class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
         <p class="text-xs font-black uppercase tracking-[0.24em] text-[#E31837]">Trung tâm điều hành</p>
-        <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-950">Tổng quan vận hành Pulse Link</h2>
+        <h2 class="mt-2 text-2xl font-black tracking-tight text-slate-950">Tổng quan vận hành Mạch Sống</h2>
         <p class="mt-1 max-w-2xl text-sm text-slate-500">
           Theo dõi lịch hiến thường quy, lượt đặt lịch, dữ liệu hoàn tất và phản ứng SOS theo thời gian thực.
         </p>

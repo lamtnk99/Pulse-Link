@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import '../infrastructure/device/device_services.dart';
 import '../infrastructure/laravel/laravel_api_client.dart';
 import '../infrastructure/laravel/laravel_emergency_signal_service.dart';
@@ -64,7 +65,14 @@ class PulseLinkBootstrap {
     final apiBaseUri = Uri.parse(laravelBaseUrl);
     final apiClient = LaravelApiClient(
       baseUrl: apiBaseUri,
-      tokenProvider: () async => mobileApiToken.isEmpty ? null : mobileApiToken,
+      tokenProvider: () async {
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString('auth_token');
+        if (token != null && token.isNotEmpty) {
+          return token;
+        }
+        return mobileApiToken.isEmpty ? null : mobileApiToken;
+      },
     );
     final fallbackRealtimeConfig = reverbAppKey.isEmpty
         ? null

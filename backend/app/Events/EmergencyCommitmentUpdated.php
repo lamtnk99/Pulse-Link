@@ -15,7 +15,7 @@ class EmergencyCommitmentUpdated implements ShouldBroadcastNow
 
     public function __construct(public EmergencyCommitment $commitment)
     {
-        $this->commitment->loadMissing('donor', 'alert');
+        $this->commitment->loadMissing('donor', 'alert', 'bloodJourney.steps');
     }
 
     public function broadcastOn(): array
@@ -34,6 +34,8 @@ class EmergencyCommitmentUpdated implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $journey = $this->commitment->bloodJourney;
+
         return [
             'commitment' => [
                 'id' => $this->commitment->id,
@@ -50,6 +52,20 @@ class EmergencyCommitmentUpdated implements ShouldBroadcastNow
                 'verified_at' => $this->commitment->verified_at?->toIso8601String(),
                 'verified_by' => $this->commitment->verified_by,
                 'donation_history_id' => $this->commitment->donation_history_id,
+                'blood_journey' => $journey ? [
+                    'id' => $journey->public_id,
+                    'current_step' => $journey->current_step,
+                    'location_label' => $journey->location_label,
+                    'destination_type' => $journey->destination_type,
+                    'completed_at' => $journey->completed_at?->toIso8601String(),
+                    'published_at' => $journey->published_at?->toIso8601String(),
+                    'steps' => $journey->steps->map(fn ($step) => [
+                        'key' => $step->step_key,
+                        'label' => $step->label,
+                        'completed' => $step->occurred_at !== null,
+                        'occurred_at' => $step->occurred_at?->toIso8601String(),
+                    ])->all(),
+                ] : null,
                 'donor' => [
                     'id' => $this->commitment->donor->id,
                     'name' => $this->commitment->donor->name,

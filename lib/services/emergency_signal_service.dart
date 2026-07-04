@@ -18,6 +18,10 @@ abstract interface class EmergencySignalService {
     required DonorProfile profile,
   });
 
+  Stream<EmergencyCommitment> watchCommitments({
+    required DonorProfile profile,
+  });
+
   Future<List<MobileNotification>> fetchNotifications({
     required DonorProfile profile,
   });

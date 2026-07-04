@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import L from 'leaflet'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { EmergencyAlert, EmergencyCommitment } from '../types'
@@ -14,9 +14,9 @@ let map: L.Map | null = null
 let layerGroup: L.LayerGroup | null = null
 
 const statusLabels: Record<EmergencyCommitment['status'], string> = {
-  committed: 'ÄÃ£ cam káº¿t',
-  en_route: 'Äang di chuyá»ƒn',
-  donated: 'ÄÃ£ hiáº¿n',
+  committed: 'Đã cam kết',
+  en_route: 'Đang di chuyển',
+  donated: 'Đã hiến',
   cancelled: 'Đã hủy',
   not_needed: 'Ca đã đủ',
 }
@@ -83,11 +83,11 @@ function renderMarkers() {
   <section class="relative z-0 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
     <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
       <div>
-        <h2 class="text-base font-black text-slate-950">Báº£n Ä‘á»“ theo dÃµi tÃ¬nh nguyá»‡n viÃªn</h2>
-        <p class="text-sm text-slate-500">NgÆ°á»i Ä‘Ã£ xÃ¡c nháº­n, thá»i gian dá»± kiáº¿n vÃ  tuyáº¿n di chuyá»ƒn.</p>
+        <h2 class="text-base font-black text-slate-950">Bản đồ theo dõi tình nguyện viên</h2>
+        <p class="text-sm text-slate-500">Người đã xác nhận, thời gian dự kiến và tuyến di chuyển.</p>
       </div>
       <span class="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black uppercase text-emerald-700">
-        {{ loading ? 'Äang Ä‘á»“ng bá»™' : 'Trá»±c tuyáº¿n' }}
+        {{ loading ? 'Đang đồng bộ' : 'Trực tuyến' }}
       </span>
     </div>
     <div ref="mapEl" class="relative z-0 h-[520px]"></div>

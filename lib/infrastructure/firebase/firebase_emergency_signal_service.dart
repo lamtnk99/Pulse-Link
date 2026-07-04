@@ -31,6 +31,13 @@ class FirebaseEmergencySignalService implements EmergencySignalService {
   }
 
   @override
+  Stream<EmergencyCommitment> watchCommitments({
+    required DonorProfile profile,
+  }) {
+    return const Stream<EmergencyCommitment>.empty();
+  }
+
+  @override
   Future<List<MobileNotification>> fetchNotifications({
     required DonorProfile profile,
   }) async {

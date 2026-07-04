@@ -183,19 +183,24 @@ class DonorSeeder extends Seeder
                 ],
             );
 
-            DonationHistory::query()->updateOrCreate(
-                ['certificate_id' => 'PL-2026-'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT)],
-                [
-                    'user_id' => $user->id,
-                    'hospital_id' => $hospital->id,
-                    'donated_at' => now()->subDays($donor['days_since_donation'])->toDateString(),
-                    'location_name' => $donor['history_location'] ?? $hospital->name,
-                    'volume_ml' => $donor['blood_type'] === 'O-' ? 350 : 450,
-                    'blood_type' => $donor['blood_type'],
-                    'status' => 'verified',
-                    'notes' => $donor['history_note'] ?? 'Hồ sơ hiến máu demo được xác minh.',
-                ],
-            );
+            $total = $donor['total_donations'];
+            for ($h = 1; $h <= $total; $h++) {
+                $daysAgo = $donor['days_since_donation'] + ($h - 1) * 90;
+                $certificateId = 'PL-2026-'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT).($h === 1 ? '' : "-{$h}");
+                DonationHistory::query()->updateOrCreate(
+                    ['certificate_id' => $certificateId],
+                    [
+                        'user_id' => $user->id,
+                        'hospital_id' => $hospital->id,
+                        'donated_at' => now()->subDays($daysAgo)->toDateString(),
+                        'location_name' => $donor['history_location'] ?? $hospital->name,
+                        'volume_ml' => $donor['blood_type'] === 'O-' ? 350 : 450,
+                        'blood_type' => $donor['blood_type'],
+                        'status' => 'verified',
+                        'notes' => $donor['history_note'] ?? "Hồ sơ hiến máu demo lần thứ {$h} được xác minh.",
+                    ],
+                );
+            }
         }
     }
 

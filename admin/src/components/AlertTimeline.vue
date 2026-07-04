@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import type { EmergencyAlert, EmergencyCommitment } from '../types'
 
 defineProps<{
@@ -7,17 +7,17 @@ defineProps<{
 }>()
 
 const commitmentStatusLabels: Record<EmergencyCommitment['status'], string> = {
-  committed: 'ÄÃ£ cam káº¿t',
-  en_route: 'Äang di chuyá»ƒn',
-  donated: 'ÄÃ£ hiáº¿n',
+  committed: 'Đã cam kết',
+  en_route: 'Đang di chuyển',
+  donated: 'Đã hiến',
   cancelled: 'Đã hủy',
   not_needed: 'Ca đã đủ',
 }
 
 function alertStatusLabel(status: string) {
-  if (status === 'active') return 'Äang hoáº¡t Ä‘á»™ng'
-  if (status === 'fulfilled') return 'HoÃ n thÃ nh'
-  if (status === 'resolved') return 'ÄÃ£ xá»­ lÃ½'
+  if (status === 'active') return 'Đang hoạt động'
+  if (status === 'fulfilled') return 'Hoàn thành'
+  if (status === 'resolved') return 'Đã xử lý'
   return status
 }
 </script>
@@ -25,8 +25,8 @@ function alertStatusLabel(status: string) {
 <template>
   <aside class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
     <div class="flex items-center justify-between">
-      <h2 class="text-base font-black text-slate-950">DÃ²ng sá»± kiá»‡n váº­n hÃ nh</h2>
-      <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-500">Trá»±c tiáº¿p</span>
+      <h2 class="text-base font-black text-slate-950">Dòng sự kiện vận hành</h2>
+      <span class="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-500">Trực tiếp</span>
     </div>
 
     <div class="mt-4 space-y-3">
@@ -37,7 +37,7 @@ function alertStatusLabel(status: string) {
         </div>
         <p class="mt-1 text-sm text-slate-700">{{ alert.message }}</p>
         <p class="mt-2 text-xs font-semibold text-slate-500">
-          {{ alert.dispatch_summary?.recipient_count ?? alert.recipients?.length ?? 0 }} tÃ¬nh nguyá»‡n viÃªn Ä‘Ã£ nháº­n tin
+          {{ alert.dispatch_summary?.recipient_count ?? alert.recipients?.length ?? 0 }} tình nguyện viên đã nhận tin
         </p>
       </div>
 
@@ -49,7 +49,7 @@ function alertStatusLabel(status: string) {
           </span>
         </div>
         <p class="mt-1 text-sm text-slate-500">
-          {{ commitment.donor?.blood_type }} - Dá»± kiáº¿n {{ commitment.eta_minutes ?? '--' }} phÃºt
+          {{ commitment.donor?.blood_type }} - Dự kiến {{ commitment.eta_minutes ?? '--' }} phút
         </p>
         <p v-if="commitment.status === 'cancelled' && commitment.cancel_reason" class="mt-2 rounded-md bg-slate-50 px-2 py-1 text-xs font-bold text-slate-500">
           {{ commitment.cancel_reason }}
@@ -57,7 +57,7 @@ function alertStatusLabel(status: string) {
       </div>
 
       <p v-if="alerts.length === 0 && commitments.length === 0" class="rounded-md border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
-        ChÆ°a cÃ³ luá»“ng kháº©n cáº¥p Ä‘ang hoáº¡t Ä‘á»™ng.
+        Chưa có luồng khẩn cấp đang hoạt động.
       </p>
     </div>
   </aside>

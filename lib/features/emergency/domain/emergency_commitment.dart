@@ -1,4 +1,5 @@
 import '../../../core/location/geo_point.dart';
+import '../../daily/domain/blood_journey.dart';
 
 class EmergencyCommitment {
   const EmergencyCommitment({
@@ -12,11 +13,13 @@ class EmergencyCommitment {
     this.committedAt,
     this.lastLocationAt,
     this.donatedAt,
+    this.bloodJourney,
   });
 
   factory EmergencyCommitment.fromJson(Map<String, dynamic> json) {
     final latitude = json['latitude'];
     final longitude = json['longitude'];
+    final journeyJson = json['blood_journey'];
 
     return EmergencyCommitment(
       id: (json['id'] as Object).toString(),
@@ -36,6 +39,9 @@ class EmergencyCommitment {
       committedAt: _parseDate(json['committed_at']),
       lastLocationAt: _parseDate(json['last_location_at']),
       donatedAt: _parseDate(json['donated_at']),
+      bloodJourney: journeyJson is Map<String, dynamic>
+          ? BloodJourney.fromJson(journeyJson)
+          : null,
     );
   }
 
@@ -49,6 +55,7 @@ class EmergencyCommitment {
   final DateTime? committedAt;
   final DateTime? lastLocationAt;
   final DateTime? donatedAt;
+  final BloodJourney? bloodJourney;
 
   EmergencyCommitment copyWith({
     EmergencyCommitmentStatus? status,
@@ -58,6 +65,7 @@ class EmergencyCommitment {
     int? etaMinutes,
     int? donationVolumeMl,
     DateTime? lastLocationAt,
+    BloodJourney? bloodJourney,
   }) {
     return EmergencyCommitment(
       id: id,
@@ -71,6 +79,7 @@ class EmergencyCommitment {
       committedAt: committedAt,
       lastLocationAt: lastLocationAt ?? this.lastLocationAt,
       donatedAt: donatedAt,
+      bloodJourney: bloodJourney ?? this.bloodJourney,
     );
   }
 }
