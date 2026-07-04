@@ -5,6 +5,7 @@ import '../infrastructure/laravel/laravel_emergency_signal_service.dart';
 import '../infrastructure/laravel/laravel_repositories.dart';
 import '../infrastructure/laravel/reverb_realtime_client.dart';
 import '../infrastructure/laravel/laravel_route_planner_service.dart';
+import '../infrastructure/laravel/laravel_chat_service.dart';
 import '../infrastructure/mock/mock_emergency_services.dart';
 import '../infrastructure/mock/mock_repositories.dart';
 import 'pulse_link_controller.dart';
@@ -59,6 +60,7 @@ class PulseLinkBootstrap {
         locationService: MockLocationService(),
         routePlannerService: MockRoutePlannerService(),
         audioService: MockEmergencyAudioService(),
+        chatService: MockChatService(),
       );
     }
 
@@ -101,6 +103,7 @@ class PulseLinkBootstrap {
       locationService: DeviceLocationService(),
       routePlannerService: LaravelRoutePlannerService(apiClient),
       audioService: JustAudioEmergencyAudioService(),
+      chatService: LaravelChatService(apiClient),
     );
   }
 }

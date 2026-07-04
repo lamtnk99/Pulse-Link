@@ -28,6 +28,7 @@ import '../services/emergency_audio_service.dart';
 import '../services/emergency_signal_service.dart';
 import '../services/location_service.dart';
 import '../services/route_planner_service.dart';
+import '../services/chat_service.dart';
 import 'pulse_link_state.dart';
 
 class PulseLinkController extends ChangeNotifier {
@@ -40,6 +41,7 @@ class PulseLinkController extends ChangeNotifier {
     required LocationService locationService,
     required RoutePlannerService routePlannerService,
     required EmergencyAudioService audioService,
+    required ChatService chatService,
   })  : _donorRepository = donorRepository,
         _eventRepository = eventRepository,
         _historyRepository = historyRepository,
@@ -47,7 +49,8 @@ class PulseLinkController extends ChangeNotifier {
         _emergencySignalService = emergencySignalService,
         _locationService = locationService,
         _routePlannerService = routePlannerService,
-        _audioService = audioService;
+        _audioService = audioService,
+        _chatService = chatService;
 
   final DonorRepository _donorRepository;
   final DonationEventRepository _eventRepository;
@@ -57,6 +60,7 @@ class PulseLinkController extends ChangeNotifier {
   final LocationService _locationService;
   final RoutePlannerService _routePlannerService;
   final EmergencyAudioService _audioService;
+  final ChatService _chatService;
 
   StreamSubscription<EmergencyAlert>? _alertSubscription;
   StreamSubscription<EmergencyCommitment>? _commitmentSubscription;
@@ -69,6 +73,7 @@ class PulseLinkController extends ChangeNotifier {
   static const _acknowledgedJourneysKey = 'acknowledged_blood_journeys';
 
   PulseLinkState get state => _state;
+  ChatService get chatService => _chatService;
 
   Future<void> initialize() async {
     final themePreference = await _loadThemePreference();

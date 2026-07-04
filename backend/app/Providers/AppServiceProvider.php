@@ -26,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(LocationRepository::class, EloquentLocationRepository::class);
         $this->app->bind(PushNotificationGateway::class, FcmHttpV1PushNotificationGateway::class);
         $this->app->bind(EmergencyAlertRealtimeGateway::class, FirestoreEmergencyAlertRealtimeGateway::class);
+        $this->app->bind(\App\Services\Contracts\AiChatService::class, \App\Services\Chat\FallbackAiChatService::class);
     }
 
     /**

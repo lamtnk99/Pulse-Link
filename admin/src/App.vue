@@ -11,6 +11,7 @@ import {
   Menu,
   ShieldAlert,
   X,
+  Settings,
 } from '@lucide/vue'
 import SosModal from './components/SosModal.vue'
 import Login from './views/Login.vue'
@@ -21,11 +22,12 @@ import DonationEvents from './views/DonationEvents.vue'
 import HospitalManagement from './views/HospitalManagement.vue'
 import RbacManagement from './views/RbacManagement.vue'
 import SosAlerts from './views/SosAlerts.vue'
+import SettingsView from './views/Settings.vue'
 import type { SosPayload } from './types'
 import pulseLinkIcon from './assets/pulse_link_icon.png'
 import pulseLinkLogo from './assets/pulse_link_logo.png'
 
-type ViewKey = 'dashboard' | 'hospitals' | 'sos' | 'events' | 'community' | 'rbac'
+type ViewKey = 'dashboard' | 'hospitals' | 'sos' | 'events' | 'community' | 'rbac' | 'settings'
 
 interface NavItem {
   key: ViewKey
@@ -74,6 +76,7 @@ const navigation: NavItem[] = [
   { key: 'events', label: 'Lịch hiến máu', shortLabel: 'Sự kiện', icon: CalendarRange },
   { key: 'community', label: 'Bài viết cộng đồng', shortLabel: 'Bài viết', icon: FileText },
   { key: 'rbac', label: 'Nhân sự & RBAC', shortLabel: 'RBAC', icon: ShieldAlert },
+  { key: 'settings', label: 'Cấu hình AI', shortLabel: 'AI', icon: Settings },
 ]
 
 const filteredNavigation = computed(() => {
@@ -96,6 +99,8 @@ const filteredNavigation = computed(() => {
         return user.permissions?.includes('posts.manage')
       case 'rbac':
         return user.permissions?.includes('staff.manage')
+      case 'settings':
+        return false // Chỉ system_admin mới cấu hình được chatbot AI
       default:
         return false
     }
@@ -357,7 +362,8 @@ onBeforeUnmount(() => {
         <HospitalManagement v-else-if="currentView === 'hospitals'" />
         <DonationEvents v-else-if="currentView === 'events'" />
         <CommunityPosts v-else-if="currentView === 'community'" />
-        <RbacManagement v-else />
+        <RbacManagement v-else-if="currentView === 'rbac'" />
+        <SettingsView v-else :api-base-url="apiBaseUrl" />
       </main>
     </div>
 

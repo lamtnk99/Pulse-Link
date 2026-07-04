@@ -19,6 +19,7 @@ import 'widgets/donation_event_card.dart';
 import 'widgets/donation_history_tile.dart';
 import 'widgets/event_map_preview.dart';
 import 'widgets/hero_pass_card.dart';
+import '../../chat/presentation/draggable_chat_fab.dart';
 
 class DailyModeScreen extends StatefulWidget {
   const DailyModeScreen({
@@ -110,19 +111,24 @@ class _DailyModeScreenState extends State<DailyModeScreen> {
           _ProfileTab(controller: widget.controller),
         ];
 
-        return Scaffold(
-          body: SafeArea(
-            child: IndexedStack(
-              index: _currentIndex,
-              children: pages,
+        return Stack(
+          children: [
+            Scaffold(
+              body: SafeArea(
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: pages,
+                ),
+              ),
+              bottomNavigationBar: _PulseBottomNavBar(
+                currentIndex: _currentIndex,
+                onSelected: (index) {
+                  setState(() => _currentIndex = index);
+                },
+              ),
             ),
-          ),
-          bottomNavigationBar: _PulseBottomNavBar(
-            currentIndex: _currentIndex,
-            onSelected: (index) {
-              setState(() => _currentIndex = index);
-            },
-          ),
+            DraggableChatFab(controller: widget.controller),
+          ],
         );
       },
     );

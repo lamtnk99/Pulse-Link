@@ -16,6 +16,8 @@ use App\Http\Controllers\Api\Mobile\MobileDonationController;
 use App\Http\Controllers\Api\Mobile\MobileNotificationController;
 use App\Http\Controllers\Api\Mobile\MobileProfileController;
 use App\Http\Controllers\Api\Mobile\RoutePlannerController;
+use App\Http\Controllers\Api\Mobile\ChatController as MobileChatController;
+use App\Http\Controllers\Api\Admin\SettingsController as AdminSettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/login', [AuthController::class, 'login']);
@@ -54,6 +56,14 @@ Route::prefix('mobile')->middleware(['role:donor'])->group(function () {
     Route::post('sos-alerts/{alert:public_id}/commit', [EmergencyController::class, 'commit']);
     Route::post('sos-alerts/{alert:public_id}/location', [EmergencyController::class, 'updateLocation']);
     Route::post('sos-alerts/{alert:public_id}/cancel', [EmergencyController::class, 'cancelCommitment']);
+
+    // Chatbot AI
+    Route::get('me/chats', [MobileChatController::class, 'index']);
+    Route::post('me/chats', [MobileChatController::class, 'store']);
+    Route::get('me/chats/active-checkup', [MobileChatController::class, 'activeCheckup']);
+    Route::get('me/chats/quota', [MobileChatController::class, 'quota']);
+    Route::get('me/chats/{chat}', [MobileChatController::class, 'show']);
+    Route::post('me/chats/{chat}/messages', [MobileChatController::class, 'sendMessage']);
 });
 
 Route::prefix('admin')->middleware(['role:admin'])->group(function () {
@@ -78,4 +88,9 @@ Route::prefix('admin')->middleware(['role:admin'])->group(function () {
     Route::post('emergency-alerts/{alert:public_id}/complete', [EmergencyController::class, 'complete']);
     Route::post('emergency-alerts/{alert:public_id}/commitments/{commitment}/donated', [EmergencyController::class, 'markCommitmentDonated']);
     Route::post('emergency-alerts/{alert:public_id}/commitments/{commitment}/journey', [EmergencyController::class, 'updateCommitmentJourney']);
+
+    // AI Settings
+    Route::get('settings', [AdminSettingsController::class, 'index']);
+    Route::put('settings', [AdminSettingsController::class, 'update']);
+    Route::post('settings/test-ai', [AdminSettingsController::class, 'testProvider']);
 });

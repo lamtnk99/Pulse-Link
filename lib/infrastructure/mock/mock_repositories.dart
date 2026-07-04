@@ -10,6 +10,9 @@ import '../../services/donation_event_repository.dart';
 import '../../services/donation_history_repository.dart';
 import '../../services/donor_repository.dart';
 import '../../services/community_post_repository.dart';
+import '../../services/chat_service.dart';
+import '../../features/chat/domain/chat_conversation.dart';
+import '../../features/chat/domain/chat_message.dart';
 import 'mock_data.dart';
 
 class MockDonorRepository implements DonorRepository {
@@ -154,5 +157,115 @@ class MockDonationHistoryRepository implements DonationHistoryRepository {
     );
     _history.insert(0, donation);
     return donation;
+  }
+}
+
+class MockChatService implements ChatService {
+  final List<ChatConversation> _conversations = [];
+  final Map<String, List<ChatMessage>> _messages = {};
+
+  @override
+  Future<List<ChatConversation>> getConversations() async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    return _conversations;
+  }
+
+  @override
+  Future<ChatConversation> getConversation(String id) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final conversation = _conversations.firstWhere((c) => c.id == id);
+    return ChatConversation(
+      id: conversation.id,
+      title: conversation.title,
+      contextType: conversation.contextType,
+      contextMeta: conversation.contextMeta,
+      isActive: conversation.isActive,
+      createdAt: conversation.createdAt,
+      messages: _messages[id] ?? [],
+    );
+  }
+
+  @override
+  Future<ChatConversation> createConversation({
+    String? contextType,
+    Map<String, dynamic>? contextMeta,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    final conversation = ChatConversation(
+      id: id,
+      title: 'Cuộc trò chuyện mới',
+      contextType: contextType ?? 'general',
+      contextMeta: contextMeta,
+      isActive: true,
+      createdAt: DateTime.now(),
+    );
+    _conversations.insert(0, conversation);
+    _messages[id] = [];
+    return conversation;
+  }
+
+  @override
+  Future<ChatMessage> sendMessage(String conversationId, String content) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final userMsg = ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      role: 'user',
+      content: content,
+      createdAt: DateTime.now(),
+    );
+    _messages[conversationId] ??= [];
+    _messages[conversationId]!.add(userMsg);
+
+    // AI reply
+    await Future.delayed(const Duration(milliseconds: 600));
+    String replyContent = 'Chào bạn! Đây là câu trả lời thử nghiệm từ trợ lý sức khỏe Mock AI của Pulse Link. ';
+    if (content.toLowerCase().contains('chóng mặt') || content.toLowerCase().contains('mệt')) {
+      replyContent += 'Nếu bạn cảm thấy chóng mặt hoặc mệt mỏi sau khi hiến máu, hãy nằm nghỉ ngay lập tức, uống nhiều nước ấm và tránh vận động mạnh trong 24 giờ. Nếu triệu chứng không thuyên giảm, vui lòng liên hệ hotline 115.';
+    } else {
+      replyContent += 'Tôi có thể hỗ trợ giải đáp các thắc mắc về dinh dưỡng, tập luyện và hướng dẫn tự chăm sóc sức khỏe sau hiến máu.';
+    }
+
+    final aiMsg = ChatMessage(
+      id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
+      role: 'assistant',
+      content: replyContent,
+      createdAt: DateTime.now(),
+    );
+    _messages[conversationId]!.add(aiMsg);
+
+    // Update conversation title
+    final idx = _conversations.indexWhere((c) => c.id == conversationId);
+    if (idx != -1) {
+      final prev = _conversations[idx];
+      _conversations[idx] = ChatConversation(
+        id: prev.id,
+        title: content.length > 25 ? '${content.substring(0, 22)}...' : content,
+        contextType: prev.contextType,
+        contextMeta: prev.contextMeta,
+        isActive: prev.isActive,
+        createdAt: prev.createdAt,
+        latestMessage: aiMsg,
+      );
+    }
+
+    return aiMsg;
+  }
+
+  @override
+  Future<ChatConversation?> getActiveCheckup() async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final idx = _conversations.indexWhere((c) => c.contextType == 'post_donation_checkup' && c.isActive);
+    if (idx == -1) return null;
+    return _conversations[idx];
+  }
+
+  @override
+  Future<Map<String, dynamic>> getQuota() async {
+    return {
+      'used': 0,
+      'limit': 0,
+      'remaining': -1,
+    };
   }
 }
