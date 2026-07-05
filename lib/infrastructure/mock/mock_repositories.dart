@@ -331,7 +331,7 @@ class MockDonationFundService implements DonationFundService {
     'mock-campaign-2': [
       CampaignDonation(donorName: 'Lê Văn Cường', amount: 0, points: 1500, message: 'Gửi chút hơi ấm tới các em vùng cao.', lastDonatedAt: DateTime.now()),
       CampaignDonation(donorName: 'Hiệp sĩ ẩn danh', amount: 0, points: 1000, isAnonymous: true, lastDonatedAt: DateTime.now()),
-      CampaignDonation(donorName: 'Nguyễn Thị Dung', amount: 0, points: 800, message: 'Lan tỏa yêu thương ❤️', lastDonatedAt: DateTime.now()),
+      CampaignDonation(donorName: 'Nguyễn Thị Dung', amount: 0, points: 800, message: 'Lan tỏa yêu thương đến mọi người.', lastDonatedAt: DateTime.now()),
     ],
   };
 
@@ -432,7 +432,7 @@ class MockCommunityImpactService implements CommunityImpactService {
         GratitudeNote(donorName: 'Nguyễn Hoài An', message: 'Cho đi một chút, nhận lại rất nhiều bình yên trong lòng.'),
         GratitudeNote(donorName: 'Hiệp sĩ ẩn danh', message: 'Mong người bệnh mau khỏe, cố lên nhé!', isAnonymous: true),
         GratitudeNote(donorName: 'Trần Minh Quân', message: 'Lần đầu hiến máu, hồi hộp mà vui lắm.'),
-        GratitudeNote(donorName: 'Phạm Thanh Vy', message: 'Hẹn gặp lại mọi người ở lần hiến sau ❤️'),
+        GratitudeNote(donorName: 'Phạm Thanh Vy', message: 'Hẹn gặp lại mọi người ở lần hiến sau nhé.'),
       ],
     );
   }
