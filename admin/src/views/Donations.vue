@@ -228,15 +228,15 @@ onMounted(() => {
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-black tracking-wide text-neutral-100 flex items-center gap-2">
+        <h1 class="text-2xl font-black tracking-wide text-slate-900 flex items-center gap-2">
           <HeartHandshake class="h-7 w-7 text-[#E31837]" />
           QUẢN LÝ QUYÊN GÓP
         </h1>
-        <p class="text-sm text-neutral-400">Quản lý quỹ tài chính SOS và tích lũy đổi quà điểm Hero.</p>
+        <p class="text-sm text-slate-500">Quản lý quỹ tài chính SOS và tích lũy đổi quà điểm Hero.</p>
       </div>
       <button
         @click="openCreateModal"
-        class="flex items-center gap-1.5 rounded-xl bg-[#E31837] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#E31837]/90 transition"
+        class="flex items-center gap-1.5 rounded-xl bg-[#E31837] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#E31837]/90 transition shadow-sm"
       >
         <Plus class="h-4 w-4" />
         TẠO CHIẾN DỊCH
@@ -244,36 +244,36 @@ onMounted(() => {
     </div>
 
     <!-- Feedback alerts -->
-    <div v-if="errorMsg" class="flex items-center gap-2 rounded-xl bg-red-950/40 border border-red-500/20 p-4 text-red-400 text-sm">
+    <div v-if="errorMsg" class="flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 p-4 text-red-600 text-sm">
       <AlertCircle class="h-4 w-4 shrink-0" />
       {{ errorMsg }}
     </div>
-    <div v-if="successMsg" class="flex items-center gap-2 rounded-xl bg-green-950/40 border border-green-500/20 p-4 text-green-400 text-sm">
+    <div v-if="successMsg" class="flex items-center gap-2 rounded-xl bg-green-50 border border-green-200 p-4 text-green-600 text-sm">
       <CheckCircle class="h-4 w-4 shrink-0" />
       {{ successMsg }}
     </div>
 
     <!-- Stats grid -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6">
-        <div class="text-xs font-bold text-neutral-400 uppercase tracking-wider">Tổng số chiến dịch</div>
-        <div class="mt-2 text-3xl font-black text-white">{{ campaigns.length }}</div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tổng số chiến dịch</div>
+        <div class="mt-2 text-3xl font-black text-slate-900">{{ campaigns.length }}</div>
       </div>
-      <div class="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6">
-        <div class="text-xs font-bold text-neutral-400 uppercase tracking-wider">Quỹ tài chính thu nhận</div>
-        <div class="mt-2 text-3xl font-black text-emerald-400">{{ formatCurrency(totalFinancialRaised) }}</div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Quỹ tài chính thu nhận</div>
+        <div class="mt-2 text-3xl font-black text-emerald-600">{{ formatCurrency(totalFinancialRaised) }}</div>
       </div>
-      <div class="rounded-2xl border border-neutral-800 bg-neutral-900/50 p-6">
-        <div class="text-xs font-bold text-neutral-400 uppercase tracking-wider">Quỹ điểm Hero đóng góp</div>
-        <div class="mt-2 text-3xl font-black text-rose-400">{{ totalPointsDonated }} Pts</div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Quỹ điểm Hero đóng góp</div>
+        <div class="mt-2 text-3xl font-black text-rose-600">{{ totalPointsDonated }} Pts</div>
       </div>
     </div>
 
     <!-- Campaign list table -->
-    <div class="overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-900/20">
+    <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
       <table class="w-full text-left border-collapse">
         <thead>
-          <tr class="border-b border-neutral-800 text-[11px] font-black uppercase tracking-wider text-neutral-400">
+          <tr class="border-b border-slate-200 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-500">
             <th class="p-4">Tên chiến dịch</th>
             <th class="p-4">Hình thức</th>
             <th class="p-4">Tài chính (VND)</th>
@@ -283,51 +283,51 @@ onMounted(() => {
             <th class="p-4 text-right">Hành động</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-neutral-800/40 text-sm text-neutral-200">
-          <tr v-for="c in campaigns" :key="c.id" class="hover:bg-white/[0.02] transition">
-            <td class="p-4 font-bold">
+        <tbody class="divide-y divide-slate-100 text-sm text-slate-700 bg-white">
+          <tr v-for="c in campaigns" :key="c.id" class="hover:bg-slate-50/50 transition">
+            <td class="p-4 font-bold text-slate-900">
               <div>{{ c.title }}</div>
-              <div class="text-[11px] text-neutral-400 font-normal line-clamp-1 mt-1">{{ c.description }}</div>
+              <div class="text-[11px] text-slate-500 font-normal line-clamp-1 mt-1">{{ c.description }}</div>
             </td>
             <td class="p-4">
-              <span v-if="c.type === 'financial'" class="rounded bg-emerald-950 text-emerald-400 text-xs px-2 py-0.5 font-bold">TIỀN MẶT</span>
-              <span v-else-if="c.type === 'points'" class="rounded bg-rose-950 text-rose-400 text-xs px-2 py-0.5 font-bold">ĐIỂM HERO</span>
-              <span v-else class="rounded bg-neutral-800 text-neutral-300 text-xs px-2 py-0.5 font-bold">CẢ HAI</span>
+              <span v-if="c.type === 'financial'" class="rounded bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 font-bold">TIỀN MẶT</span>
+              <span v-else-if="c.type === 'points'" class="rounded bg-rose-50 text-rose-700 text-xs px-2 py-0.5 font-bold">ĐIỂM HERO</span>
+              <span v-else class="rounded bg-slate-100 text-slate-700 text-xs px-2 py-0.5 font-bold">CẢ HAI</span>
             </td>
             <td class="p-4">
               <div v-if="c.type !== 'points'">
-                <div class="font-bold text-emerald-400">{{ formatCurrency(c.current_amount) }}</div>
-                <div class="text-[11px] text-neutral-400 mt-0.5">Mục tiêu: {{ formatCurrency(c.target_amount) }}</div>
+                <div class="font-bold text-emerald-600">{{ formatCurrency(c.current_amount) }}</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">Mục tiêu: {{ formatCurrency(c.target_amount) }}</div>
               </div>
-              <span v-else class="text-neutral-500">-</span>
+              <span v-else class="text-slate-400">-</span>
             </td>
             <td class="p-4">
               <div v-if="c.type !== 'financial'">
-                <div class="font-bold text-rose-400">{{ c.current_points }} Pts</div>
-                <div class="text-[11px] text-neutral-400 mt-0.5">Mục tiêu: {{ c.target_points }} Pts</div>
+                <div class="font-bold text-rose-600">{{ c.current_points }} Pts</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">Mục tiêu: {{ c.target_points }} Pts</div>
               </div>
-              <span v-else class="text-neutral-500">-</span>
+              <span v-else class="text-slate-400">-</span>
             </td>
-            <td class="p-4 text-neutral-400">{{ formatDate(c.expires_at) }}</td>
+            <td class="p-4 text-slate-500">{{ formatDate(c.expires_at) }}</td>
             <td class="p-4">
-              <span v-if="c.status === 'active'" class="rounded bg-green-500/10 text-green-400 text-xs px-2.5 py-1 font-bold">ĐANG DIỄN RA</span>
-              <span v-else-if="c.status === 'completed'" class="rounded bg-blue-500/10 text-blue-400 text-xs px-2.5 py-1 font-bold">HOÀN THÀNH</span>
-              <span v-else class="rounded bg-neutral-800 text-neutral-400 text-xs px-2.5 py-1 font-bold">ĐÃ HỦY</span>
+              <span v-if="c.status === 'active'" class="rounded bg-green-50 text-green-600 text-xs px-2.5 py-1 font-bold whitespace-nowrap">ĐANG DIỄN RA</span>
+              <span v-else-if="c.status === 'completed'" class="rounded bg-blue-50 text-blue-600 text-xs px-2.5 py-1 font-bold whitespace-nowrap">HOÀN THÀNH</span>
+              <span v-else class="rounded bg-slate-100 text-slate-500 text-xs px-2.5 py-1 font-bold whitespace-nowrap">ĐÃ HỦY</span>
             </td>
-            <td class="p-4 text-right space-x-2">
-              <button @click="viewTransactions(c)" title="Lịch sử giao dịch" class="p-2 rounded bg-neutral-800 hover:bg-neutral-700 transition text-neutral-300">
+            <td class="p-4 text-right space-x-2 whitespace-nowrap">
+              <button @click="viewTransactions(c)" title="Lịch sử giao dịch" class="p-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition text-slate-600 hover:text-slate-900 shadow-sm">
                 <Eye class="h-4 w-4" />
               </button>
-              <button @click="openEditModal(c)" title="Sửa" class="p-2 rounded bg-neutral-800 hover:bg-neutral-700 transition text-yellow-500">
+              <button @click="openEditModal(c)" title="Sửa" class="p-2 rounded-lg border border-amber-200 bg-amber-50 hover:bg-amber-100 transition text-amber-600 hover:text-amber-800 shadow-sm">
                 <Edit class="h-4 w-4" />
               </button>
-              <button @click="deleteCampaign(c)" title="Xóa" class="p-2 rounded bg-neutral-800 hover:bg-neutral-700 transition text-red-500">
+              <button @click="deleteCampaign(c)" title="Xóa" class="p-2 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 transition text-red-600 hover:text-red-800 shadow-sm">
                 <Trash2 class="h-4 w-4" />
               </button>
             </td>
           </tr>
           <tr v-if="campaigns.length === 0">
-            <td colspan="7" class="p-8 text-center text-neutral-400">
+            <td colspan="7" class="p-8 text-center text-slate-400 font-bold">
               Không tìm thấy chiến dịch quyên góp nào.
             </td>
           </tr>
@@ -336,81 +336,81 @@ onMounted(() => {
     </div>
 
     <!-- Add/Edit Campaign Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div class="w-full max-w-lg rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl">
-        <h3 class="text-lg font-black text-white uppercase tracking-wide">
+    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div class="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <h3 class="text-lg font-black text-slate-900 uppercase tracking-wide">
           {{ editingCampaignId ? 'CẬP NHẬT CHIẾN DỊCH' : 'TẠO CHIẾN DỊCH MỚI' }}
         </h3>
         <form @submit.prevent="submitForm" class="mt-4 space-y-4">
           <div>
-            <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Tiêu đề chiến dịch</label>
-            <input v-model="formTitle" type="text" required class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Ví dụ: Hỗ trợ viện phí ca SOS em bé A" />
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tiêu đề chiến dịch</label>
+            <input v-model="formTitle" type="text" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Ví dụ: Hỗ trợ viện phí ca SOS em bé A" />
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Mô tả dự án</label>
-            <textarea v-model="formDescription" required rows="3" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Nhập câu chuyện dự án, các mục đích sử dụng quỹ..."></textarea>
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Mô tả dự án</label>
+            <textarea v-model="formDescription" required rows="3" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Nhập câu chuyện dự án, các mục đích sử dụng quỹ..."></textarea>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Hình thức</label>
-              <select v-model="formType" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]">
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Hình thức</label>
+              <select v-model="formType" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50">
                 <option value="both">Cả hai (Tiền & Điểm)</option>
                 <option value="financial">Quyên góp tiền mặt</option>
                 <option value="points">Quyên góp điểm Hero</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Thời hạn đóng</label>
-              <input v-model="formExpiresAt" type="date" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" />
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Thời hạn đóng</label>
+              <input v-model="formExpiresAt" type="date" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" />
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div v-if="formType !== 'points'">
-              <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Mục tiêu tiền (VND)</label>
-              <input v-model.number="formTargetAmount" type="number" min="0" required class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" />
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Mục tiêu tiền (VND)</label>
+              <input v-model.number="formTargetAmount" type="number" min="0" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" />
             </div>
             <div v-if="formType !== 'financial'">
-              <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Mục tiêu điểm Hero</label>
-              <input v-model.number="formTargetPoints" type="number" min="0" required class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" />
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Mục tiêu điểm Hero</label>
+              <input v-model.number="formTargetPoints" type="number" min="0" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" />
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Link ảnh đại diện (URL)</label>
-            <input v-model="formImageUrl" type="url" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="https://images.unsplash.com/..." />
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Link ảnh đại diện (URL)</label>
+            <input v-model="formImageUrl" type="url" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="https://images.unsplash.com/..." />
           </div>
 
-          <!-- Empathy section: nội dung giúp người quyên góp thấu cảm với hoàn cảnh -->
-          <div class="rounded-xl border border-[#E31837]/20 bg-[#E31837]/[0.03] p-4 space-y-4">
+          <!-- Empathy section -->
+          <div class="rounded-xl border border-[#E31837]/20 bg-[#E31837]/[0.02] p-4 space-y-4">
             <div class="flex items-center gap-2 text-[#E31837]">
               <HeartHandshake class="h-4 w-4" />
               <span class="text-xs font-black uppercase tracking-wide">Nội dung thấu cảm</span>
             </div>
-            <p class="text-[11px] text-neutral-500 -mt-2">
+            <p class="text-[11px] text-slate-500 -mt-2">
               Giúp người quyên góp hình dung mình đang giúp ai, và mỗi đóng góp tạo ra tác động gì. Bỏ trống nếu chưa có.
             </p>
 
             <div>
-              <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Người / cộng đồng thụ hưởng</label>
-              <input v-model="formBeneficiaryName" type="text" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Ví dụ: Bé Gia Bảo, 6 tuổi / Điểm trường Lũng Cú" />
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Người / cộng đồng thụ hưởng</label>
+              <input v-model="formBeneficiaryName" type="text" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Ví dụ: Bé Gia Bảo, 6 tuổi / Điểm trường Lũng Cú" />
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Câu chuyện hoàn cảnh</label>
-              <textarea v-model="formBeneficiaryStory" rows="4" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Kể câu chuyện thật, gần gũi về người thụ hưởng để chạm tới cảm xúc người đọc..."></textarea>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Câu chuyện hoàn cảnh</label>
+              <textarea v-model="formBeneficiaryStory" rows="4" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Kể câu chuyện thật, gần gũi về người thụ hưởng để chạm tới cảm xúc người đọc..."></textarea>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Đơn vị tác động</label>
-                <input v-model="formImpactUnit" type="text" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Ví dụ: phần cơm, đơn vị máu, bộ sơ cứu" />
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Đơn vị tác động</label>
+                <input v-model="formImpactUnit" type="text" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Ví dụ: phần cơm, đơn vị máu, bộ sơ cứu" />
               </div>
               <div>
-                <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Mức độ cấp thiết</label>
-                <select v-model="formUrgencyLevel" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Mức độ cấp thiết</label>
+                <select v-model="formUrgencyLevel" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50">
                   <option value="">Không hiển thị</option>
                   <option value="normal">Đang kêu gọi</option>
                   <option value="urgent">Cần gấp</option>
@@ -421,27 +421,27 @@ onMounted(() => {
 
             <div class="grid grid-cols-2 gap-4">
               <div v-if="formType !== 'points'">
-                <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">VND cho 1 đơn vị tác động</label>
-                <input v-model.number="formImpactPerUnitAmount" type="number" min="0" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Ví dụ: 35000" />
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">VND cho 1 đơn vị tác động</label>
+                <input v-model.number="formImpactPerUnitAmount" type="number" min="0" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Ví dụ: 35000" />
               </div>
               <div v-if="formType !== 'financial'">
-                <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Điểm Hero cho 1 đơn vị</label>
-                <input v-model.number="formImpactPerUnitPoints" type="number" min="0" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Ví dụ: 50" />
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Điểm Hero cho 1 đơn vị</label>
+                <input v-model.number="formImpactPerUnitPoints" type="number" min="0" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Ví dụ: 50" />
               </div>
             </div>
           </div>
 
           <div v-if="editingCampaignId">
-            <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Trạng thái</label>
-            <select v-model="formStatus" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]">
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Trạng thái</label>
+            <select v-model="formStatus" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50">
               <option value="active">Đang diễn ra</option>
               <option value="completed">Hoàn thành</option>
               <option value="cancelled">Hủy bỏ</option>
             </select>
           </div>
 
-          <div class="flex justify-end gap-2 pt-4 border-t border-neutral-850">
-            <button type="button" @click="showModal = false" class="rounded-xl border border-neutral-800 px-4 py-2 text-sm text-neutral-400 hover:bg-neutral-900">Hủy</button>
+          <div class="flex justify-end gap-2 pt-4 border-t border-slate-100">
+            <button type="button" @click="showModal = false" class="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-500 hover:bg-slate-50">Hủy</button>
             <button type="submit" class="rounded-xl bg-[#E31837] px-5 py-2 text-sm font-bold text-white hover:bg-[#E31837]/90 transition">Xác nhận</button>
           </div>
         </form>
@@ -449,21 +449,21 @@ onMounted(() => {
     </div>
 
     <!-- View Transactions Modal -->
-    <div v-if="showTxModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div class="w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950 p-6 shadow-xl flex flex-col max-h-[85vh]">
-        <div class="flex items-center justify-between border-b border-neutral-800 pb-4">
-          <h3 class="text-base font-black text-white uppercase tracking-wide">
+    <div v-if="showTxModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div class="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl flex flex-col max-h-[85vh]">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+          <h3 class="text-base font-black text-slate-900 uppercase tracking-wide">
             Lịch sử quyên góp: {{ activeCampaign?.title }}
           </h3>
-          <button @click="showTxModal = false" class="text-neutral-400 hover:text-white">&times; Đóng</button>
+          <button @click="showTxModal = false" class="text-slate-500 hover:text-slate-800 font-bold">&times; Đóng</button>
         </div>
 
         <div class="flex-1 overflow-y-auto mt-4 space-y-4">
-          <div v-if="isLoadingTx" class="text-center py-8 text-neutral-400">Đang tải lịch sử giao dịch...</div>
+          <div v-if="isLoadingTx" class="text-center py-8 text-slate-400 font-bold">Đang tải lịch sử giao dịch...</div>
           <div v-else class="overflow-x-auto">
             <table class="w-full text-left text-sm border-collapse">
               <thead>
-                <tr class="border-b border-neutral-800 text-[10px] font-black uppercase tracking-wider text-neutral-400">
+                <tr class="border-b border-slate-200 text-[10px] font-black uppercase tracking-wider text-slate-500">
                   <th class="pb-2">Người ủng hộ</th>
                   <th class="pb-2">Đóng góp</th>
                   <th class="pb-2">Phương thức</th>
@@ -472,31 +472,31 @@ onMounted(() => {
                   <th class="pb-2">Thời gian</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-neutral-850 text-neutral-200">
-                <tr v-for="t in transactions" :key="t.id" class="hover:bg-white/[0.01]">
+              <tbody class="divide-y divide-slate-100 text-slate-700 bg-white">
+                <tr v-for="t in transactions" :key="t.id" class="hover:bg-slate-50/50">
                   <td class="py-2.5">
-                    <div class="font-bold">{{ t.donor_name }}</div>
-                    <div class="text-[10px] text-neutral-500 italic mt-0.5">{{ t.message || 'Không có lời chúc.' }}</div>
+                    <div class="font-bold text-slate-900">{{ t.donor_name }}</div>
+                    <div class="text-[10px] text-slate-400 italic mt-0.5">{{ t.message || 'Không có lời chúc.' }}</div>
                   </td>
                   <td class="py-2.5 font-bold">
-                    <span v-if="t.amount > 0" class="text-emerald-400">+{{ formatCurrency(t.amount) }}</span>
-                    <span v-else class="text-rose-400">+{{ t.points }} Pts</span>
+                    <span v-if="t.amount > 0" class="text-emerald-600">+{{ formatCurrency(t.amount) }}</span>
+                    <span v-else class="text-rose-600">+{{ t.points }} Pts</span>
                   </td>
-                  <td class="py-2.5 uppercase text-xs text-neutral-400">{{ t.payment_method }}</td>
-                  <td class="py-2.5 font-mono text-xs">{{ t.transaction_id }}</td>
+                  <td class="py-2.5 uppercase text-xs text-slate-500">{{ t.payment_method }}</td>
+                  <td class="py-2.5 font-mono text-xs text-slate-600">{{ t.transaction_id }}</td>
                   <td class="py-2.5">
-                    <span v-if="t.payment_status === 'success'" class="text-emerald-400 text-xs font-bold flex items-center gap-1">
+                    <span v-if="t.payment_status === 'success'" class="text-emerald-600 text-xs font-bold flex items-center gap-1">
                       <CheckCircle class="h-3 w-3" /> THÀNH CÔNG
                     </span>
-                    <span v-else-if="t.payment_status === 'failed'" class="text-red-400 text-xs font-bold flex items-center gap-1">
+                    <span v-else-if="t.payment_status === 'failed'" class="text-red-600 text-xs font-bold flex items-center gap-1">
                       <XCircle class="h-3 w-3" /> THẤT BẠI
                     </span>
-                    <span v-else class="text-yellow-500 text-xs font-bold">PENDING</span>
+                    <span v-else class="text-yellow-600 text-xs font-bold">PENDING</span>
                   </td>
-                  <td class="py-2.5 text-xs text-neutral-400">{{ new Date(t.created_at).toLocaleString('vi-VN') }}</td>
+                  <td class="py-2.5 text-xs text-slate-500">{{ new Date(t.created_at).toLocaleString('vi-VN') }}</td>
                 </tr>
                 <tr v-if="transactions.length === 0">
-                  <td colspan="6" class="py-6 text-center text-neutral-400">
+                  <td colspan="6" class="py-6 text-center text-slate-400 font-bold">
                     Chưa có lượt ủng hộ nào cho chiến dịch này.
                   </td>
                 </tr>
