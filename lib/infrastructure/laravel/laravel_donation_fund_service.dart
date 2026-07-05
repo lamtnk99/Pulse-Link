@@ -76,6 +76,13 @@ class LaravelDonationFundService implements DonationFundService {
     return _unwrapData(json);
   }
 
+  @override
+  Future<String> checkTransactionStatus(String transactionId) async {
+    final json = await _client.getJson('/api/mobile/donation/transactions/$transactionId/status');
+    final data = _unwrapData(json);
+    return data['status'] as String;
+  }
+
   Map<String, dynamic> _unwrapData(Map<String, dynamic> json) {
     final data = json['data'];
     if (data is Map<String, dynamic>) return data;

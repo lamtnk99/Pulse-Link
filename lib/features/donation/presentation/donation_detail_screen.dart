@@ -509,12 +509,6 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
   }
 
   Widget _buildDonorTile(CampaignDonation donor, int index, bool isDark) {
-    final isTop3 = index < 3;
-    Color? medalColor;
-    if (index == 0) medalColor = DonationPalette.gold;
-    if (index == 1) medalColor = DonationPalette.silver;
-    if (index == 2) medalColor = DonationPalette.bronze;
-
     final amountText = donor.amount > 0
         ? '${NumberFormat('#,###').format(donor.amount)}đ'
         : '${donor.points} điểm Hero';
@@ -526,8 +520,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
         color: DonationPalette.surface(isDark).withOpacity(isDark ? 0.5 : 1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isTop3 ? medalColor!.withOpacity(0.4) : DonationPalette.subtleBorder(isDark),
-          width: isTop3 ? 1.4 : 1,
+          color: DonationPalette.subtleBorder(isDark),
+          width: 1,
         ),
       ),
       child: Column(
@@ -536,52 +530,27 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Avatar tròn với chữ cái đầu + huy hiệu hạng
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      gradient: donor.isAnonymous
-                          ? null
-                          : DonationPalette.warmGradient,
-                      color: donor.isAnonymous ? DonationPalette.primary.withOpacity(0.12) : null,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        donor.initial,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                          color: donor.isAnonymous ? DonationPalette.primary : Colors.white,
-                        ),
-                      ),
+              // Avatar tròn với chữ cái đầu
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  gradient: donor.isAnonymous
+                      ? null
+                      : DonationPalette.warmGradient,
+                  color: donor.isAnonymous ? DonationPalette.primary.withOpacity(0.12) : null,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    donor.initial,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: donor.isAnonymous ? DonationPalette.primary : Colors.white,
                     ),
                   ),
-                  if (isTop3)
-                    Positioned(
-                      right: -2,
-                      bottom: -2,
-                      child: Container(
-                        width: 18,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          color: medalColor,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: DonationPalette.surface(isDark), width: 1.5),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${index + 1}',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.black87),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -808,11 +777,23 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
         );
 
         final paymentUrl = res['payment_url'] as String?;
-        if (paymentUrl != null) {
+        final transactionId = res['transaction_id'] as String?;
+        if (paymentUrl != null && transactionId != null) {
           final uri = Uri.parse(paymentUrl);
           if (await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-            // Tiền mặt: webhook xác nhận sau nên đánh dấu pending.
-            widget.onSuccess(_buildResult(isPending: true));
+            if (mounted) {
+              showDialog<void>(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => _PaymentWaitingDialog(
+                  controller: widget.controller,
+                  transactionId: transactionId,
+                  onPaymentSuccess: () {
+                    widget.onSuccess(_buildResult(isPending: false));
+                  },
+                ),
+              );
+            }
           } else {
             throw 'Không thể khởi động cổng thanh toán.';
           }
@@ -1180,6 +1161,168 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
               color: isSel ? DonationPalette.primary : DonationPalette.mutedText(isDark),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentWaitingDialog extends StatefulWidget {
+  final PulseLinkController controller;
+  final String transactionId;
+  final VoidCallback onPaymentSuccess;
+
+  const _PaymentWaitingDialog({
+    required this.controller,
+    required this.transactionId,
+    required this.onPaymentSuccess,
+  });
+
+  @override
+  State<_PaymentWaitingDialog> createState() => _PaymentWaitingDialogState();
+}
+
+class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
+  Timer? _timer;
+  bool _checking = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) => _checkStatus());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkStatus() async {
+    if (_checking) return;
+    setState(() {
+      _checking = true;
+      _error = null;
+    });
+    try {
+      final status = await widget.controller.donationFundService.checkTransactionStatus(widget.transactionId);
+      if (!mounted) return;
+      if (status == 'success') {
+        _timer?.cancel();
+        Navigator.of(context).pop(); // Close dialog
+        widget.onPaymentSuccess();
+      } else if (status == 'failed') {
+        _timer?.cancel();
+        setState(() {
+          _checking = false;
+          _error = 'Giao dịch thất bại hoặc đã bị hủy.';
+        });
+      } else {
+        setState(() {
+          _checking = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _checking = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    return Dialog(
+      backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                SizedBox(
+                  width: 72,
+                  height: 72,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 4,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _error != null ? Colors.red : DonationPalette.primary,
+                    ),
+                  ),
+                ),
+                Icon(
+                  _error != null 
+                      ? Icons.error_outline_rounded 
+                      : Icons.account_balance_wallet_outlined,
+                  size: 32,
+                  color: _error != null ? Colors.red : DonationPalette.primary,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            Text(
+              _error ?? 'Đang chờ thanh toán...',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              _error != null
+                  ? 'Vui lòng thử lại hoặc chọn phương thức thanh toán khác.'
+                  : 'Vui lòng hoàn tất thanh toán trên trình duyệt của bạn.\nỨng dụng sẽ tự động tiếp tục khi giao dịch thành công.',
+              style: TextStyle(
+                fontSize: 13.5,
+                color: isDark ? Colors.grey[400] : Colors.grey[600],
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            if (_error == null) ...[
+              ElevatedButton.icon(
+                onPressed: _checking ? null : _checkStatus,
+                icon: _checking
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Kiểm tra trạng thái'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: DonationPalette.primary,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(48),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                _error != null ? 'Đóng' : 'Hủy giao dịch',
+                style: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

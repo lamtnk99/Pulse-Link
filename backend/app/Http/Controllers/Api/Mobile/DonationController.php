@@ -55,7 +55,7 @@ class DonationController extends Controller
                     'last_donated_at' => $group->max('created_at'),
                 ];
             })
-            ->sortByDesc(fn($d) => [$d['amount'], $d['points']])
+            ->sortByDesc('last_donated_at')
             ->take(10)
             ->values();
 
@@ -95,8 +95,8 @@ class DonationController extends Controller
             'payment_method' => $payload['payment_method'],
             'payment_status' => 'pending',
             'transaction_id' => $transactionId,
-            'donor_name' => $payload['donor_name'] ?: ($user ? $user->name : 'Hiệp sĩ ẩn danh'),
-            'message' => $payload['message'],
+            'donor_name' => ($payload['donor_name'] ?? null) ?: ($user ? $user->name : 'Hiệp sĩ ẩn danh'),
+            'message' => $payload['message'] ?? null,
             'is_anonymous' => $payload['is_anonymous'] ?? false,
         ]);
 
@@ -154,8 +154,8 @@ class DonationController extends Controller
                 'payment_method' => 'points',
                 'payment_status' => 'success',
                 'transaction_id' => 'PTS-' . strtoupper(Str::random(12)),
-                'donor_name' => $payload['donor_name'] ?: $user->name,
-                'message' => $payload['message'],
+                'donor_name' => ($payload['donor_name'] ?? null) ?: $user->name,
+                'message' => $payload['message'] ?? null,
                 'is_anonymous' => $payload['is_anonymous'] ?? false,
             ]);
 
@@ -207,6 +207,19 @@ class DonationController extends Controller
         }
 
         return response()->json(['message' => 'Webhook xử lý thành công.']);
+    }
+
+    public function checkTransactionStatus($transactionId): JsonResponse
+    {
+        $donation = CampaignDonation::query()
+            ->where('transaction_id', $transactionId)
+            ->firstOrFail();
+
+        return response()->json([
+            'data' => [
+                'status' => $donation->payment_status,
+            ]
+        ]);
     }
 
     private function formatCampaign(DonationCampaign $campaign): array

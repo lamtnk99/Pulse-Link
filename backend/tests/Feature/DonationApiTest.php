@@ -187,6 +187,35 @@ class DonationApiTest extends TestCase
         ]);
     }
 
+    public function test_donor_can_donate_cash_without_optional_fields()
+    {
+        $campaign = DonationCampaign::create([
+            'title' => 'SOS Surgery Fund',
+            'description' => 'Help heart surgery',
+            'type' => 'financial',
+            'target_amount' => 100000000,
+            'status' => 'active',
+        ]);
+
+        $response = $this->postJson('/api/mobile/donation/campaigns/' . $campaign->public_id . '/donate-cash', [
+            'amount' => 500000,
+            'payment_method' => 'vnpay',
+        ], [
+            'Authorization' => 'Bearer ' . $this->donorToken,
+        ]);
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('campaign_donations', [
+            'donation_campaign_id' => $campaign->id,
+            'amount' => 500000,
+            'payment_status' => 'pending',
+            'donor_name' => $this->donor->name, // defaults to user name
+            'message' => null,
+            'is_anonymous' => false,
+        ]);
+    }
+
     public function test_webhook_can_mark_pending_cash_donation_successful()
     {
         Event::fake([CampaignProgressUpdated::class]);
@@ -224,6 +253,34 @@ class DonationApiTest extends TestCase
         $this->assertEquals(500000, $campaign->current_amount);
 
         Event::assertDispatched(CampaignProgressUpdated::class);
+    }
+
+    public function test_donor_can_check_transaction_status()
+    {
+        $campaign = DonationCampaign::create([
+            'title' => 'SOS Surgery Fund',
+            'description' => 'Help heart surgery',
+            'type' => 'financial',
+            'target_amount' => 100000000,
+            'status' => 'active',
+        ]);
+
+        $donation = CampaignDonation::create([
+            'donation_campaign_id' => $campaign->id,
+            'user_id' => $this->donor->id,
+            'amount' => 500000,
+            'payment_method' => 'momo',
+            'payment_status' => 'pending',
+            'transaction_id' => 'TXN-CHECKSTATUS',
+            'donor_name' => 'Donor A',
+        ]);
+
+        $response = $this->getJson('/api/mobile/donation/transactions/TXN-CHECKSTATUS/status', [
+            'Authorization' => 'Bearer ' . $this->donorToken,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('data.status', 'pending');
     }
 
     public function test_admin_can_manage_campaigns()

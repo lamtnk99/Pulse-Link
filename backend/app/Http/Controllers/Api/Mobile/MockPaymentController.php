@@ -271,11 +271,12 @@ class MockPaymentController extends Controller
             'status' => ['required', 'string', 'in:success,failed'],
         ]);
 
-        // Send a internal POST request to the webhook endpoint
-        $response = Http::post(route('payment.webhook'), [
+        // Send a internal POST request to the webhook endpoint (avoid HTTP call to prevent single-thread deadlock)
+        $webhookRequest = Request::create(route('payment.webhook'), 'POST', [
             'transaction_id' => $payload['transaction_id'],
             'status' => $payload['status'],
         ]);
+        $response = app(\App\Http\Controllers\Api\Mobile\DonationController::class)->paymentWebhook($webhookRequest);
 
         $statusMessage = $payload['status'] === 'success' 
             ? 'Thanh toán thành công!' 

@@ -75,6 +75,7 @@ Route::prefix('mobile')->middleware(['role:donor'])->group(function () {
     Route::get('donation/campaigns/{campaign}', [MobileDonationFundController::class, 'show']);
     Route::post('donation/campaigns/{campaign}/donate-cash', [MobileDonationFundController::class, 'donateCash']);
     Route::post('donation/campaigns/{campaign}/donate-points', [MobileDonationFundController::class, 'donatePoints']);
+    Route::get('donation/transactions/{transaction_id}/status', [MobileDonationFundController::class, 'checkTransactionStatus']);
 });
 
 Route::prefix('admin')->middleware(['role:admin'])->group(function () {

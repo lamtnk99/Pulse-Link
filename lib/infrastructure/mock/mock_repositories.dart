@@ -407,6 +407,12 @@ class MockDonationFundService implements DonationFundService {
       'remaining_points': 500,
     };
   }
+
+  @override
+  Future<String> checkTransactionStatus(String transactionId) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    return 'success';
+  }
 }
 
 class MockCommunityImpactService implements CommunityImpactService {

@@ -21,4 +21,6 @@ abstract interface class DonationFundService {
     String? message,
     bool isAnonymous = false,
   });
+
+  Future<String> checkTransactionStatus(String transactionId);
 }
