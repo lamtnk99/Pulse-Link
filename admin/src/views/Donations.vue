@@ -18,6 +18,12 @@ interface Campaign {
   target_points: number
   current_points: number
   status: 'active' | 'completed' | 'cancelled'
+  beneficiary_name: string | null
+  beneficiary_story: string | null
+  impact_unit: string | null
+  impact_per_unit_amount: number | null
+  impact_per_unit_points: number | null
+  urgency_level: 'normal' | 'urgent' | 'critical' | null
   expires_at: string | null
   total_donors: number
   created_at: string
@@ -53,6 +59,13 @@ const formTargetAmount = ref<number>(50000000)
 const formTargetPoints = ref<number>(5000)
 const formExpiresAt = ref('')
 const formStatus = ref<'active' | 'completed' | 'cancelled'>('active')
+// Empathy fields
+const formBeneficiaryName = ref('')
+const formBeneficiaryStory = ref('')
+const formImpactUnit = ref('')
+const formImpactPerUnitAmount = ref<number | null>(null)
+const formImpactPerUnitPoints = ref<number | null>(null)
+const formUrgencyLevel = ref<'' | 'normal' | 'urgent' | 'critical'>('')
 
 // Transactions state
 const activeCampaign = ref<Campaign | null>(null)
@@ -107,6 +120,12 @@ function openCreateModal() {
   formTargetPoints.value = 5000
   formExpiresAt.value = ''
   formStatus.value = 'active'
+  formBeneficiaryName.value = ''
+  formBeneficiaryStory.value = ''
+  formImpactUnit.value = ''
+  formImpactPerUnitAmount.value = null
+  formImpactPerUnitPoints.value = null
+  formUrgencyLevel.value = ''
   showModal.value = true
 }
 
@@ -120,6 +139,12 @@ function openEditModal(campaign: Campaign) {
   formTargetPoints.value = campaign.target_points
   formStatus.value = campaign.status
   formExpiresAt.value = campaign.expires_at ? campaign.expires_at.split('T')[0] : ''
+  formBeneficiaryName.value = campaign.beneficiary_name ?? ''
+  formBeneficiaryStory.value = campaign.beneficiary_story ?? ''
+  formImpactUnit.value = campaign.impact_unit ?? ''
+  formImpactPerUnitAmount.value = campaign.impact_per_unit_amount
+  formImpactPerUnitPoints.value = campaign.impact_per_unit_points
+  formUrgencyLevel.value = campaign.urgency_level ?? ''
   showModal.value = true
 }
 
@@ -135,6 +160,14 @@ async function submitForm() {
     target_points: formType.value !== 'financial' ? formTargetPoints.value : 0,
     expires_at: formExpiresAt.value || null,
     status: formStatus.value,
+    beneficiary_name: formBeneficiaryName.value || null,
+    beneficiary_story: formBeneficiaryStory.value || null,
+    impact_unit: formImpactUnit.value || null,
+    impact_per_unit_amount:
+      formType.value !== 'points' ? formImpactPerUnitAmount.value : null,
+    impact_per_unit_points:
+      formType.value !== 'financial' ? formImpactPerUnitPoints.value : null,
+    urgency_level: formUrgencyLevel.value || null,
   }
 
   const isEdit = editingCampaignId.value !== null
@@ -348,6 +381,54 @@ onMounted(() => {
           <div>
             <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Link ảnh đại diện (URL)</label>
             <input v-model="formImageUrl" type="url" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="https://images.unsplash.com/..." />
+          </div>
+
+          <!-- Empathy section: nội dung giúp người quyên góp thấu cảm với hoàn cảnh -->
+          <div class="rounded-xl border border-[#E31837]/20 bg-[#E31837]/[0.03] p-4 space-y-4">
+            <div class="flex items-center gap-2 text-[#E31837]">
+              <HeartHandshake class="h-4 w-4" />
+              <span class="text-xs font-black uppercase tracking-wide">Nội dung thấu cảm</span>
+            </div>
+            <p class="text-[11px] text-neutral-500 -mt-2">
+              Giúp người quyên góp hình dung mình đang giúp ai, và mỗi đóng góp tạo ra tác động gì. Bỏ trống nếu chưa có.
+            </p>
+
+            <div>
+              <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Người / cộng đồng thụ hưởng</label>
+              <input v-model="formBeneficiaryName" type="text" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Ví dụ: Bé Gia Bảo, 6 tuổi / Điểm trường Lũng Cú" />
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Câu chuyện hoàn cảnh</label>
+              <textarea v-model="formBeneficiaryStory" rows="4" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Kể câu chuyện thật, gần gũi về người thụ hưởng để chạm tới cảm xúc người đọc..."></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Đơn vị tác động</label>
+                <input v-model="formImpactUnit" type="text" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Ví dụ: phần cơm, đơn vị máu, bộ sơ cứu" />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Mức độ cấp thiết</label>
+                <select v-model="formUrgencyLevel" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]">
+                  <option value="">Không hiển thị</option>
+                  <option value="normal">Đang kêu gọi</option>
+                  <option value="urgent">Cần gấp</option>
+                  <option value="critical">Rất cấp thiết</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div v-if="formType !== 'points'">
+                <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">VND cho 1 đơn vị tác động</label>
+                <input v-model.number="formImpactPerUnitAmount" type="number" min="0" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Ví dụ: 35000" />
+              </div>
+              <div v-if="formType !== 'financial'">
+                <label class="block text-xs font-bold text-neutral-400 uppercase mb-1">Điểm Hero cho 1 đơn vị</label>
+                <input v-model.number="formImpactPerUnitPoints" type="number" min="0" class="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#E31837]" placeholder="Ví dụ: 50" />
+              </div>
+            </div>
           </div>
 
           <div v-if="editingCampaignId">

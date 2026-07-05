@@ -30,6 +30,7 @@ import '../services/location_service.dart';
 import '../services/route_planner_service.dart';
 import '../services/chat_service.dart';
 import '../services/donation_fund_service.dart';
+import '../services/community_impact_service.dart';
 import 'pulse_link_state.dart';
 
 class PulseLinkController extends ChangeNotifier {
@@ -44,6 +45,7 @@ class PulseLinkController extends ChangeNotifier {
     required EmergencyAudioService audioService,
     required ChatService chatService,
     required DonationFundService donationFundService,
+    required CommunityImpactService communityImpactService,
   })  : _donorRepository = donorRepository,
         _eventRepository = eventRepository,
         _historyRepository = historyRepository,
@@ -53,7 +55,8 @@ class PulseLinkController extends ChangeNotifier {
         _routePlannerService = routePlannerService,
         _audioService = audioService,
         _chatService = chatService,
-        _donationFundService = donationFundService;
+        _donationFundService = donationFundService,
+        _communityImpactService = communityImpactService;
 
   final DonorRepository _donorRepository;
   final DonationEventRepository _eventRepository;
@@ -65,6 +68,7 @@ class PulseLinkController extends ChangeNotifier {
   final EmergencyAudioService _audioService;
   final ChatService _chatService;
   final DonationFundService _donationFundService;
+  final CommunityImpactService _communityImpactService;
 
   StreamSubscription<EmergencyAlert>? _alertSubscription;
   StreamSubscription<EmergencyCommitment>? _commitmentSubscription;
@@ -79,6 +83,7 @@ class PulseLinkController extends ChangeNotifier {
   PulseLinkState get state => _state;
   ChatService get chatService => _chatService;
   DonationFundService get donationFundService => _donationFundService;
+  CommunityImpactService get communityImpactService => _communityImpactService;
 
   Future<void> initialize() async {
     final themePreference = await _loadThemePreference();
@@ -294,7 +299,32 @@ class PulseLinkController extends ChangeNotifier {
     _state = _state.copyWith(
       profile: updatedProfile,
       donationHistory: [donation, ..._state.donationHistory],
+      pendingLevelUp: _detectLevelUp(profile.heroLevel, updatedProfile.heroLevel),
     );
+    notifyListeners();
+  }
+
+  /// Thứ hạng các cấp Hero để phát hiện thăng cấp giữa hai lần cập nhật hồ sơ.
+  static const List<String> _heroLevelOrder = [
+    'Bronze Badge',
+    'Silver Badge',
+    'Gold Badge',
+    'Platinum Badge',
+  ];
+
+  /// Trả về cấp mới nếu vừa thăng hạng (để mở màn ăn mừng), ngược lại null.
+  String? _detectLevelUp(String previousLevel, String newLevel) {
+    if (previousLevel == newLevel) return null;
+    final prevRank = _heroLevelOrder.indexOf(previousLevel);
+    final newRank = _heroLevelOrder.indexOf(newLevel);
+    if (prevRank < 0 || newRank < 0) return null;
+    return newRank > prevRank ? newLevel : null;
+  }
+
+  /// Đóng màn ăn mừng thăng cấp sau khi người dùng đã xem.
+  void dismissLevelUp() {
+    if (_state.pendingLevelUp == null) return;
+    _state = _state.copyWith(clearPendingLevelUp: true);
     notifyListeners();
   }
 

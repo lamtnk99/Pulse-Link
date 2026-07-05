@@ -16,6 +16,8 @@ import '../../features/chat/domain/chat_message.dart';
 import '../../services/donation_fund_service.dart';
 import '../../features/donation/domain/donation_campaign.dart';
 import '../../features/donation/domain/campaign_donation.dart';
+import '../../services/community_impact_service.dart';
+import '../../features/community/domain/community_impact.dart';
 import 'mock_data.dart';
 
 class MockDonorRepository implements DonorRepository {
@@ -404,5 +406,26 @@ class MockDonationFundService implements DonationFundService {
       'donation_id': 999,
       'remaining_points': 500,
     };
+  }
+}
+
+class MockCommunityImpactService implements CommunityImpactService {
+  @override
+  Future<CommunityImpact> getImpact() async {
+    await Future.delayed(const Duration(milliseconds: 120));
+    return const CommunityImpact(
+      monthLabel: 'Tháng này',
+      donationsThisMonth: 342,
+      volumeMlThisMonth: 119700,
+      activeDonors: 289,
+      livesTouched: 1026,
+      totalHeroCount: 1580,
+      gratitudeWall: [
+        GratitudeNote(donorName: 'Nguyễn Hoài An', message: 'Cho đi một chút, nhận lại rất nhiều bình yên trong lòng.'),
+        GratitudeNote(donorName: 'Hiệp sĩ ẩn danh', message: 'Mong người bệnh mau khỏe, cố lên nhé!', isAnonymous: true),
+        GratitudeNote(donorName: 'Trần Minh Quân', message: 'Lần đầu hiến máu, hồi hộp mà vui lắm.'),
+        GratitudeNote(donorName: 'Phạm Thanh Vy', message: 'Hẹn gặp lại mọi người ở lần hiến sau ❤️'),
+      ],
+    );
   }
 }

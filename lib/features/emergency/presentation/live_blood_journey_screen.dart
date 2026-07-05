@@ -480,54 +480,14 @@ class _LiveBloodJourneyScreenState extends State<LiveBloodJourneyScreen>
                   ),
                   child: Column(
                     children: [
-                      // Completion banner
+                      // Lá thư cảm ơn từ người nhận — payload cảm xúc cao nhất của hành trình.
                       if (journey.completedAt != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 14),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withOpacity(0.12),
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(
-                                color: const Color(0xFF10B981).withOpacity(0.3),
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.verified_rounded,
-                                  color: Color(0xFF10B981),
-                                  size: 22,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        'HÀNH TRÌNH HOÀN TẤT',
-                                        style: TextStyle(
-                                          color: Color(0xFF10B981),
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 1.0,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        journey.finalMessage ?? 'Giọt máu của bạn đã cứu sống người bệnh thành công!',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: _GratitudeLetterCard(
+                            message: journey.finalMessage ??
+                                'Giọt máu của bạn đã cứu sống người bệnh thành công!',
+                            isReserve: journey.destinationType == 'reserve',
                           ),
                         ),
                       // Close button
@@ -555,12 +515,11 @@ class _LiveBloodJourneyScreenState extends State<LiveBloodJourneyScreen>
                               borderRadius: BorderRadius.circular(16),
                               child: const Center(
                                 child: Text(
-                                  'TRỞ VỀ TRANG CHỦ',
+                                  'Trở về trang chủ',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.2,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ),
@@ -735,5 +694,100 @@ class _AmbientParticlePainter extends CustomPainter {
   @override
   bool shouldRepaint(_AmbientParticlePainter oldDelegate) {
     return oldDelegate.animValue != animValue;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// Lá thư cảm ơn từ người nhận / đội ngũ y tế (AI cá nhân hóa).
+// Trình bày như một bức thư tay ấm áp thay cho banner trạng thái.
+// ═══════════════════════════════════════════════════
+class _GratitudeLetterCard extends StatelessWidget {
+  const _GratitudeLetterCard({
+    required this.message,
+    required this.isReserve,
+  });
+
+  final String message;
+  final bool isReserve;
+
+  @override
+  Widget build(BuildContext context) {
+    final sender = isReserve ? 'Đội ngũ y tế' : 'Gia đình người bệnh';
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFFFF6B6B).withOpacity(0.16),
+            const Color(0xFFE31837).withOpacity(0.10),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE31837).withOpacity(0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE31837).withOpacity(0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.mail_rounded, color: Color(0xFFE31837), size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Lời cảm ơn gửi tới bạn',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      'Từ $sender',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.format_quote_rounded, size: 18, color: Color(0xFFFF9E9E)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14.5,
+                    height: 1.6,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }

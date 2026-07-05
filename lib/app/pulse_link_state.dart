@@ -39,6 +39,7 @@ class PulseLinkState {
     this.activeLiveBloodJourney,
     this.activeLiveBloodJourneyHospitalName,
     this.activeLiveBloodJourneyBloodType,
+    this.pendingLevelUp,
   });
 
   factory PulseLinkState.initial() {
@@ -74,6 +75,10 @@ class PulseLinkState {
   final BloodJourney? activeLiveBloodJourney;
   final String? activeLiveBloodJourneyHospitalName;
   final String? activeLiveBloodJourneyBloodType;
+
+  /// Cấp Hero vừa đạt (giá trị gốc như 'Gold Badge') chờ được ăn mừng toàn màn hình.
+  /// Null khi không có gì để celebrate.
+  final String? pendingLevelUp;
 
   bool get hasActiveSosAlert => activeAlerts.any((alert) => alert.active && !alert.isExpired);
 
@@ -121,6 +126,8 @@ class PulseLinkState {
     bool clearActiveLiveBloodJourneyHospitalName = false,
     String? activeLiveBloodJourneyBloodType,
     bool clearActiveLiveBloodJourneyBloodType = false,
+    String? pendingLevelUp,
+    bool clearPendingLevelUp = false,
   }) {
     return PulseLinkState(
       activeMode: activeMode ?? this.activeMode,
@@ -162,6 +169,9 @@ class PulseLinkState {
       activeLiveBloodJourneyBloodType: clearActiveLiveBloodJourneyBloodType
           ? null
           : activeLiveBloodJourneyBloodType ?? this.activeLiveBloodJourneyBloodType,
+      pendingLevelUp: clearPendingLevelUp
+          ? null
+          : pendingLevelUp ?? this.pendingLevelUp,
     );
   }
 }

@@ -7,6 +7,7 @@ import '../features/auth/presentation/login_screen.dart';
 import '../features/daily/presentation/daily_mode_screen.dart';
 import '../features/emergency/presentation/sos_mode_screen.dart';
 import '../features/emergency/presentation/live_blood_journey_screen.dart';
+import '../features/profile/presentation/hero_level_up_screen.dart';
 import 'pulse_link_controller.dart';
 
 class PulseLinkApp extends StatefulWidget {
@@ -78,6 +79,13 @@ class _PulseLinkAppState extends State<PulseLinkApp>
                         key: const ValueKey('login-screen'),
                         controller: widget.controller,
                       )
+                    : state.pendingLevelUp != null
+                        ? HeroLevelUpScreen(
+                            key: ValueKey('hero-level-up-${state.pendingLevelUp}'),
+                            newLevel: state.pendingLevelUp!,
+                            badgeTitle: state.profile?.badgeTitle ?? '',
+                            onDismiss: widget.controller.dismissLevelUp,
+                          )
                     : state.activeLiveBloodJourney != null
                         ? LiveBloodJourneyScreen(
                             key: const ValueKey('live-blood-journey'),

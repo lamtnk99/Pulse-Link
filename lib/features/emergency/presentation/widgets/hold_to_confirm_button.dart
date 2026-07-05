@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../../core/theme/pulse_link_theme.dart';
+import '../../../../core/utils/haptics.dart';
 
 class HoldToConfirmButton extends StatefulWidget {
   const HoldToConfirmButton({
@@ -23,6 +23,9 @@ class _HoldToConfirmButtonState extends State<HoldToConfirmButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   bool _confirming = false;
+  // Số nhịp tim đã rung trong lần giữ hiện tại, để rung đều theo tiến trình.
+  int _beatsFired = 0;
+  bool _milestoneFired = false;
 
   @override
   void initState() {
@@ -31,14 +34,31 @@ class _HoldToConfirmButtonState extends State<HoldToConfirmButton>
       vsync: this,
       duration: const Duration(seconds: 3),
     )
-      ..addListener(() {
-        widget.onProgressChanged(_controller.value);
-      })
+      ..addListener(_handleProgress)
       ..addStatusListener((status) {
         if (status == AnimationStatus.completed && !_confirming) {
           _confirmCommitment();
         }
       });
+  }
+
+  void _handleProgress() {
+    final progress = _controller.value;
+    widget.onProgressChanged(progress);
+
+    if (widget.committed || _confirming) return;
+
+    // "Nhịp tim đồng bộ": rung nhẹ theo từng nấc tiến trình khi đang giữ,
+    // nhanh dần về cuối để tạo cảm giác hồi hộp, gần gũi.
+    final expectedBeats = (progress * 6).floor();
+    if (expectedBeats > _beatsFired) {
+      _beatsFired = expectedBeats;
+      Haptics.heartbeat();
+    }
+    if (!_milestoneFired && progress >= 0.5) {
+      _milestoneFired = true;
+      Haptics.milestone();
+    }
   }
 
   @override
@@ -60,11 +80,11 @@ class _HoldToConfirmButtonState extends State<HoldToConfirmButton>
 
   Future<void> _confirmCommitment() async {
     setState(() => _confirming = true);
-    HapticFeedback.heavyImpact();
+    Haptics.success();
     try {
       await widget.onConfirmed();
     } catch (_) {
-      HapticFeedback.mediumImpact();
+      Haptics.warn();
       if (mounted && !widget.committed) {
         _controller.reverse();
       }
@@ -75,12 +95,16 @@ class _HoldToConfirmButtonState extends State<HoldToConfirmButton>
 
   void _startHold(_) {
     if (widget.committed || _confirming) return;
-    HapticFeedback.selectionClick();
+    _beatsFired = 0;
+    _milestoneFired = false;
+    Haptics.tap();
     _controller.forward();
   }
 
   void _cancelHold([dynamic _]) {
     if (widget.committed || _confirming) return;
+    _beatsFired = 0;
+    _milestoneFired = false;
     _controller.reverse();
   }
 

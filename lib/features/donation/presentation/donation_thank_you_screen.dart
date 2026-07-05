@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../../core/utils/haptics.dart';
 import '../domain/donation_campaign.dart';
 import 'donation_palette.dart';
 
@@ -65,6 +66,8 @@ class _DonationThankYouScreenState extends State<DonationThankYouScreen>
       vsync: this,
       duration: const Duration(milliseconds: 650),
     )..forward();
+    // Rung "thành công" đúng khoảnh khắc cảm ơn hiện ra.
+    Haptics.success();
   }
 
   @override

@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BloodJourneyController;
 use App\Http\Controllers\Api\CertificateController;
 use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\Mobile\CommunityImpactController;
 use App\Http\Controllers\Api\Mobile\CommunityPostController as MobileCommunityPostController;
 use App\Http\Controllers\Api\Mobile\MobileDonationController;
 use App\Http\Controllers\Api\Mobile\MobileNotificationController;
@@ -54,6 +55,7 @@ Route::prefix('mobile')->middleware(['role:donor'])->group(function () {
     Route::post('donation-events/{event}/cancel', [MobileDonationController::class, 'cancel']);
     Route::get('community-posts', [MobileCommunityPostController::class, 'index']);
     Route::get('community-posts/{post:slug}', [MobileCommunityPostController::class, 'show']);
+    Route::get('community-impact', [CommunityImpactController::class, 'index']);
     Route::post('routes/plan', [RoutePlannerController::class, 'plan']);
     Route::get('sos-alerts', [EmergencyController::class, 'mobileIndex']);
     Route::post('sos-alerts/{alert:public_id}/commit', [EmergencyController::class, 'commit']);

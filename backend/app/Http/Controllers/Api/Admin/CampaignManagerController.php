@@ -38,6 +38,16 @@ class CampaignManagerController extends Controller
                     'target_points' => (int) $campaign->target_points,
                     'current_points' => (int) $campaign->current_points,
                     'status' => $campaign->status,
+                    'beneficiary_name' => $campaign->beneficiary_name,
+                    'beneficiary_story' => $campaign->beneficiary_story,
+                    'impact_unit' => $campaign->impact_unit,
+                    'impact_per_unit_amount' => $campaign->impact_per_unit_amount !== null
+                        ? (float) $campaign->impact_per_unit_amount
+                        : null,
+                    'impact_per_unit_points' => $campaign->impact_per_unit_points !== null
+                        ? (int) $campaign->impact_per_unit_points
+                        : null,
+                    'urgency_level' => $campaign->urgency_level,
                     'expires_at' => $campaign->expires_at?->toIso8601String(),
                     'total_donors' => $campaign->total_donors,
                     'created_at' => $campaign->created_at?->toIso8601String(),

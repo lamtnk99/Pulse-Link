@@ -41,6 +41,7 @@ class EmergencyController extends Controller
         private readonly EmergencyAlertRealtimeGateway $realtimeGateway,
         private readonly DonationRecognitionService $recognitionService,
         private readonly BloodCompatibility $bloodCompatibility,
+        private readonly \App\Services\Gratitude\GratitudeMessageService $gratitudeService,
     ) {}
 
     public function store(StoreEmergencyAlertRequest $request)
@@ -291,7 +292,34 @@ class EmergencyController extends Controller
             'publish' => ['nullable', 'boolean'],
         ]);
 
-        $journey = DB::transaction(function () use ($alert, $commitment, $payload): BloodJourney {
+        // Xác định trước giao dịch: lần cập nhật này có phải là bước hoàn tất + công bố không?
+        // Nếu có, sinh lời cảm ơn AI cá nhân hóa NGOÀI transaction để không giữ khóa DB
+        // trong lúc gọi HTTP tới nhà cung cấp AI. Chỉ sinh khi journey chưa hoàn tất trước đó.
+        $existingJourney = $commitment->bloodJourney;
+        $destinationTypePre = $payload['destination_type']
+            ?? $existingJourney?->destination_type
+            ?? ($alert->status === 'fulfilled' ? 'reserve' : 'patient');
+        $stepKeysPre = collect(BloodJourney::defaultSteps($destinationTypePre))->pluck('step_key');
+        $requestedStep = $payload['current_step'] ?? $existingJourney?->current_step ?? 'received';
+        $willComplete = ($payload['publish'] ?? false)
+            && $stepKeysPre->last() === $requestedStep
+            && $existingJourney?->completed_at === null;
+
+        $aiFinalMessage = null;
+        if ($willComplete) {
+            $commitment->loadMissing('donor');
+            $aiFinalMessage = $this->gratitudeService->generate(
+                [
+                    'donor_name' => $commitment->donor?->name,
+                    'blood_type' => $commitment->donor?->blood_type,
+                    'hospital_name' => $alert->hospital?->name,
+                    'destination_type' => $destinationTypePre,
+                ],
+                BloodJourney::finalMessageFor($destinationTypePre),
+            );
+        }
+
+        $journey = DB::transaction(function () use ($alert, $commitment, $payload, $aiFinalMessage): BloodJourney {
             $history = DonationHistory::query()->findOrFail($commitment->donation_history_id);
             $journey = $this->ensureBloodJourney($alert, $commitment->loadMissing('donor'), $history, $payload['destination_type'] ?? null);
 
@@ -305,10 +333,14 @@ class EmergencyController extends Controller
 
             $completedStepKeys = $stepKeys->take($stepKeys->search($stepKey) + 1);
             $isFinalStep = $stepKeys->last() === $stepKey;
+            // Ưu tiên lời cảm ơn AI vừa sinh; nếu không có, giữ nội dung đã lưu; cuối cùng rơi về mẫu tĩnh.
+            $finalMessage = $aiFinalMessage
+                ?? $journey->final_message
+                ?? BloodJourney::finalMessageFor($journey->destination_type);
             $journey->update([
                 'current_step' => $stepKey,
                 'location_label' => $payload['location_label'] ?? $journey->location_label,
-                'final_message' => BloodJourney::finalMessageFor($journey->destination_type),
+                'final_message' => $finalMessage,
                 'completed_at' => $isFinalStep ? ($journey->completed_at ?? now()) : null,
                 'published_at' => ($payload['publish'] ?? false) ? now() : $journey->published_at,
             ]);
@@ -320,7 +352,7 @@ class EmergencyController extends Controller
                 $this->createMobileNotification(
                     $journey->donor_id,
                     'blood_journey_completed',
-                    'Hành trình giọt máu đã hoàn tất',
+                    'Lời cảm ơn từ hành trình giọt máu',
                     $journey->final_message ?? BloodJourney::finalMessageFor($journey->destination_type),
                     ['blood_journey_id' => $journey->public_id, 'destination_type' => $journey->destination_type],
                 );

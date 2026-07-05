@@ -10,7 +10,8 @@ void main() {
   testWidgets('Daily mode shows five Vietnamese navigation tabs', (
     WidgetTester tester,
   ) async {
-    SharedPreferences.setMockInitialValues({});
+    // Cần token để qua cổng đăng nhập và vào thẳng Daily Mode (mock repo trả hồ sơ sẵn).
+    SharedPreferences.setMockInitialValues({'auth_token': 'test-token'});
     final controller = PulseLinkController(
       donorRepository: MockDonorRepository(),
       eventRepository: MockDonationEventRepository(),
@@ -22,6 +23,7 @@ void main() {
       audioService: MockEmergencyAudioService(),
       chatService: MockChatService(),
       donationFundService: MockDonationFundService(),
+      communityImpactService: MockCommunityImpactService(),
     );
 
     await tester.pumpWidget(PulseLinkApp(controller: controller));
@@ -37,7 +39,14 @@ void main() {
     }
 
     await tester.tap(find.text('Lịch'));
-    await tester.pumpAndSettle();
+    // Daily Mode có animation liên tục (nhịp đập, sóng) nên pumpAndSettle sẽ treo;
+    // dùng pump có giới hạn để chờ tab chuyển.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 150));
+      if (find.text('Lịch đã đặt').evaluate().isNotEmpty) {
+        break;
+      }
+    }
     expect(find.text('Lịch đã đặt'), findsOneWidget);
   });
 }

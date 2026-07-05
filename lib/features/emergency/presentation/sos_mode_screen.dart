@@ -1214,11 +1214,23 @@ class _SosHeader extends StatelessWidget {
                       color: Colors.white,
                     ),
               ),
-              const SizedBox(height: 5),
+              const SizedBox(height: 6),
+              // Đóng khung quanh con người: người cần máu, không phải dữ liệu.
               Text(
-                'Cần gấp ${alert.unitsNeeded} đơn vị máu ${alert.requiredBloodType} ngay lúc này.',
+                'Một người bệnh đang cần nhóm máu ${alert.requiredBloodType} của bạn để giành lại sự sống.',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13.5,
+                  height: 1.4,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Cần gấp ${alert.unitsNeeded} đơn vị · chỉ bạn ở gần mới kịp.',
                 style: const TextStyle(
                   color: Colors.white70,
+                  fontSize: 12,
                   height: 1.35,
                 ),
               ),
