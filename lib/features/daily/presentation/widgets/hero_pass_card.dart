@@ -109,21 +109,55 @@ class HeroPassCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '${profile.totalDonations} lần được ghi nhận',
+                      profile.name,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      VietnameseLabels.heroLevel(profile.heroLevel),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 11,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    Text(
-                      '$totalVolumeMl ml trong sổ hiến',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
                   ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: _HeroPassMetricItem(
+                    label: 'Lần hiến',
+                    value: '${profile.totalDonations}',
+                    icon: Icons.favorite,
+                    iconColor: const Color(0xFFFF8A80),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _HeroPassMetricItem(
+                    label: 'Đã ghi nhận',
+                    value:
+                        '${NumberFormat.compact(locale: 'vi').format(totalVolumeMl)} ml',
+                    icon: Icons.water_drop,
+                    iconColor: const Color(0xFF80D8FF),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _HeroPassMetricItem(
+                    label: 'Điểm',
+                    value: NumberFormat.compact(locale: 'vi').format(profile.points),
+                    icon: Icons.stars,
+                    iconColor: const Color(0xFFFFD740),
+                  ),
                 ),
               ],
             ),
@@ -351,6 +385,65 @@ class _Badge extends StatelessWidget {
               color: Colors.white,
               fontWeight: FontWeight.w800,
               fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroPassMetricItem extends StatelessWidget {
+  const _HeroPassMetricItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.iconColor,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.12),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: iconColor,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

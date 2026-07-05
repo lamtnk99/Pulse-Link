@@ -571,12 +571,6 @@ class _HomeTab extends StatelessWidget {
             upcomingCount: state.bookedAppointments.length,
           ),
           const SizedBox(height: 14),
-          _ImpactStrip(
-            donations: profile.totalDonations,
-            totalVolumeMl: state.totalVolumeMl,
-            points: profile.points,
-          ),
-          const SizedBox(height: 14),
           // Tác động tập thể: từ "tôi đã cho đi" sang "chúng ta đang cùng cho đi".
           CommunityImpactCard(controller: controller),
           const SizedBox(height: 24),
@@ -689,7 +683,7 @@ class _HomeTab extends StatelessWidget {
   }
 }
 
-class _EventsTab extends StatelessWidget {
+class _EventsTab extends StatefulWidget {
   const _EventsTab({
     required this.controller,
     required this.showMap,
@@ -701,59 +695,544 @@ class _EventsTab extends StatelessWidget {
   final VoidCallback onToggleMap;
 
   @override
-  Widget build(BuildContext context) {
-    final events = controller.state.events;
+  State<_EventsTab> createState() => _EventsTabState();
+}
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-      children: [
-        _ScreenTitle(
-          title: 'Sự kiện gần bạn',
-          subtitle:
-              'Xem kỹ địa điểm, thời gian và chuẩn bị sức khỏe trước khi đặt.',
-          trailing: IconButton.filledTonal(
-            onPressed: onToggleMap,
-            icon: Icon(showMap ? Icons.view_agenda_outlined : Icons.map),
-            tooltip: showMap ? 'Hiện danh sách' : 'Hiện bản đồ',
+class _EventsTabState extends State<_EventsTab> {
+  int _selectedTab = 0; // 0: Hiến máu, 1: Quyên góp
+  List<DonationCampaign> _campaigns = [];
+  bool _isLoadingCampaigns = false;
+  String? _campaignsError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCampaigns();
+  }
+
+  Future<void> _loadCampaigns() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingCampaigns = true;
+      _campaignsError = null;
+    });
+    try {
+      final campaigns = await widget.controller.donationFundService.getCampaigns();
+      if (!mounted) return;
+      setState(() {
+        _campaigns = campaigns;
+        _isLoadingCampaigns = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _campaignsError = 'Không thể tải danh sách chiến dịch quyên góp. Vui lòng kéo xuống thử lại.';
+        _isLoadingCampaigns = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final events = widget.controller.state.events;
+
+    Widget buildEventsList() {
+      if (events.isEmpty) {
+        return const _EmptyState(
+          icon: Icons.event_busy_rounded,
+          title: 'Chưa có sự kiện nào gần đây',
+          subtitle: 'Hãy quay lại sau hoặc chuyển sang quyên góp đồng hành nhé.',
+        );
+      }
+      return Column(
+        children: [
+          if (widget.showMap) ...[
+            EventMapPreview(
+              events: events,
+              onOpenDetails: (event) => _openEventDetail(
+                context,
+                widget.controller,
+                event,
+              ),
+              onBookingToggle: (event) async {
+                await _handleBookingAction(context, widget.controller, event);
+              },
+              onOpenDirections: openDonationEventDirections,
+              onOpenFullMap: () => _openEventsMap(
+                context,
+                widget.controller,
+                events,
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          for (final event in events) ...[
+            DonationEventCard(
+              event: event,
+              expanded: true,
+              onOpenDetails: () => _openEventDetail(
+                context,
+                widget.controller,
+                event,
+              ),
+              onBookingToggle: () async {
+                await _handleBookingAction(context, widget.controller, event);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ],
+      );
+    }
+
+    Widget buildCampaignsList() {
+      if (_isLoadingCampaigns) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 48),
+          child: Center(
+            child: CircularProgressIndicator(color: DonationPalette.primary),
+          ),
+        );
+      }
+
+      if (_campaignsError != null) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 24),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline_rounded, size: 48, color: DonationPalette.primary),
+                const SizedBox(height: 12),
+                Text(
+                  _campaignsError!,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: PulseLinkTheme.textColor(context).withOpacity(0.8),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ElevatedButton.icon(
+                  onPressed: _loadCampaigns,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Thử lại'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: DonationPalette.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
+      if (_campaigns.isEmpty) {
+        return const _EmptyState(
+          icon: Icons.favorite_border_rounded,
+          title: 'Chưa có chiến dịch quyên góp',
+          subtitle: 'Hiện tại chưa có hoạt động kêu gọi nào đang diễn ra.',
+        );
+      }
+
+      return Column(
+        children: [
+          for (final campaign in _campaigns) ...[
+            _CampaignEventCard(
+              campaign: campaign,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (context) => DonationDetailScreen(
+                      controller: widget.controller,
+                      campaignId: campaign.id,
+                    ),
+                  ),
+                ).then((_) => _loadCampaigns());
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ],
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        if (_selectedTab == 0) {
+          await widget.controller.initialize();
+        } else {
+          await _loadCampaigns();
+        }
+      },
+      color: DonationPalette.primary,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+        children: [
+          _ScreenTitle(
+            title: _selectedTab == 0 ? 'Sự kiện gần bạn' : 'Đồng hành chia sẻ',
+            subtitle: _selectedTab == 0
+                ? 'Xem địa điểm, thời gian và chuẩn bị sức khỏe trước khi đặt.'
+                : 'Mỗi hành động sẻ chia đều thắp sáng niềm hy vọng.',
+            trailing: _selectedTab == 0
+                ? IconButton.filledTonal(
+                    onPressed: widget.onToggleMap,
+                    icon: Icon(widget.showMap ? Icons.view_agenda_outlined : Icons.map),
+                    tooltip: widget.showMap ? 'Hiện danh sách' : 'Hiện bản đồ',
+                  )
+                : null,
+          ),
+          const SizedBox(height: 16),
+          // Custom Tab Switcher
+          Row(
+            children: [
+              Expanded(
+                child: _CustomTabButton(
+                  title: 'Điểm hiến máu',
+                  subtitle: 'Trao giọt máu hồng',
+                  icon: Icons.volunteer_activism_rounded,
+                  isSelected: _selectedTab == 0,
+                  onTap: () => setState(() => _selectedTab = 0),
+                  color: PulseLinkTheme.primaryRed,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _CustomTabButton(
+                  title: 'Gieo hy vọng',
+                  subtitle: 'Đồng hành nhân ái',
+                  icon: Icons.diversity_3_rounded,
+                  isSelected: _selectedTab == 1,
+                  onTap: () => setState(() => _selectedTab = 1),
+                  color: Colors.amber.shade700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Tab Content
+          _selectedTab == 0 ? buildEventsList() : buildCampaignsList(),
+        ],
+      ),
+    );
+  }
+}
+
+class _CustomTabButton extends StatelessWidget {
+  const _CustomTabButton({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+    required this.color,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: isSelected
+                ? color.withOpacity(isDark ? 0.18 : 0.08)
+                : Colors.transparent,
+            border: Border.all(
+              color: isSelected
+                  ? color.withOpacity(0.5)
+                  : PulseLinkTheme.subtleBorderColor(context),
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? color : PulseLinkTheme.mutedColor(context),
+                size: 24,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w900,
+                        color: isSelected
+                            ? (isDark ? Colors.white : color.withRed(150))
+                            : PulseLinkTheme.textColor(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: isSelected
+                            ? (isDark ? Colors.white70 : color.withOpacity(0.7))
+                            : PulseLinkTheme.mutedColor(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
-        if (showMap) ...[
-          EventMapPreview(
-            events: events,
-            onOpenDetails: (event) => _openEventDetail(
-              context,
-              controller,
-              event,
+      ),
+    );
+  }
+}
+
+class _CampaignEventCard extends StatelessWidget {
+  const _CampaignEventCard({
+    required this.campaign,
+    required this.onTap,
+  });
+
+  final DonationCampaign campaign;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
+    final progress = campaign.isFinancial ? campaign.financialProgress : campaign.pointsProgress;
+    final progressPercent = (progress * 100).round();
+    
+    final remaining = campaign.isFinancial
+        ? campaign.targetAmount - campaign.currentAmount
+        : (campaign.targetPoints - campaign.currentPoints).toDouble();
+        
+    final remainingText = campaign.isFinancial
+        ? '${NumberFormat.compact(locale: 'vi').format(remaining < 0 ? 0 : remaining)}đ'
+        : '${remaining < 0 ? 0 : remaining.toInt()} điểm';
+
+    final urgency = DonationPalette.urgency(campaign.urgencyLevel);
+    final beneficiary = (campaign.beneficiaryName ?? '').trim();
+    final storyLine = campaign.hasStory ? campaign.beneficiaryStory!.trim() : campaign.description;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: DonationPalette.surface(isDark),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image Stack
+            SizedBox(
+              height: 142,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  campaign.imageUrl != null
+                      ? Image.network(
+                          campaign.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildPlaceholder(),
+                        )
+                      : _buildPlaceholder(),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.72),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (urgency != null)
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: urgency.color.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(urgency.icon, size: 12, color: Colors.white),
+                            const SizedBox(width: 4),
+                            Text(
+                              urgency.label.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (beneficiary.isNotEmpty)
+                    Positioned(
+                      left: 12,
+                      right: 12,
+                      bottom: 10,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.favorite_rounded, size: 14, color: Colors.white),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Vì $beneficiary',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
-            onBookingToggle: (event) async {
-              await _handleBookingAction(context, controller, event);
-            },
-            onOpenDirections: openDonationEventDirections,
-            onOpenFullMap: () => _openEventsMap(
-              context,
-              controller,
-              events,
+            // Card Content
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    campaign.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                      color: PulseLinkTheme.textColor(context),
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    storyLine,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: PulseLinkTheme.mutedColor(context),
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Progress Bar
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: DonationPalette.primary.withOpacity(0.08),
+                      valueColor: const AlwaysStoppedAnimation<Color>(DonationPalette.primary),
+                      minHeight: 6,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Đồng hành $progressPercent%',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900,
+                                color: DonationPalette.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Cần thêm $remainingText',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                color: PulseLinkTheme.mutedColor(context),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${campaign.donorCount} lượt đóng góp',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: PulseLinkTheme.textColor(context),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Trái tim ấm áp',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              color: PulseLinkTheme.mutedColor(context),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-        ],
-        for (final event in events) ...[
-          DonationEventCard(
-            event: event,
-            expanded: true,
-            onOpenDetails: () => _openEventDetail(
-              context,
-              controller,
-              event,
-            ),
-            onBookingToggle: () async {
-              await _handleBookingAction(context, controller, event);
-            },
-          ),
-          const SizedBox(height: 12),
-        ],
-      ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholder() {
+    return Container(
+      color: Colors.white10,
+      alignment: Alignment.center,
+      child: const Icon(Icons.volunteer_activism_rounded, size: 36, color: Colors.white30),
     );
   }
 }
@@ -1412,101 +1891,6 @@ class _ThemePreferenceCard extends StatelessWidget {
   }
 }
 
-class _ImpactStrip extends StatelessWidget {
-  const _ImpactStrip({
-    required this.donations,
-    required this.totalVolumeMl,
-    required this.points,
-  });
-
-  final int donations;
-  final int totalVolumeMl;
-  final int points;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _ImpactItem(
-            label: 'Lần hiến',
-            value: '$donations',
-            icon: Icons.favorite_border,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _ImpactItem(
-            label: 'Đã ghi nhận',
-            value:
-                '${NumberFormat.compact(locale: 'vi').format(totalVolumeMl)} ml',
-            icon: Icons.water_drop_outlined,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _ImpactItem(
-            label: 'Điểm',
-            value: NumberFormat.compact(locale: 'vi').format(points),
-            icon: Icons.stars_outlined,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ImpactItem extends StatelessWidget {
-  const _ImpactItem({
-    required this.label,
-    required this.value,
-    required this.icon,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: PulseLinkTheme.surfaceColor(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: PulseLinkTheme.primaryRed, size: 18),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: PulseLinkTheme.textColor(context),
-              fontWeight: FontWeight.w900,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: PulseLinkTheme.mutedColor(context),
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _DailyHeader extends StatelessWidget {
   const _DailyHeader({
