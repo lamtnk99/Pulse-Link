@@ -28,6 +28,11 @@ class DonationCampaignSeeder extends Seeder
             'target_amount' => 80000000.00,
             'current_amount' => 0.00,
             'status' => 'active',
+            'beneficiary_name' => 'Bé Gia Bảo, 6 tuổi',
+            'beneficiary_story' => 'Gia Bảo mắc bệnh tan máu bẩm sinh (Thalassemia), mỗi tháng em cần truyền máu và thải sắt để duy trì sự sống. Ba em làm phụ hồ, mẹ bán vé số, khoản viện phí hơn 8 triệu mỗi đợt vượt xa thu nhập của gia đình. "Con chỉ mong được đi học lại với các bạn" - Gia Bảo nói khi nằm trên giường bệnh. Mỗi phần đóng góp của bạn giúp em có thêm một lần truyền máu an toàn.',
+            'impact_unit' => 'ngày điều trị',
+            'impact_per_unit_amount' => 250000,
+            'urgency_level' => 'critical',
             'expires_at' => now()->addDays(30),
         ]);
 
@@ -65,6 +70,11 @@ class DonationCampaignSeeder extends Seeder
             'target_points' => 10000,
             'current_points' => 0,
             'status' => 'active',
+            'beneficiary_name' => 'Điểm trường Lũng Cú, Hà Giang',
+            'beneficiary_story' => 'Điểm trường Lũng Cú có 42 em nhỏ, cách trạm y tế gần nhất hơn 15km đường núi. Mùa lũ về, một vết thương nhỏ cũng có thể trở thành nguy hiểm khi không có bông băng, thuốc sát trùng. Thầy cô ở đây vẫn tự bỏ tiền túi mua thuốc dự phòng cho các em. Điểm Hero bạn tích lũy từ những lần hiến máu nay có thể hóa thành một tủ thuốc thật, đặt ngay tại lớp học của các em.',
+            'impact_unit' => 'bộ sơ cứu',
+            'impact_per_unit_points' => 200,
+            'urgency_level' => 'normal',
             'expires_at' => now()->addDays(45),
         ]);
 
@@ -104,6 +114,12 @@ class DonationCampaignSeeder extends Seeder
             'target_points' => 5000,
             'current_points' => 0,
             'status' => 'active',
+            'beneficiary_name' => 'Ngân hàng máu toàn quốc',
+            'beneficiary_story' => 'Mỗi mùa hè, lượng máu dự trữ tại các bệnh viện lại chạm đáy khi sinh viên - nguồn hiến máu chính - về quê nghỉ hè. Hành Trình Đỏ đi qua 40 tỉnh thành để giữ cho dòng máu cứu người không bao giờ cạn. Đóng góp tài chính giúp tổ chức một ngày hội hiến máu; điểm Hero của bạn thành suất ăn ấm nóng tiếp sức cho những người vừa rời ghế hiến máu. Mỗi giọt máu kịp thời là một gia đình được giữ lại người thân.',
+            'impact_unit' => 'suất ăn tiếp sức',
+            'impact_per_unit_amount' => 35000,
+            'impact_per_unit_points' => 50,
+            'urgency_level' => 'urgent',
             'expires_at' => now()->addDays(20),
         ]);
 

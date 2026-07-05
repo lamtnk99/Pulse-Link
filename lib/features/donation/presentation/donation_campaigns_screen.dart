@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/pulse_link_theme.dart';
+import 'package:intl/intl.dart';
 import '../domain/donation_campaign.dart';
 import '../../../app/pulse_link_controller.dart';
 import 'donation_detail_screen.dart';
+import 'donation_palette.dart';
 
 class DonationCampaignsScreen extends StatefulWidget {
   const DonationCampaignsScreen({
@@ -63,19 +64,19 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'ĐỒNG HÀNH QUYÊN GÓP',
-          style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2),
+          'Đồng hành quyên góp',
+          style: TextStyle(fontWeight: FontWeight.w800),
         ),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: const Color(0xFFE31837),
+          labelColor: DonationPalette.primary,
           unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
-          indicatorColor: const Color(0xFFE31837),
+          indicatorColor: DonationPalette.primary,
           indicatorWeight: 3.0,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
           tabs: const [
-            Tab(text: 'QUYÊN GÓP TÀI CHÍNH', icon: Icon(Icons.wallet)),
-            Tab(text: 'QUYÊN GÓP ĐIỂM HERO', icon: Icon(Icons.stars)),
+            Tab(text: 'Góp tấm lòng', icon: Icon(Icons.favorite_rounded)),
+            Tab(text: 'Góp điểm Hero', icon: Icon(Icons.stars_rounded)),
           ],
         ),
       ),
@@ -90,7 +91,7 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
   Widget _buildBody(bool isDark) {
     if (_isLoading) {
       return const Center(
-        child: CircularProgressIndicator(color: Color(0xFFE31837)),
+        child: CircularProgressIndicator(color: DonationPalette.primary),
       );
     }
 
@@ -104,21 +105,21 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  const Icon(Icons.error_outline, size: 64, color: Color(0xFFE31837)),
+                  const Icon(Icons.error_outline, size: 64, color: DonationPalette.primary),
                   const SizedBox(height: 16),
                   Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                    style: TextStyle(fontSize: 14, color: DonationPalette.mutedText(isDark)),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _loadCampaigns,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE31837),
+                      backgroundColor: DonationPalette.primary,
                       foregroundColor: Colors.white,
                     ),
-                    child: const Text('TẢI LẠI'),
+                    child: const Text('Thử lại'),
                   ),
                 ],
               ),
@@ -150,11 +151,18 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          SizedBox(height: MediaQuery.of(context).size.height * 0.25),
-          const Center(
-            child: Text(
-              'Chưa có chiến dịch quyên góp nào đang diễn ra.',
-              style: TextStyle(color: Colors.grey, fontSize: 14),
+          SizedBox(height: MediaQuery.of(context).size.height * 0.22),
+          Center(
+            child: Column(
+              children: [
+                Icon(Icons.favorite_border_rounded, size: 44, color: DonationPalette.primary.withOpacity(0.6)),
+                const SizedBox(height: 12),
+                Text(
+                  'Hiện chưa có chiến dịch nào đang diễn ra.\nHãy quay lại sau nhé!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: DonationPalette.mutedText(isDark), fontSize: 14, height: 1.5),
+                ),
+              ],
             ),
           ),
         ],
@@ -174,14 +182,21 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
 
   Widget _buildCampaignCard(DonationCampaign campaign, bool isFinancial, bool isDark) {
     final progress = isFinancial ? campaign.financialProgress : campaign.pointsProgress;
-    final progressPercent = (progress * 100).toInt();
+    final progressPercent = (progress * 100).round();
 
-    final targetText = isFinancial
-        ? '${_formatCurrency(campaign.targetAmount)}đ'
-        : '${campaign.targetPoints} điểm';
-    final raisedText = isFinancial
-        ? '${_formatCurrency(campaign.currentAmount)}đ'
-        : '${campaign.currentPoints} điểm';
+    // Framing tích cực, hướng hành động: nêu phần còn thiếu thay vì chỉ "tiến độ".
+    final remaining = isFinancial
+        ? campaign.targetAmount - campaign.currentAmount
+        : (campaign.targetPoints - campaign.currentPoints).toDouble();
+    final remainingText = isFinancial
+        ? '${_formatCurrency(remaining < 0 ? 0 : remaining)}đ'
+        : '${remaining < 0 ? 0 : remaining.toInt()} điểm';
+
+    final urgency = DonationPalette.urgency(campaign.urgencyLevel);
+    final daysLeft = campaign.daysLeft;
+    final beneficiary = (campaign.beneficiaryName ?? '').trim();
+    // Ưu tiên kể câu chuyện; nếu chưa có thì rơi về mô tả.
+    final storyLine = campaign.hasStory ? campaign.beneficiaryStory!.trim() : campaign.description;
 
     return GestureDetector(
       onTap: () {
@@ -195,115 +210,167 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
         ).then((_) => _loadCampaigns());
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: 18),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: DonationPalette.surface(isDark),
+          borderRadius: BorderRadius.circular(22),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
             ),
           ],
-          border: Border.all(
-            color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
-          ),
+          border: Border.all(color: DonationPalette.subtleBorder(isDark)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
-                child: campaign.imageUrl != null
-                    ? Image.network(
-                        campaign.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
-                      )
-                    : _buildPlaceholderImage(),
-              ),
+            // Ảnh + overlay + badge cấp thiết + tên người thụ hưởng
+            Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: campaign.imageUrl != null
+                      ? Image.network(
+                          campaign.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
+                        )
+                      : _buildPlaceholderImage(),
+                ),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
+                      ),
+                    ),
+                  ),
+                ),
+                if (urgency != null)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: _CampaignBadge(icon: urgency.icon, label: urgency.label, color: urgency.color),
+                  ),
+                if (daysLeft != null && daysLeft <= 30)
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: _CampaignBadge(
+                      icon: Icons.schedule_rounded,
+                      label: daysLeft <= 0 ? 'Sắp kết thúc' : 'Còn $daysLeft ngày',
+                      color: Colors.black.withOpacity(0.55),
+                    ),
+                  ),
+                if (beneficiary.isNotEmpty)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 12,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.favorite_rounded, size: 15, color: Colors.white),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Vì $beneficiary',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              shadows: [Shadow(blurRadius: 6, color: Colors.black54)],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
                   Text(
-                    campaign.title.toUpperCase(),
+                    campaign.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
+                    style: TextStyle(
+                      fontSize: 15.5,
+                      height: 1.3,
+                      fontWeight: FontWeight.w800,
+                      color: DonationPalette.strongText(isDark),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  // Description
                   Text(
-                    campaign.description,
+                    storyLine,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.white60 : Colors.black54,
+                      height: 1.5,
+                      color: DonationPalette.mutedText(isDark),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Progress Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Tiến độ: $progressPercent%',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFFE31837),
-                        ),
-                      ),
-                      Text(
-                        'Mục tiêu: $targetText',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isDark ? Colors.white60 : Colors.black54,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // Progress Bar
+                  // Progress bar
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
-                      value: progress,
-                      backgroundColor: isDark ? Colors.white12 : Colors.black12,
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFE31837)),
+                      value: progress == 0 ? null : progress,
+                      backgroundColor: DonationPalette.primary.withOpacity(0.1),
+                      valueColor: const AlwaysStoppedAnimation<Color>(DonationPalette.primary),
                       minHeight: 8,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  // Raised Row
+                  const SizedBox(height: 10),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        'Đã quyên góp: $raisedText',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : Colors.black87,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Đã cùng góp $progressPercent%',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: DonationPalette.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              remaining <= 0 ? 'Đã về đích, cảm ơn cộng đồng!' : 'Còn thiếu $remainingText để về đích',
+                              style: TextStyle(fontSize: 12, color: DonationPalette.mutedText(isDark)),
+                            ),
+                          ],
                         ),
                       ),
-                      Icon(
-                        Icons.chevron_right,
-                        color: isDark ? Colors.white38 : Colors.black38,
-                      ),
+                      if (campaign.donorCount > 0)
+                        Row(
+                          children: [
+                            Icon(Icons.people_alt_rounded, size: 14, color: DonationPalette.coral),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${campaign.donorCount}',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: DonationPalette.strongText(isDark),
+                              ),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                 ],
@@ -316,21 +383,52 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
   }
 
   Widget _buildPlaceholderImage() {
-    return Container(
-      color: Colors.red.withOpacity(0.1),
-      child: const Center(
-        child: Icon(Icons.favorite, color: Color(0xFFE31837), size: 48),
+    return const DecoratedBox(
+      decoration: BoxDecoration(gradient: DonationPalette.warmGradient),
+      child: Center(
+        child: Icon(Icons.favorite_rounded, color: Colors.white70, size: 44),
       ),
     );
   }
 
   String _formatCurrency(double amount) {
     if (amount >= 1000000) {
-      return '${(amount / 1000000).toStringAsFixed(1)} Tr';
+      final millions = amount / 1000000;
+      return '${millions.toStringAsFixed(millions % 1 == 0 ? 0 : 1)} triệu';
     }
     if (amount >= 1000) {
-      return '${(amount / 1000).toStringAsFixed(0)}k';
+      return '${NumberFormat('#,###').format(amount)}';
     }
     return amount.toStringAsFixed(0);
+  }
+}
+
+class _CampaignBadge extends StatelessWidget {
+  const _CampaignBadge({required this.icon, required this.label, required this.color});
+
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.92),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+          ),
+        ],
+      ),
+    );
   }
 }

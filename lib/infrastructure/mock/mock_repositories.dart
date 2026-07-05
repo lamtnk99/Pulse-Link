@@ -286,7 +286,16 @@ class MockDonationFundService implements DonationFundService {
       targetPoints: 5000,
       currentPoints: 2450,
       status: 'active',
+      beneficiaryName: 'Bé Gia Bảo, 6 tuổi',
+      beneficiaryStory:
+          'Gia Bảo mắc bệnh tan máu bẩm sinh, mỗi tháng em cần truyền máu để duy trì sự sống. Ba làm phụ hồ, mẹ bán vé số, khoản viện phí hơn 8 triệu mỗi đợt vượt xa sức của gia đình. "Con chỉ mong được đi học lại với các bạn" — Gia Bảo nói khi nằm trên giường bệnh.',
+      impactUnit: 'ngày điều trị',
+      impactPerUnitAmount: 250000,
+      impactPerUnitPoints: 50,
+      urgencyLevel: 'critical',
+      donorCount: 128,
       createdAt: DateTime.now().subtract(const Duration(days: 5)),
+      expiresAt: DateTime.now().add(const Duration(days: 12)),
     ),
     DonationCampaign(
       id: 'mock-campaign-2',
@@ -299,20 +308,28 @@ class MockDonationFundService implements DonationFundService {
       targetPoints: 10000,
       currentPoints: 7200,
       status: 'active',
+      beneficiaryName: 'Điểm trường Lũng Cú, Hà Giang',
+      beneficiaryStory:
+          'Điểm trường có 42 em nhỏ, cách trạm y tế gần nhất hơn 15km đường núi. Mùa lũ về, một vết thương nhỏ cũng có thể trở nên nguy hiểm khi không có bông băng, thuốc sát trùng. Điểm Hero bạn tích lũy nay có thể hóa thành một tủ thuốc thật đặt ngay tại lớp học.',
+      impactUnit: 'bộ sơ cứu',
+      impactPerUnitPoints: 200,
+      urgencyLevel: 'normal',
+      donorCount: 54,
       createdAt: DateTime.now().subtract(const Duration(days: 10)),
+      expiresAt: DateTime.now().add(const Duration(days: 30)),
     )
   ];
 
   final Map<String, List<CampaignDonation>> _leaderboards = {
     'mock-campaign-1': [
-      CampaignDonation(donorName: 'Nguyễn Văn A', amount: 5000000.0, points: 200, lastDonatedAt: DateTime.now()),
-      CampaignDonation(donorName: 'Hiệp sĩ ẩn danh', amount: 2000000.0, points: 50, lastDonatedAt: DateTime.now()),
-      CampaignDonation(donorName: 'Trần Thị B', amount: 1500000.0, points: 100, lastDonatedAt: DateTime.now()),
+      CampaignDonation(donorName: 'Nguyễn Văn An', amount: 5000000.0, points: 200, message: 'Chúc bé mau khỏe, cố lên con nhé!', lastDonatedAt: DateTime.now()),
+      CampaignDonation(donorName: 'Hiệp sĩ ẩn danh', amount: 2000000.0, points: 50, message: 'Mong ca điều trị thật thuận lợi.', isAnonymous: true, lastDonatedAt: DateTime.now()),
+      CampaignDonation(donorName: 'Trần Thị Bình', amount: 1500000.0, points: 100, lastDonatedAt: DateTime.now()),
     ],
     'mock-campaign-2': [
-      CampaignDonation(donorName: 'Lê Văn C', amount: 0, points: 1500, lastDonatedAt: DateTime.now()),
-      CampaignDonation(donorName: 'Hiệp sĩ ẩn danh', amount: 0, points: 1000, lastDonatedAt: DateTime.now()),
-      CampaignDonation(donorName: 'Nguyễn Thị D', amount: 0, points: 800, lastDonatedAt: DateTime.now()),
+      CampaignDonation(donorName: 'Lê Văn Cường', amount: 0, points: 1500, message: 'Gửi chút hơi ấm tới các em vùng cao.', lastDonatedAt: DateTime.now()),
+      CampaignDonation(donorName: 'Hiệp sĩ ẩn danh', amount: 0, points: 1000, isAnonymous: true, lastDonatedAt: DateTime.now()),
+      CampaignDonation(donorName: 'Nguyễn Thị Dung', amount: 0, points: 800, message: 'Lan tỏa yêu thương ❤️', lastDonatedAt: DateTime.now()),
     ],
   };
 
@@ -372,7 +389,15 @@ class MockDonationFundService implements DonationFundService {
         targetPoints: prev.targetPoints,
         currentPoints: prev.currentPoints + points,
         status: prev.status,
+        beneficiaryName: prev.beneficiaryName,
+        beneficiaryStory: prev.beneficiaryStory,
+        impactUnit: prev.impactUnit,
+        impactPerUnitAmount: prev.impactPerUnitAmount,
+        impactPerUnitPoints: prev.impactPerUnitPoints,
+        urgencyLevel: prev.urgencyLevel,
+        donorCount: prev.donorCount + 1,
         createdAt: prev.createdAt,
+        expiresAt: prev.expiresAt,
       );
     }
     return {

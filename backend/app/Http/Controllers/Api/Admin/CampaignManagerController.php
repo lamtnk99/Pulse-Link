@@ -58,6 +58,12 @@ class CampaignManagerController extends Controller
             'type' => ['required', 'string', 'in:financial,points,both'],
             'target_amount' => ['required_if:type,financial,both', 'numeric', 'min:0'],
             'target_points' => ['required_if:type,points,both', 'integer', 'min:0'],
+            'beneficiary_name' => ['nullable', 'string', 'max:255'],
+            'beneficiary_story' => ['nullable', 'string'],
+            'impact_unit' => ['nullable', 'string', 'max:100'],
+            'impact_per_unit_amount' => ['nullable', 'numeric', 'min:0'],
+            'impact_per_unit_points' => ['nullable', 'integer', 'min:0'],
+            'urgency_level' => ['nullable', 'string', 'in:normal,urgent,critical'],
             'expires_at' => ['nullable', 'date'],
         ]);
 
@@ -71,6 +77,12 @@ class CampaignManagerController extends Controller
             'target_points' => $payload['target_points'] ?? 0,
             'current_points' => 0,
             'status' => 'active',
+            'beneficiary_name' => $payload['beneficiary_name'] ?? null,
+            'beneficiary_story' => $payload['beneficiary_story'] ?? null,
+            'impact_unit' => $payload['impact_unit'] ?? null,
+            'impact_per_unit_amount' => $payload['impact_per_unit_amount'] ?? null,
+            'impact_per_unit_points' => $payload['impact_per_unit_points'] ?? null,
+            'urgency_level' => $payload['urgency_level'] ?? null,
             'expires_at' => $payload['expires_at'] ?? null,
         ]);
 
@@ -103,6 +115,12 @@ class CampaignManagerController extends Controller
             'target_amount' => ['sometimes', 'numeric', 'min:0'],
             'target_points' => ['sometimes', 'integer', 'min:0'],
             'status' => ['sometimes', 'required', 'string', 'in:active,completed,cancelled'],
+            'beneficiary_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'beneficiary_story' => ['sometimes', 'nullable', 'string'],
+            'impact_unit' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'impact_per_unit_amount' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'impact_per_unit_points' => ['sometimes', 'nullable', 'integer', 'min:0'],
+            'urgency_level' => ['sometimes', 'nullable', 'string', 'in:normal,urgent,critical'],
             'expires_at' => ['nullable', 'date'],
         ]);
 

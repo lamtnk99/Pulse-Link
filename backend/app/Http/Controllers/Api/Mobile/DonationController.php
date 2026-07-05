@@ -31,20 +31,33 @@ class DonationController extends Controller
             ->where('public_id', $id)
             ->firstOrFail();
 
-        // Get Top Donors Leaderboard
+        // Get Top Donors Leaderboard. We surface the most recent heartfelt message
+        // per donor so the "Bảng vàng tri ân" reads as people, not just amounts.
         $leaderboard = $campaign->donations()
             ->where('payment_status', 'success')
-            ->selectRaw('user_id, donor_name, is_anonymous, SUM(amount) as total_amount, SUM(points) as total_points, MAX(created_at) as last_donated_at')
-            ->groupBy('user_id', 'donor_name', 'is_anonymous')
-            ->orderByRaw('SUM(amount) DESC, SUM(points) DESC')
-            ->limit(10)
+            ->selectRaw('id, user_id, donor_name, is_anonymous, message, amount, points, created_at')
+            ->orderByRaw('amount DESC, points DESC, created_at DESC')
             ->get()
-            ->map(fn($d) => [
-                'donor_name' => $d->is_anonymous ? 'Hiệp sĩ ẩn danh' : $d->donor_name,
-                'amount' => (float) $d->total_amount,
-                'points' => (int) $d->total_points,
-                'last_donated_at' => $d->last_donated_at,
-            ]);
+            ->groupBy(fn($d) => $d->user_id ?? 'guest-' . $d->id)
+            ->map(function ($group) {
+                $first = $group->first();
+                $latestWithMessage = $group
+                    ->filter(fn($d) => filled($d->message))
+                    ->sortByDesc('created_at')
+                    ->first();
+
+                return [
+                    'donor_name' => $first->is_anonymous ? 'Hiệp sĩ ẩn danh' : $first->donor_name,
+                    'amount' => (float) $group->sum('amount'),
+                    'points' => (int) $group->sum('points'),
+                    'message' => $latestWithMessage?->message,
+                    'is_anonymous' => (bool) $first->is_anonymous,
+                    'last_donated_at' => $group->max('created_at'),
+                ];
+            })
+            ->sortByDesc(fn($d) => [$d['amount'], $d['points']])
+            ->take(10)
+            ->values();
 
         return response()->json([
             'data' => [
@@ -202,6 +215,13 @@ class DonationController extends Controller
 
     private function formatCampaign(DonationCampaign $campaign): array
     {
+        // donor_count: số người thực sự đã đóng góp thành công (đếm theo người, không theo lượt),
+        // dùng cho hiệu ứng cộng đồng "cùng N hiệp sĩ".
+        $donorCount = $campaign->donations()
+            ->where('payment_status', 'success')
+            ->distinct()
+            ->count(DB::raw('COALESCE(user_id, id)'));
+
         return [
             'id' => $campaign->public_id,
             'title' => $campaign->title,
@@ -213,6 +233,17 @@ class DonationController extends Controller
             'target_points' => (int) $campaign->target_points,
             'current_points' => (int) $campaign->current_points,
             'status' => $campaign->status,
+            'beneficiary_name' => $campaign->beneficiary_name,
+            'beneficiary_story' => $campaign->beneficiary_story,
+            'impact_unit' => $campaign->impact_unit,
+            'impact_per_unit_amount' => $campaign->impact_per_unit_amount !== null
+                ? (float) $campaign->impact_per_unit_amount
+                : null,
+            'impact_per_unit_points' => $campaign->impact_per_unit_points !== null
+                ? (int) $campaign->impact_per_unit_points
+                : null,
+            'urgency_level' => $campaign->urgency_level,
+            'donor_count' => $donorCount,
             'expires_at' => $campaign->expires_at?->toIso8601String(),
             'created_at' => $campaign->created_at?->toIso8601String(),
         ];

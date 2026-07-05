@@ -20,6 +20,13 @@ return new class extends Migration
             $table->integer('target_points')->default(0);
             $table->integer('current_points')->default(0);
             $table->enum('status', ['active', 'completed', 'cancelled'])->default('active');
+            // Empathy fields: humanize the campaign so donors give to a person, not a bar.
+            $table->string('beneficiary_name')->nullable();       // e.g. "Bé An", "Học sinh bản Lũng Cú"
+            $table->text('beneficiary_story')->nullable();         // câu chuyện hoàn cảnh người thụ hưởng
+            $table->string('impact_unit')->nullable();             // e.g. "phần cơm", "đơn vị máu", "tủ thuốc"
+            $table->decimal('impact_per_unit_amount', 15, 2)->nullable(); // VND để tạo ra 1 impact_unit (cho campaign tiền)
+            $table->integer('impact_per_unit_points')->nullable(); // điểm Hero để tạo ra 1 impact_unit (cho campaign điểm)
+            $table->string('urgency_level')->nullable();           // null | 'normal' | 'urgent' | 'critical'
             $table->timestamp('expires_at')->nullable();
             $table->timestamps();
         });

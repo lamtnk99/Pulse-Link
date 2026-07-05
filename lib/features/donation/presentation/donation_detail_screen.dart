@@ -2,10 +2,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../../core/theme/pulse_link_theme.dart';
 import '../../../app/pulse_link_controller.dart';
 import '../domain/donation_campaign.dart';
 import '../domain/campaign_donation.dart';
+import 'donation_palette.dart';
+import 'donation_thank_you_screen.dart';
 
 class DonationDetailScreen extends StatefulWidget {
   const DonationDetailScreen({
@@ -84,23 +85,23 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
 
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('CHI TIẾT QUYÊN GÓP')),
+        appBar: AppBar(title: const Text('Chi tiết chiến dịch')),
         body: const Center(
-          child: CircularProgressIndicator(color: Color(0xFFE31837)),
+          child: CircularProgressIndicator(color: DonationPalette.primary),
         ),
       );
     }
 
     if (_error != null || _campaign == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('CHI TIẾT QUYÊN GÓP')),
+        appBar: AppBar(title: const Text('Chi tiết chiến dịch')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 64, color: Color(0xFFE31837)),
+                const Icon(Icons.error_outline, size: 64, color: DonationPalette.primary),
                 const SizedBox(height: 16),
                 Text(
                   _error ?? 'Không tìm thấy thông tin chiến dịch.',
@@ -153,12 +154,13 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
             // Tab Header
             TabBar(
               controller: _tabController,
-              labelColor: const Color(0xFFE31837),
+              labelColor: DonationPalette.primary,
               unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
-              indicatorColor: const Color(0xFFE31837),
+              indicatorColor: DonationPalette.primary,
+              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
               tabs: const [
-                Tab(text: 'GIỚI THIỆU'),
-                Tab(text: 'BẢNG VÀNG TRI ÂN'),
+                Tab(text: 'Câu chuyện'),
+                Tab(text: 'Bảng vàng tri ân'),
               ],
             ),
             // Tab View Body
@@ -205,28 +207,66 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            campaign.title.toUpperCase(),
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+            campaign.title,
+            style: TextStyle(
+              fontSize: 16.5,
+              height: 1.3,
+              fontWeight: FontWeight.w800,
+              color: DonationPalette.strongText(isDark),
+            ),
           ),
           const SizedBox(height: 16),
           if (showCash) ...[
             _buildProgressRow(
-              label: 'Quyên góp tài chính',
+              label: 'Tấm lòng tài chính',
               current: campaign.currentAmount,
               target: campaign.targetAmount,
               progress: campaign.financialProgress,
               isCash: true,
+              campaign: campaign,
             ),
             if (showPoints) const SizedBox(height: 16),
           ],
           if (showPoints)
             _buildProgressRow(
-              label: 'Quyên góp điểm Hero',
+              label: 'Điểm Hero đồng hành',
               current: campaign.currentPoints.toDouble(),
               target: campaign.targetPoints.toDouble(),
               progress: campaign.pointsProgress,
               isCash: false,
+              campaign: campaign,
             ),
+          // Social proof: cộng đồng đang cùng chung tay.
+          if (campaign.donorCount > 0) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: DonationPalette.coral.withOpacity(isDark ? 0.14 : 0.07),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.people_alt_rounded, size: 18, color: DonationPalette.coral),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        style: TextStyle(fontSize: 13, color: DonationPalette.strongText(isDark)),
+                        children: [
+                          TextSpan(
+                            text: '${campaign.donorCount} hiệp sĩ',
+                            style: const TextStyle(fontWeight: FontWeight.w800, color: DonationPalette.primary),
+                          ),
+                          const TextSpan(text: ' đã cùng bạn viết tiếp câu chuyện này.'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -238,11 +278,24 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
     required double target,
     required double progress,
     required bool isCash,
+    required DonationCampaign campaign,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final formatter = NumberFormat('#,###');
-    final currentText = isCash ? '${formatter.format(current)} VND' : '${current.toInt()} Pts';
-    final targetText = isCash ? '${formatter.format(target)} VND' : '${target.toInt()} Pts';
+    final currentText = isCash ? '${formatter.format(current)} VND' : '${current.toInt()} điểm';
+    final targetText = isCash ? '${formatter.format(target)} VND' : '${target.toInt()} điểm';
     final percent = (progress * 100).toInt();
+
+    // Quy đổi phần đã góp sang tác động cụ thể để con số trở nên "chạm được".
+    String? impactLine;
+    if (campaign.hasImpactUnit) {
+      final units = isCash
+          ? campaign.impactUnitsForAmount(current)
+          : campaign.impactUnitsForPoints(current.toInt());
+      if (units > 0) {
+        impactLine = 'Tương đương $units ${campaign.impactUnit} đã được trao đi';
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,21 +305,25 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: DonationPalette.strongText(isDark),
+              ),
             ),
             Text(
               '$percent%',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Color(0xFFE31837)),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: DonationPalette.primary),
             ),
           ],
         ),
         const SizedBox(height: 8),
         ClipRRect(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(6),
           child: LinearProgressIndicator(
-            value: progress,
-            backgroundColor: Colors.red.withOpacity(0.08),
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFE31837)),
+            value: progress == 0 ? null : progress,
+            backgroundColor: DonationPalette.primary.withOpacity(0.08),
+            valueColor: const AlwaysStoppedAnimation<Color>(DonationPalette.primary),
             minHeight: 8,
           ),
         ),
@@ -274,23 +331,121 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Đã đạt: $currentText', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-            Text('Mục tiêu: $targetText', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(
+              'Đã góp: $currentText',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: DonationPalette.strongText(isDark)),
+            ),
+            Text('Đích đến: $targetText', style: TextStyle(fontSize: 12, color: DonationPalette.mutedText(isDark))),
           ],
         ),
+        if (impactLine != null) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(Icons.eco_rounded, size: 13, color: DonationPalette.amber),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Text(
+                  impactLine,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontStyle: FontStyle.italic,
+                    color: DonationPalette.mutedText(isDark),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
 
   Widget _buildAboutTab(DonationCampaign campaign, bool isDark) {
+    final beneficiary = (campaign.beneficiaryName ?? '').trim();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'THÔNG TIN DỰ ÁN',
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.5),
+          // Câu chuyện người thụ hưởng — chất liệu thấu cảm chính.
+          if (campaign.hasStory) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    DonationPalette.coral.withOpacity(isDark ? 0.16 : 0.08),
+                    DonationPalette.primary.withOpacity(isDark ? 0.12 : 0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: DonationPalette.primary.withOpacity(0.15)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: DonationPalette.primary.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.auto_stories_rounded, size: 18, color: DonationPalette.primary),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Câu chuyện',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: DonationPalette.mutedText(isDark),
+                              ),
+                            ),
+                            if (beneficiary.isNotEmpty)
+                              Text(
+                                beneficiary,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: DonationPalette.strongText(isDark),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    campaign.beneficiaryStory!.trim(),
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      height: 1.7,
+                      color: DonationPalette.strongText(isDark).withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+          Text(
+            'Về dự án',
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
+              color: DonationPalette.strongText(isDark),
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -298,7 +453,7 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
             style: TextStyle(
               fontSize: 14,
               height: 1.6,
-              color: isDark ? Colors.white70 : Colors.black87,
+              color: DonationPalette.mutedText(isDark),
             ),
           ),
           const SizedBox(height: 24),
@@ -309,122 +464,234 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
 
   Widget _buildLeaderboardTab(bool isDark) {
     if (_leaderboard.isEmpty) {
-      return const Center(
-        child: Text(
-          'Chưa có lượt đóng góp nào. Hãy là người đầu tiên!',
-          style: TextStyle(color: Colors.grey, fontSize: 13),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.favorite_border_rounded, size: 48, color: DonationPalette.primary.withOpacity(0.6)),
+              const SizedBox(height: 12),
+              Text(
+                'Chưa có ai đồng hành.\nHãy là người đầu tiên gieo hy vọng!',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: DonationPalette.mutedText(isDark), fontSize: 13.5, height: 1.5),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: _leaderboard.length,
+      itemCount: _leaderboard.length + 1,
       itemBuilder: (context, index) {
-        final donor = _leaderboard[index];
-        final isTop3 = index < 3;
-        
-        Color badgeColor = Colors.transparent;
-        if (index == 0) badgeColor = const Color(0xFFFFD700); // Gold
-        if (index == 1) badgeColor = const Color(0xFFC0C0C0); // Silver
-        if (index == 2) badgeColor = const Color(0xFFCD7F32); // Bronze
-
-        final amountText = donor.amount > 0 
-            ? '+${NumberFormat('#,###').format(donor.amount)} VND'
-            : '+${donor.points} Hero Pts';
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E293B).withOpacity(0.4) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isTop3 
-                  ? badgeColor.withOpacity(0.3) 
-                  : (isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.03)),
-              width: isTop3 ? 1.5 : 1,
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'Những tấm lòng đã chung tay',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: DonationPalette.mutedText(isDark),
+              ),
             ),
-          ),
-          child: Row(
+          );
+        }
+
+        final donor = _leaderboard[index - 1];
+        final rank = index - 1;
+        return _buildDonorTile(donor, rank, isDark);
+      },
+    );
+  }
+
+  Widget _buildDonorTile(CampaignDonation donor, int index, bool isDark) {
+    final isTop3 = index < 3;
+    Color? medalColor;
+    if (index == 0) medalColor = DonationPalette.gold;
+    if (index == 1) medalColor = DonationPalette.silver;
+    if (index == 2) medalColor = DonationPalette.bronze;
+
+    final amountText = donor.amount > 0
+        ? '${NumberFormat('#,###').format(donor.amount)}đ'
+        : '${donor.points} điểm Hero';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: DonationPalette.surface(isDark).withOpacity(isDark ? 0.5 : 1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isTop3 ? medalColor!.withOpacity(0.4) : DonationPalette.subtleBorder(isDark),
+          width: isTop3 ? 1.4 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Rank badge
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: isTop3 ? badgeColor : Colors.transparent,
-                  shape: BoxShape.circle,
-                  border: isTop3 ? null : Border.all(color: Colors.grey.withOpacity(0.3)),
-                ),
-                child: Center(
-                  child: Text(
-                    '${index + 1}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                      color: isTop3 ? Colors.black87 : (isDark ? Colors.white60 : Colors.black54),
+              // Avatar tròn với chữ cái đầu + huy hiệu hạng
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      gradient: donor.isAnonymous
+                          ? null
+                          : DonationPalette.warmGradient,
+                      color: donor.isAnonymous ? DonationPalette.primary.withOpacity(0.12) : null,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        donor.initial,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          color: donor.isAnonymous ? DonationPalette.primary : Colors.white,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  if (isTop3)
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: medalColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: DonationPalette.surface(isDark), width: 1.5),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.black87),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
-              const SizedBox(width: 16),
-              // Donor Info
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       donor.donorName,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: DonationPalette.strongText(isDark),
+                      ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
-                      amountText,
+                      'Đã trao $amountText',
                       style: const TextStyle(
-                        fontSize: 12, 
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFFE31837)
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: DonationPalette.primary,
                       ),
                     ),
                   ],
                 ),
               ),
-              // Time
               if (donor.lastDonatedAt != null)
                 Text(
-                  DateFormat('dd/MM HH:mm').format(donor.lastDonatedAt!.toLocal()),
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                  DateFormat('dd/MM').format(donor.lastDonatedAt!.toLocal()),
+                  style: TextStyle(fontSize: 11, color: DonationPalette.mutedText(isDark)),
                 ),
             ],
           ),
-        );
-      },
+          // Lời chúc dạng bong bóng — chất liệu thấu cảm chính của bảng vàng.
+          if (donor.hasMessage) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: DonationPalette.amber.withOpacity(isDark ? 0.14 : 0.1),
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(12),
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.format_quote_rounded, size: 16, color: DonationPalette.amber),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      donor.message!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.45,
+                        fontStyle: FontStyle.italic,
+                        color: DonationPalette.strongText(isDark).withOpacity(0.9),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
   Widget _buildBottomActionBar(DonationCampaign campaign) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.transparent,
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.05))),
+        color: DonationPalette.surface(isDark),
+        border: Border(top: BorderSide(color: DonationPalette.subtleBorder(isDark))),
       ),
       child: SafeArea(
+        top: false,
         child: SizedBox(
           width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: () => _showDonationBottomSheet(campaign),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE31837),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              elevation: 4,
+          height: 54,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: DonationPalette.warmGradient,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: DonationPalette.primary.withOpacity(0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-            child: const Text(
-              'QUYÊN GÓP NGAY',
-              style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.2),
+            child: ElevatedButton.icon(
+              onPressed: () => _showDonationBottomSheet(campaign),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              icon: const Icon(Icons.favorite_rounded, size: 20),
+              label: const Text(
+                'Gửi yêu thương',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5),
+              ),
             ),
           ),
         ),
@@ -440,13 +707,19 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
       builder: (context) => _DonationFormBottomSheet(
         controller: widget.controller,
         campaign: campaign,
-        onSuccess: () {
-          Navigator.of(context).pop(); // Close bottom sheet
-          _loadDetails(showLoading: true); // Reload details
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cảm ơn đóng góp quý giá của bạn!'),
-              backgroundColor: Colors.green,
+        onSuccess: (result) {
+          Navigator.of(context).pop(); // Đóng bottom sheet
+          _loadDetails(showLoading: false); // Làm mới ngầm
+          // Khoảnh khắc cảm ơn full-screen thay cho SnackBar lạnh lẽo.
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => DonationThankYouScreen(
+                campaign: campaign,
+                result: result,
+                onViewLeaderboard: () {
+                  _tabController.animateTo(1);
+                },
+              ),
             ),
           );
         },
@@ -464,7 +737,7 @@ class _DonationFormBottomSheet extends StatefulWidget {
 
   final PulseLinkController controller;
   final DonationCampaign campaign;
-  final VoidCallback onSuccess;
+  final ValueChanged<DonationResult> onSuccess;
 
   @override
   State<_DonationFormBottomSheet> createState() => _DonationFormBottomSheetState();
@@ -507,6 +780,18 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
     super.dispose();
   }
 
+  DonationResult _buildResult({required bool isPending}) {
+    return DonationResult(
+      isCash: _selectedTypeIndex == 0,
+      amount: _selectedTypeIndex == 0 ? _selectedCashAmount : 0,
+      points: _selectedTypeIndex == 0 ? 0 : _selectedPointsAmount,
+      donorName: _nameController.text.trim(),
+      message: _messageController.text.trim(),
+      isAnonymous: _isAnonymous,
+      isPending: isPending,
+    );
+  }
+
   Future<void> _submitDonation() async {
     setState(() => _submitting = true);
     try {
@@ -525,8 +810,8 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
         if (paymentUrl != null) {
           final uri = Uri.parse(paymentUrl);
           if (await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-            // Success callback will trigger when payment is done and screen is re-polled
-            widget.onSuccess();
+            // Tiền mặt: webhook xác nhận sau nên đánh dấu pending.
+            widget.onSuccess(_buildResult(isPending: true));
           } else {
             throw 'Không thể khởi động cổng thanh toán.';
           }
@@ -540,14 +825,14 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
           message: _messageController.text,
           isAnonymous: _isAnonymous,
         );
-        widget.onSuccess();
+        widget.onSuccess(_buildResult(isPending: false));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString().contains('không đủ') 
-                ? 'Số dư điểm Hero không đủ để thực hiện quyên góp.' 
+            content: Text(e.toString().contains('không đủ')
+                ? 'Số dư điểm Hero không đủ để thực hiện quyên góp.'
                 : 'Đã xảy ra lỗi khi thực hiện quyên góp: $e'),
             backgroundColor: Colors.red,
           ),
@@ -593,22 +878,31 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                   ),
                 ),
               ),
-              const Text(
-                'ỦNG HỘ ĐỒNG HÀNH',
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, letterSpacing: 0.5),
+              Text(
+                'Gửi yêu thương',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                  color: DonationPalette.strongText(isDark),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Mỗi đóng góp, dù nhỏ, đều tạo nên khác biệt.',
+                style: TextStyle(fontSize: 13, color: DonationPalette.mutedText(isDark)),
               ),
               const SizedBox(height: 16),
-              
+
               // Tabs if campaign allows both
               if (widget.campaign.type == 'both') ...[
                 Row(
                   children: [
                     Expanded(
-                      child: _buildTypeButton(0, 'TIỀN MẶT', Icons.wallet),
+                      child: _buildTypeButton(0, 'Tiền mặt', Icons.favorite_rounded),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildTypeButton(1, 'ĐIỂM HERO', Icons.stars),
+                      child: _buildTypeButton(1, 'Điểm Hero', Icons.stars_rounded),
                     ),
                   ],
                 ),
@@ -617,29 +911,30 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
 
               // Content based on index
               if (_selectedTypeIndex == 0) ...[
-                // Cash limits presets
-                const Text('Chọn số tiền ủng hộ:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 8),
+                Text(
+                  'Chọn số tiền ủng hộ',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: DonationPalette.strongText(isDark)),
+                ),
+                const SizedBox(height: 10),
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
                   children: _cashPresets.map((amount) {
                     final isSel = _selectedCashAmount == amount;
-                    return ChoiceChip(
-                      label: Text('${NumberFormat('#,###').format(amount)}đ'),
+                    return _buildAmountChip(
                       selected: isSel,
-                      selectedColor: const Color(0xFFE31837).withOpacity(0.15),
-                      labelStyle: TextStyle(
-                        color: isSel ? const Color(0xFFE31837) : (isDark ? Colors.white70 : Colors.black87),
-                        fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                      ),
-                      onSelected: (_) => setState(() => _selectedCashAmount = amount),
+                      label: '${NumberFormat('#,###').format(amount)}đ',
+                      hint: _impactHint(isCash: true, value: amount),
+                      isDark: isDark,
+                      onTap: () => setState(() => _selectedCashAmount = amount),
                     );
                   }).toList(),
                 ),
                 const SizedBox(height: 20),
-                // Payment Methods
-                const Text('Cổng thanh toán:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text(
+                  'Cổng thanh toán',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: DonationPalette.strongText(isDark)),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -649,32 +944,31 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                   ],
                 ),
               ] else ...[
-                // Points limit presets
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Chọn số điểm ủng hộ:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     Text(
-                      'Số dư: $userPoints Pts',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey),
+                      'Chọn số điểm ủng hộ',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: DonationPalette.strongText(isDark)),
+                    ),
+                    Text(
+                      'Số dư: $userPoints điểm',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: DonationPalette.mutedText(isDark)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
                   children: _pointsPresets.map((points) {
                     final isSel = _selectedPointsAmount == points;
-                    return ChoiceChip(
-                      label: Text('$points Pts'),
+                    return _buildAmountChip(
                       selected: isSel,
-                      selectedColor: const Color(0xFFE31837).withOpacity(0.15),
-                      labelStyle: TextStyle(
-                        color: isSel ? const Color(0xFFE31837) : (isDark ? Colors.white70 : Colors.black87),
-                        fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                      ),
-                      onSelected: (_) => setState(() => _selectedPointsAmount = points),
+                      label: '$points điểm',
+                      hint: _impactHint(isCash: false, value: points.toDouble()),
+                      isDark: isDark,
+                      onTap: () => setState(() => _selectedPointsAmount = points),
                     );
                   }).toList(),
                 ),
@@ -706,10 +1000,11 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
               TextField(
                 controller: _messageController,
                 maxLines: 2,
-                decoration: const InputDecoration(
-                  labelText: 'Lời chúc gửi tới chiến dịch (Không bắt buộc)',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.all(12),
+                decoration: InputDecoration(
+                  labelText: 'Gửi một lời chúc (không bắt buộc)',
+                  hintText: 'Lời nhắn của bạn sẽ xuất hiện trên bảng vàng tri ân',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.all(14),
                 ),
               ),
               const SizedBox(height: 24),
@@ -717,20 +1012,36 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
               // Button action
               SizedBox(
                 width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _submitting ? null : _submitDonation,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE31837),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                height: 52,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: _submitting ? null : DonationPalette.warmGradient,
+                    color: _submitting ? Colors.grey.withOpacity(0.3) : null,
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: _submitting
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(
-                          _selectedTypeIndex == 0 ? 'TIẾN HÀNH THANH TOÁN' : 'XÁC NHẬN ỦNG HỘ ĐIỂM',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
+                  child: ElevatedButton.icon(
+                    onPressed: _submitting ? null : _submitDonation,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    icon: _submitting
+                        ? const SizedBox.shrink()
+                        : const Icon(Icons.favorite_rounded, size: 20),
+                    label: _submitting
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                          )
+                        : Text(
+                            _selectedTypeIndex == 0 ? 'Tiến hành gửi tặng' : 'Xác nhận tặng điểm',
+                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                          ),
+                  ),
                 ),
               ),
             ],
@@ -740,31 +1051,91 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
     );
   }
 
+  /// Gợi ý quy đổi tác động cho một mức đóng góp, ví dụ "≈ 2 phần cơm".
+  String? _impactHint({required bool isCash, required double value}) {
+    final c = widget.campaign;
+    if (!c.hasImpactUnit) return null;
+    final units = isCash
+        ? c.impactUnitsForAmount(value)
+        : c.impactUnitsForPoints(value.toInt());
+    if (units <= 0) return null;
+    return '≈ $units ${c.impactUnit}';
+  }
+
+  Widget _buildAmountChip({
+    required bool selected,
+    required String label,
+    required String? hint,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? DonationPalette.primary.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? DonationPalette.primary : DonationPalette.subtleBorder(isDark),
+            width: selected ? 1.6 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                color: selected ? DonationPalette.primary : DonationPalette.strongText(isDark),
+              ),
+            ),
+            if (hint != null) ...[
+              const SizedBox(height: 2),
+              Text(
+                hint,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: selected ? DonationPalette.primary.withOpacity(0.8) : DonationPalette.mutedText(isDark),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildTypeButton(int index, String label, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSel = _selectedTypeIndex == index;
     return GestureDetector(
       onTap: () => setState(() => _selectedTypeIndex = index),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSel ? const Color(0xFFE31837).withOpacity(0.1) : Colors.transparent,
+          color: isSel ? DonationPalette.primary.withOpacity(0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSel ? const Color(0xFFE31837) : Colors.grey.withOpacity(0.3),
+            color: isSel ? DonationPalette.primary : DonationPalette.subtleBorder(isDark),
             width: isSel ? 1.5 : 1,
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18, color: isSel ? const Color(0xFFE31837) : Colors.grey),
+            Icon(icon, size: 18, color: isSel ? DonationPalette.primary : DonationPalette.mutedText(isDark)),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: isSel ? const Color(0xFFE31837) : Colors.grey,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: isSel ? DonationPalette.primary : DonationPalette.mutedText(isDark),
               ),
             ),
           ],
@@ -774,6 +1145,7 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
   }
 
   Widget _buildPaymentMethodTile(String method, String label) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSel = _selectedPaymentMethod == method;
     return Expanded(
       child: GestureDetector(
@@ -781,10 +1153,10 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
-            color: isSel ? const Color(0xFFE31837).withOpacity(0.1) : Colors.transparent,
+            color: isSel ? DonationPalette.primary.withOpacity(0.1) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSel ? const Color(0xFFE31837) : Colors.grey.withOpacity(0.3),
+              color: isSel ? DonationPalette.primary : DonationPalette.subtleBorder(isDark),
               width: isSel ? 1.5 : 1,
             ),
           ),
@@ -792,9 +1164,9 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
             child: Text(
               label,
               style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-                color: isSel ? const Color(0xFFE31837) : Colors.grey,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+                color: isSel ? DonationPalette.primary : DonationPalette.mutedText(isDark),
               ),
             ),
           ),

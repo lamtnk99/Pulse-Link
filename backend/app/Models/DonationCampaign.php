@@ -21,6 +21,12 @@ class DonationCampaign extends Model
         'target_points',
         'current_points',
         'status',
+        'beneficiary_name',
+        'beneficiary_story',
+        'impact_unit',
+        'impact_per_unit_amount',
+        'impact_per_unit_points',
+        'urgency_level',
         'expires_at',
     ];
 
@@ -32,6 +38,8 @@ class DonationCampaign extends Model
             'current_amount' => 'float',
             'target_points' => 'integer',
             'current_points' => 'integer',
+            'impact_per_unit_amount' => 'float',
+            'impact_per_unit_points' => 'integer',
         ];
     }
 
