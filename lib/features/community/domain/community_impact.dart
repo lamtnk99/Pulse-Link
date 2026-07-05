@@ -8,6 +8,8 @@ class CommunityImpact {
     required this.livesTouched,
     required this.totalHeroCount,
     required this.gratitudeWall,
+    required this.campaignDonationsCount,
+    required this.totalDonatedAmount,
   });
 
   factory CommunityImpact.fromJson(Map<String, dynamic> json) {
@@ -18,6 +20,8 @@ class CommunityImpact {
       activeDonors: (json['active_donors'] as num?)?.toInt() ?? 0,
       livesTouched: (json['lives_touched'] as num?)?.toInt() ?? 0,
       totalHeroCount: (json['total_hero_count'] as num?)?.toInt() ?? 0,
+      campaignDonationsCount: (json['campaign_donations_count'] as num?)?.toInt() ?? 0,
+      totalDonatedAmount: (json['total_donated_amount'] as num?)?.toDouble() ?? 0.0,
       gratitudeWall: (json['gratitude_wall'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(GratitudeNote.fromJson)
@@ -31,9 +35,15 @@ class CommunityImpact {
   final int activeDonors;
   final int livesTouched;
   final int totalHeroCount;
+  final int campaignDonationsCount;
+  final double totalDonatedAmount;
   final List<GratitudeNote> gratitudeWall;
 
-  bool get hasData => donationsThisMonth > 0 || activeDonors > 0 || gratitudeWall.isNotEmpty;
+  bool get hasData =>
+      donationsThisMonth > 0 ||
+      activeDonors > 0 ||
+      campaignDonationsCount > 0 ||
+      gratitudeWall.isNotEmpty;
 }
 
 /// Một lời chúc trên tường tri ân cộng đồng.

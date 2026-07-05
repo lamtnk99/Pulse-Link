@@ -46,4 +46,8 @@ class ChatConversation {
   final List<ChatMessage>? messages;
 
   bool get isPostDonationCheckup => contextType == 'post_donation_checkup';
+  bool get isPreDonationGuidance => contextType == 'pre_donation_guidance';
+  bool get isAppointmentReminder => contextType == 'appointment_reminder';
+  bool get isDonationDeferred => contextType == 'donation_deferred';
+  bool get isGeneral => contextType == 'general';
 }

@@ -85,6 +85,24 @@ class PulseLinkController extends ChangeNotifier {
   DonationFundService get donationFundService => _donationFundService;
   CommunityImpactService get communityImpactService => _communityImpactService;
 
+  bool _isChatOpen = false;
+  bool get isChatOpen => _isChatOpen;
+  
+  String? _activeChatConversationId;
+  String? get activeChatConversationId => _activeChatConversationId;
+
+  void openChat({String? conversationId}) {
+    _isChatOpen = true;
+    _activeChatConversationId = conversationId;
+    notifyListeners();
+  }
+
+  void closeChat() {
+    _isChatOpen = false;
+    _activeChatConversationId = null;
+    notifyListeners();
+  }
+
   Future<void> initialize() async {
     final themePreference = await _loadThemePreference();
     _state = _state.copyWith(

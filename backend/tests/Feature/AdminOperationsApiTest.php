@@ -139,6 +139,8 @@ class AdminOperationsApiTest extends TestCase
             ['status' => 'booked', 'booked_at' => now()]
         );
         $event->refreshBookedCount();
+        app(\App\Services\Donations\DonationRecognitionService::class)->refreshDonorRecognition($donor);
+        $donor->refresh();
         $initialDonations = $donor->total_donations;
         $initialPoints = $donor->points;
 
@@ -170,7 +172,7 @@ class AdminOperationsApiTest extends TestCase
         ]);
         $donor->refresh();
         $this->assertSame($initialDonations + 1, $donor->total_donations);
-        $this->assertSame($initialPoints + 250, $donor->points);
+        $this->assertSame($initialPoints + 450, $donor->points);
 
         $this->getJson("/api/mobile/me/donations?user_id={$donor->id}")
             ->assertOk()

@@ -102,7 +102,11 @@ class SendPostDonationCheckup extends Command
                 ]);
 
                 // 4. Broadcast notification event
-                event(new MobileNotificationCreated($notification));
+                try {
+                    event(new MobileNotificationCreated($notification));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning("Broadcasting post-donation notification failed: " . $e->getMessage());
+                }
                 
                 $sentCount++;
             });

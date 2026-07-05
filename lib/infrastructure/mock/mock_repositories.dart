@@ -426,6 +426,8 @@ class MockCommunityImpactService implements CommunityImpactService {
       activeDonors: 289,
       livesTouched: 1026,
       totalHeroCount: 1580,
+      campaignDonationsCount: 156,
+      totalDonatedAmount: 78000000.0,
       gratitudeWall: [
         GratitudeNote(donorName: 'Nguyễn Hoài An', message: 'Cho đi một chút, nhận lại rất nhiều bình yên trong lòng.'),
         GratitudeNote(donorName: 'Hiệp sĩ ẩn danh', message: 'Mong người bệnh mau khỏe, cố lên nhé!', isAnonymous: true),

@@ -234,4 +234,148 @@ class ChatbotApiTest extends TestCase
             'type' => 'post_donation_checkup',
         ]);
     }
+
+    public function test_appointment_creates_pre_donation_guidance_chat()
+    {
+        $hospital = Hospital::firstOrCreate([
+            'code' => 'TEST-HOSP',
+        ], [
+            'name' => 'Bệnh viện Kiểm thử',
+            'province_code' => '01',
+            'address' => '123 Test Street',
+            'latitude' => 21.0285,
+            'longitude' => 105.8542,
+            'is_active' => true,
+        ]);
+
+        $event = \App\Models\DonationEvent::create([
+            'hospital_id' => $hospital->id,
+            'title' => 'Sự kiện Hiến Máu Test',
+            'starts_at' => now()->addDays(2),
+            'ends_at' => now()->addDays(2)->addHours(4),
+            'location_name' => 'Bệnh viện Kiểm thử',
+            'organizer' => 'Bệnh viện Kiểm thử',
+            'latitude' => 21.0285,
+            'longitude' => 105.8542,
+            'capacity' => 100,
+            'is_published' => true,
+        ]);
+
+        // Creating appointment should trigger Pre-donation chat
+        $appointment = \App\Models\DonationAppointment::create([
+            'donation_event_id' => $event->id,
+            'user_id' => $this->donor->id,
+            'status' => 'booked',
+            'booked_at' => now(),
+        ]);
+
+        $this->assertDatabaseHas('chat_conversations', [
+            'user_id' => $this->donor->id,
+            'context_type' => 'pre_donation_guidance',
+        ]);
+
+        $this->assertDatabaseHas('mobile_notifications', [
+            'user_id' => $this->donor->id,
+            'type' => 'pre_donation_guidance',
+        ]);
+    }
+
+    public function test_appointment_deferred_creates_counseling_chat()
+    {
+        $hospital = Hospital::firstOrCreate([
+            'code' => 'TEST-HOSP',
+        ], [
+            'name' => 'Bệnh viện Kiểm thử',
+            'province_code' => '01',
+            'address' => '123 Test Street',
+            'latitude' => 21.0285,
+            'longitude' => 105.8542,
+            'is_active' => true,
+        ]);
+
+        $event = \App\Models\DonationEvent::create([
+            'hospital_id' => $hospital->id,
+            'title' => 'Sự kiện Hiến Máu Test 2',
+            'starts_at' => now()->addDays(2),
+            'ends_at' => now()->addDays(2)->addHours(4),
+            'location_name' => 'Bệnh viện Kiểm thử',
+            'organizer' => 'Bệnh viện Kiểm thử',
+            'latitude' => 21.0285,
+            'longitude' => 105.8542,
+            'capacity' => 100,
+            'is_published' => true,
+        ]);
+
+        $appointment = \App\Models\DonationAppointment::create([
+            'donation_event_id' => $event->id,
+            'user_id' => $this->donor->id,
+            'status' => 'booked',
+            'booked_at' => now(),
+        ]);
+
+        // Updating status to deferred should trigger Deferred counseling chat
+        $appointment->update([
+            'status' => 'deferred',
+            'screening_notes' => 'Huyết áp thấp',
+        ]);
+
+        $this->assertDatabaseHas('chat_conversations', [
+            'user_id' => $this->donor->id,
+            'context_type' => 'donation_deferred',
+        ]);
+
+        $this->assertDatabaseHas('mobile_notifications', [
+            'user_id' => $this->donor->id,
+            'type' => 'donation_deferred',
+        ]);
+    }
+
+    public function test_send_appointment_reminder_command()
+    {
+        $hospital = Hospital::firstOrCreate([
+            'code' => 'TEST-HOSP',
+        ], [
+            'name' => 'Bệnh viện Kiểm thử',
+            'province_code' => '01',
+            'address' => '123 Test Street',
+            'latitude' => 21.0285,
+            'longitude' => 105.8542,
+            'is_active' => true,
+        ]);
+
+        // Create an event that starts today
+        $event = \App\Models\DonationEvent::create([
+            'hospital_id' => $hospital->id,
+            'title' => 'Sự kiện Hôm Nay',
+            'starts_at' => now()->addHours(2),
+            'ends_at' => now()->addHours(6),
+            'location_name' => 'Bệnh viện Kiểm thử',
+            'organizer' => 'Bệnh viện Kiểm thử',
+            'latitude' => 21.0285,
+            'longitude' => 105.8542,
+            'capacity' => 100,
+            'is_published' => true,
+        ]);
+
+        $appointment = \App\Models\DonationAppointment::create([
+            'donation_event_id' => $event->id,
+            'user_id' => $this->donor->id,
+            'status' => 'booked',
+            'booked_at' => now(),
+        ]);
+
+        // Run Artisan command
+        $this->artisan('app:send-appointment-reminder')
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('chat_conversations', [
+            'user_id' => $this->donor->id,
+            'context_type' => 'appointment_reminder',
+        ]);
+
+        $this->assertDatabaseHas('mobile_notifications', [
+            'user_id' => $this->donor->id,
+            'type' => 'appointment_reminder',
+        ]);
+    }
 }

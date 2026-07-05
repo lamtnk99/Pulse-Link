@@ -101,9 +101,15 @@ class _CommunityImpactCardState extends State<CommunityImpactCard> {
             children: [
               _stat(context, formatter.format(impact.donationsThisMonth), 'lượt hiến'),
               _statDivider(),
-              _stat(context, formatter.format(impact.livesTouched), 'cuộc đời được chạm tới'),
+              _stat(context, '${formatter.format(impact.volumeMlThisMonth)} mL', 'số lượng ML'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _stat(context, formatter.format(impact.campaignDonationsCount), 'lượt quyên góp'),
               _statDivider(),
-              _stat(context, '${(impact.volumeMlThisMonth / 1000).toStringAsFixed(1)}L', 'máu sẻ chia'),
+              _stat(context, '${formatter.format(impact.totalDonatedAmount)}đ', 'tổng số tiền quyên góp'),
             ],
           ),
           if (impact.gratitudeWall.isNotEmpty) ...[

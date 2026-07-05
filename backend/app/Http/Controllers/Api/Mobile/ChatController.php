@@ -146,12 +146,65 @@ class ChatController extends Controller
     {
         $user = $this->mobileUserResolver->resolve($request->integer('user_id'));
 
+        // 1. Quét các context đặc biệt đang active
         $conversation = ChatConversation::where('user_id', $user->id)
-            ->where('context_type', 'post_donation_checkup')
+            ->whereIn('context_type', [
+                ChatConversation::CONTEXT_POST_DONATION_CHECKUP,
+                ChatConversation::CONTEXT_APPOINTMENT_REMINDER,
+                ChatConversation::CONTEXT_PRE_DONATION_GUIDANCE,
+                ChatConversation::CONTEXT_DONATION_DEFERRED,
+            ])
             ->where('is_active', true)
             ->with(['latestMessage'])
             ->latest()
             ->first();
+
+        // 2. Nếu không có context đặc biệt, trả về hoặc tạo cuộc trò chuyện general và thêm lời chào thấu cảm hàng ngày
+        if (!$conversation) {
+            $conversation = ChatConversation::where('user_id', $user->id)
+                ->where('context_type', ChatConversation::CONTEXT_GENERAL)
+                ->where('is_active', true)
+                ->latest()
+                ->first();
+
+            if (!$conversation) {
+                $conversation = ChatConversation::create([
+                    'user_id' => $user->id,
+                    'title' => 'Trợ lý Sức khỏe AI',
+                    'context_type' => ChatConversation::CONTEXT_GENERAL,
+                    'is_active' => true,
+                ]);
+            }
+
+            // Kiểm tra xem hôm nay đã gửi lời chào hàng ngày chưa
+            $hasDailyGreetingToday = ChatMessage::where('chat_conversation_id', $conversation->id)
+                ->where('role', 'assistant')
+                ->where('content', 'like', '%Chào%')
+                ->whereDate('created_at', today())
+                ->exists();
+
+            if (!$hasDailyGreetingToday) {
+                // Tạo lời chào thấu cảm theo thời gian thực (Giờ địa phương hoặc UTC tùy cấu hình - dùng Carbon hỗ trợ múi giờ)
+                $hour = now()->timezone('Asia/Ho_Chi_Minh')->hour;
+                $greeting = "Chào bạn! Chúc bạn một ngày mới tốt lành. ❤️";
+                if ($hour >= 5 && $hour < 12) {
+                    $greeting = "Chào buổi sáng {$user->name}! Chúc bạn một ngày mới tràn đầy năng lượng tích cực. Hãy nhớ uống một cốc nước lọc ấm để khởi đầu ngày mới nhé! ☀️";
+                } elseif ($hour >= 12 && $hour < 18) {
+                    $greeting = "Chào {$user->name}, nửa ngày đã trôi qua rồi. Bạn đã dành vài phút để nghỉ ngơi và uống nước chưa? Hãy cùng thư giãn một chút nhé! ☕";
+                } else {
+                    $greeting = "Chào buổi tối {$user->name}! Một ngày vất vả đã trôi qua, hãy nghỉ ngơi thật tốt và chuẩn bị cho một giấc ngủ thật ngon để cơ thể tái tạo máu tốt nhất nhé! 💤";
+                }
+
+                ChatMessage::create([
+                    'chat_conversation_id' => $conversation->id,
+                    'role' => 'assistant',
+                    'content' => $greeting,
+                ]);
+
+                // Tải lại tin nhắn mới nhất
+                $conversation->load('latestMessage');
+            }
+        }
 
         return response()->json([
             'data' => $conversation

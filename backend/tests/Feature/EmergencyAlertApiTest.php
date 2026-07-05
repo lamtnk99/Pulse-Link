@@ -161,6 +161,8 @@ class EmergencyAlertApiTest extends TestCase
             ->where('role', 'donor')
             ->where('blood_type', 'O+')
             ->firstOrFail();
+        app(\App\Services\Donations\DonationRecognitionService::class)->refreshDonorRecognition($donor);
+        $donor->refresh();
         $initialDonations = $donor->total_donations;
         $initialPoints = $donor->points;
 
@@ -201,7 +203,7 @@ class EmergencyAlertApiTest extends TestCase
         ]);
         $donor->refresh();
         $this->assertSame($initialDonations + 1, $donor->total_donations);
-        $this->assertSame($initialPoints + 350, $donor->points);
+        $this->assertSame($initialPoints + 630, $donor->points);
 
         $this->postJson("/api/admin/emergency-alerts/{$alertId}/complete?admin_user_id={$staff->id}")
             ->assertOk()

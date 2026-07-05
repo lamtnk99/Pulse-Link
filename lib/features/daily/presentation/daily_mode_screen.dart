@@ -2015,6 +2015,11 @@ class _DailyHeader extends StatelessWidget {
                           ),
                           onTap: () {
                             controller.markNotificationRead(notification.id);
+                            final conversationId = notification.payload['conversation_id']?.toString();
+                            if (conversationId != null) {
+                              Navigator.pop(context); // Close notification bottom sheet
+                              controller.openChat(conversationId: conversationId);
+                            }
                           },
                         );
                       },

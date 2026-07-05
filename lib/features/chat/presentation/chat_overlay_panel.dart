@@ -46,12 +46,57 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
   _DailyQuota? _quota;
   String? _errorMessage;
 
-  final List<String> _suggestedChips = [
-    'Chế độ ăn sau hiến',
-    'Tôi bị chóng mặt',
-    'Khi nào được hiến tiếp?',
-    'Món ăn bổ máu'
-  ];
+  List<String> get _dynamicSuggestedChips {
+    final chat = _currentChat;
+    if (chat == null) {
+      return [
+        'Chế độ ăn sau hiến',
+        'Tôi bị chóng mặt',
+        'Khi nào được hiến tiếp?',
+        'Món ăn bổ máu'
+      ];
+    }
+    
+    if (chat.isPostDonationCheckup) {
+      return [
+        'Tôi thấy rất khỏe',
+        'Tôi bị chóng mặt',
+        'Vết tiêm bị bầm tím',
+        'Cần kiêng gì không?',
+      ];
+    }
+    if (chat.isPreDonationGuidance) {
+      return [
+        'Tôi cần nhịn ăn không?',
+        'Cần mang theo giấy tờ gì?',
+        'Ai không được hiến máu?',
+        'Có được uống trà/café không?'
+      ];
+    }
+    if (chat.isAppointmentReminder) {
+      return [
+        'Xem vị trí điểm hiến',
+        'Thủ tục đăng ký thế nào?',
+        'Nếu hôm nay bị mệt?',
+        'Cần uống nước ấm lúc nào?'
+      ];
+    }
+    if (chat.isDonationDeferred) {
+      return [
+        'Tại sao tôi bị hoãn hiến?',
+        'Thực phẩm bổ máu tốt nhất?',
+        'Khi nào tôi đăng ký lại được?',
+        'Tư vấn nâng cao huyết sắc tố'
+      ];
+    }
+    
+    return [
+      'Chế độ ăn sau hiến',
+      'Tôi bị chóng mặt',
+      'Khi nào được hiến tiếp?',
+      'Món ăn bổ máu'
+    ];
+  }
 
   @override
   void initState() {
@@ -98,16 +143,31 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
       // 2. Fetch conversations
       _conversations = await widget.controller.chatService.getConversations();
 
-      // 3. Auto open active checkup if exists
-      final activeCheckup = await widget.controller.chatService.getActiveCheckup();
-      if (activeCheckup != null) {
-        await _openConversation(activeCheckup);
-      } else if (_conversations.isNotEmpty) {
-        // Otherwise load the latest conversation if general
-        await _openConversation(_conversations.first);
+      // 3. Auto open active checkup or target conversation if exists
+      final targetId = widget.controller.activeChatConversationId;
+      if (targetId != null) {
+        final existing = _conversations.firstWhere(
+          (c) => c.id == targetId,
+          orElse: () => ChatConversation(
+            id: targetId,
+            title: 'Trợ lý Sức khỏe',
+            contextType: 'general',
+            isActive: true,
+            createdAt: DateTime.now(),
+          ),
+        );
+        await _openConversation(existing);
       } else {
-        // If absolutely no chats, start a new one
-        await _startNewConversation();
+        final activeCheckup = await widget.controller.chatService.getActiveCheckup();
+        if (activeCheckup != null) {
+          await _openConversation(activeCheckup);
+        } else if (_conversations.isNotEmpty) {
+          // Otherwise load the latest conversation if general
+          await _openConversation(_conversations.first);
+        } else {
+          // If absolutely no chats, start a new one
+          await _startNewConversation();
+        }
       }
     } catch (e) {
       setState(() {
@@ -287,6 +347,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                       _buildQuotaBar(),
                       if (_errorMessage != null) _buildErrorBanner(),
                       Expanded(child: _buildChatBody()),
+                      _buildQuickRepliesBar(),
                       _buildInputBar(),
                     ],
                   ),
@@ -300,7 +361,25 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
   }
 
   Widget _buildHeader() {
-    final isCheckup = _currentChat?.isPostDonationCheckup ?? false;
+    String title = 'Trợ lý Sức khỏe';
+    String desc = 'Hỏi đáp sức khỏe & hiến máu';
+    
+    final chat = _currentChat;
+    if (chat != null) {
+      if (chat.isPostDonationCheckup) {
+        title = 'Hỏi thăm sức khỏe';
+        desc = 'Mạch Sống đồng hành cùng bạn';
+      } else if (chat.isPreDonationGuidance) {
+        title = 'Chuẩn bị hiến máu';
+        desc = 'Dặn dò an toàn trước ca hiến';
+      } else if (chat.isAppointmentReminder) {
+        title = 'Nhắc hẹn hôm nay';
+        desc = 'Pulse Link đồng hành cùng bạn';
+      } else if (chat.isDonationDeferred) {
+        title = 'Động viên & Bồi bổ';
+        desc = 'Sức khỏe của bạn là ưu tiên số 1';
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -325,7 +404,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                 Row(
                   children: [
                     Text(
-                      isCheckup ? 'Hỏi thăm sức khỏe' : 'Trợ lý Sức khỏe',
+                      title,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -352,7 +431,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  isCheckup ? 'Mạch Sống đồng hành cùng bạn' : 'Hỏi đáp sức khỏe & hiến máu',
+                  desc,
                   style: const TextStyle(
                     color: PulseLinkTheme.mutedText,
                     fontSize: 11,
@@ -486,7 +565,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
               spacing: 8,
               runSpacing: 8,
               alignment: WrapAlignment.center,
-              children: _suggestedChips.map((chipText) {
+              children: _dynamicSuggestedChips.map((chipText) {
                 return ActionChip(
                   label: Text(
                     chipText,
@@ -574,6 +653,44 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
             );
           }),
         ),
+      ),
+    );
+  }
+
+  Widget _buildQuickRepliesBar() {
+    if (_isLoadingChats || _isLoadingMessages || _messages.isEmpty || _isSending) {
+      return const SizedBox.shrink();
+    }
+
+    final chips = _dynamicSuggestedChips;
+    if (chips.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: chips.length,
+        itemBuilder: (context, index) {
+          final chipText = chips[index];
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ActionChip(
+              label: Text(
+                chipText,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              backgroundColor: PulseLinkTheme.cardBackground,
+              side: BorderSide(color: Colors.white.withOpacity(0.08)),
+              onPressed: () => _handleSendMessage(chipText),
+            ),
+          );
+        },
       ),
     );
   }

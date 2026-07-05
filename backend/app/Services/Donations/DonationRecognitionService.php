@@ -22,6 +22,24 @@ class DonationRecognitionService
         ];
     }
 
+    public function pointsForDonation(string $type, int $volumeMl): int
+    {
+        // Điểm cơ bản tương ứng với số mL
+        $basePoints = match ($volumeMl) {
+            250 => 250,
+            350 => 350,
+            450 => 450,
+            default => 250,
+        };
+
+        // SOS được tăng 40% điểm
+        if ($type === 'sos') {
+            return (int) ($basePoints * 1.4);
+        }
+
+        return $basePoints;
+    }
+
     public function refreshDonorRecognition(User $user): void
     {
         $histories = DonationHistory::query()
@@ -29,11 +47,9 @@ class DonationRecognitionService
             ->where('status', 'verified')
             ->get();
 
-        $regularCount = $histories->where('donation_type', 'regular')->count()
-            + $histories->where('donation_type', 'manual')->count();
         $sosCount = $histories->where('donation_type', 'sos')->count();
         $totalDonations = $histories->count();
-        $points = $regularCount * 250 + $sosCount * 350;
+        $points = $histories->sum(fn ($h) => $this->pointsForDonation($h->donation_type, (int) $h->volume_ml));
         $lastDonationDate = $histories->max('donated_at');
 
         $user->update([
@@ -47,27 +63,7 @@ class DonationRecognitionService
 
     public function awardNewDonation(User $user, string $type, mixed $donatedAt = null): void
     {
-        $points = $this->pointsFor($type);
-        $donationDate = $donatedAt ? Carbon::parse($donatedAt)->toDateString() : now()->toDateString();
-        $nextTotal = $user->total_donations + 1;
-        $nextPoints = $user->points + $points;
-        $totalVolumeMl = (int) DonationHistory::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'verified')
-            ->sum('volume_ml');
-        $sosCount = DonationHistory::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'verified')
-            ->where('donation_type', 'sos')
-            ->count();
-
-        $user->update([
-            'total_donations' => $nextTotal,
-            'points' => $nextPoints,
-            'last_donation_date' => $donationDate,
-            'hero_level' => $this->levelFor($nextTotal, $nextPoints),
-            'badge_title' => $this->primaryBadgeTitle($nextTotal, $sosCount, $totalVolumeMl),
-        ]);
+        $this->refreshDonorRecognition($user);
     }
 
     public function recognitionFor(User $user): array

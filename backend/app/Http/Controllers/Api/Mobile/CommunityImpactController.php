@@ -27,11 +27,57 @@ class CommunityImpactController extends Controller
             ->where('donated_at', '>=', $startOfMonth)
             ->sum('volume_ml');
 
-        // Số người hiến khác nhau trong tháng — hiệu ứng "cùng N người".
-        $activeDonors = (int) DonationHistory::query()
+        // Số người hiến máu và quyên góp khác nhau trong tháng — hiệu ứng "cùng N người".
+        $bloodDonorUserIds = DonationHistory::query()
             ->where('donated_at', '>=', $startOfMonth)
+            ->whereNotNull('user_id')
             ->distinct()
-            ->count(DB::raw('COALESCE(user_id, id)'));
+            ->pluck('user_id')
+            ->toArray();
+
+        $campaignDonorUserIds = CampaignDonation::query()
+            ->where('payment_status', 'success')
+            ->where('created_at', '>=', $startOfMonth)
+            ->whereNotNull('user_id')
+            ->distinct()
+            ->pluck('user_id')
+            ->toArray();
+
+        $uniqueUserIds = array_unique(array_merge($bloodDonorUserIds, $campaignDonorUserIds));
+        $registeredCount = count($uniqueUserIds);
+
+        $guestBloodCount = DonationHistory::query()
+            ->where('donated_at', '>=', $startOfMonth)
+            ->whereNull('user_id')
+            ->count();
+
+        $guestCampaignCount = CampaignDonation::query()
+            ->where('payment_status', 'success')
+            ->where('created_at', '>=', $startOfMonth)
+            ->whereNull('user_id')
+            ->distinct('donor_name')
+            ->count('donor_name');
+
+        $activeDonors = $registeredCount + $guestBloodCount + $guestCampaignCount;
+
+        // Số lượt quyên góp chiến dịch trong tháng
+        $campaignDonationsCount = CampaignDonation::query()
+            ->where('payment_status', 'success')
+            ->where('created_at', '>=', $startOfMonth)
+            ->count();
+
+        // Tổng số tiền quyên góp trong tháng (quy đổi 1 điểm = 5,000 VND)
+        $cashAmountThisMonth = CampaignDonation::query()
+            ->where('payment_status', 'success')
+            ->where('created_at', '>=', $startOfMonth)
+            ->sum('amount');
+
+        $pointsThisMonth = CampaignDonation::query()
+            ->where('payment_status', 'success')
+            ->where('created_at', '>=', $startOfMonth)
+            ->sum('points');
+
+        $totalDonatedAmount = $cashAmountThisMonth + ($pointsThisMonth * 250);
 
         // 1 đơn vị máu ~ giúp được 3 người bệnh (ước lượng phổ biến trong ngành).
         $livesTouched = $donationsThisMonth * 3;
@@ -59,6 +105,8 @@ class CommunityImpactController extends Controller
                 'volume_ml_this_month' => $volumeThisMonth,
                 'active_donors' => $activeDonors,
                 'lives_touched' => $livesTouched,
+                'campaign_donations_count' => $campaignDonationsCount,
+                'total_donated_amount' => $totalDonatedAmount,
                 'total_hero_count' => (int) User::query()->where('role', 'donor')->count(),
                 'gratitude_wall' => $wall,
             ],

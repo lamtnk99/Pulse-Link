@@ -36,12 +36,23 @@ class _DraggableChatFabState extends State<DraggableChatFab>
     )..repeat();
 
     _checkActiveCheckup();
+    widget.controller.addListener(_onControllerChanged);
+    _isOpen = widget.controller.isChatOpen;
   }
 
   @override
   void dispose() {
+    widget.controller.removeListener(_onControllerChanged);
     _pulseController.dispose();
     super.dispose();
+  }
+
+  void _onControllerChanged() {
+    if (widget.controller.isChatOpen != _isOpen && mounted) {
+      setState(() {
+        _isOpen = widget.controller.isChatOpen;
+      });
+    }
   }
 
   Future<void> _checkActiveCheckup() async {
@@ -96,8 +107,8 @@ class _DraggableChatFabState extends State<DraggableChatFab>
               });
             },
             onTap: () {
+              widget.controller.openChat();
               setState(() {
-                _isOpen = true;
                 _hasActiveCheckup = false; // Dismiss badge on click
               });
             },
@@ -165,9 +176,7 @@ class _DraggableChatFabState extends State<DraggableChatFab>
           ChatOverlayPanel(
             controller: widget.controller,
             onClose: () {
-              setState(() {
-                _isOpen = false;
-              });
+              widget.controller.closeChat();
             },
           ),
       ],
