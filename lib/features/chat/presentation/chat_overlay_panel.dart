@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/theme/pulse_link_theme.dart';
 import '../../../app/pulse_link_controller.dart';
@@ -720,132 +721,297 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
   }
 }
 
-class RobotMedicalAvatar extends StatelessWidget {
+class RobotMedicalAvatar extends StatefulWidget {
   const RobotMedicalAvatar({super.key, this.size = 44.0});
   final double size;
 
   @override
+  State<RobotMedicalAvatar> createState() => _RobotMedicalAvatarState();
+}
+
+class _RobotMedicalAvatarState extends State<RobotMedicalAvatar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _blinkController;
+  Timer? _blinkTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _blinkController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+    );
+
+    // Blinks every 3.5 seconds
+    _blinkTimer = Timer.periodic(const Duration(milliseconds: 3500), (timer) {
+      if (mounted) {
+        _blinkController.forward().then((_) {
+          if (mounted) {
+            _blinkController.reverse();
+          }
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _blinkTimer?.cancel();
+    _blinkController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final size = widget.size;
     return SizedBox(
       width: size,
       height: size,
       child: Stack(
         alignment: Alignment.center,
+        clipBehavior: Clip.none,
         children: [
-          // Robot Head base
+          // Glossy Neck / Collar support (adds 3D depth)
+          Positioned(
+            bottom: size * 0.04,
+            child: Container(
+              width: size * 0.3,
+              height: size * 0.14,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF475569), Color(0xFF1E293B)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(size * 0.04),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
+                  )
+                ],
+              ),
+            ),
+          ),
+          // Side ear caps/plates (adds 3D robot aesthetic)
+          Positioned(
+            left: size * 0.02,
+            child: _buildEarCap(size),
+          ),
+          Positioned(
+            right: size * 0.02,
+            child: _buildEarCap(size),
+          ),
+          // Head Spherical Face (Radial gradient for 3D metallic volume)
           Container(
-            width: size * 0.85,
-            height: size * 0.85,
+            width: size * 0.78,
+            height: size * 0.78,
             decoration: BoxDecoration(
-              color: const Color(0xFF0F172A), // Slate 900
               shape: BoxShape.circle,
               border: Border.all(
-                color: const Color(0xFFE31837), // Glowing pulse red ring
-                width: 2.0,
+                color: const Color(0xFFE31837), // Pulse red outer glow border
+                width: 1.5,
+              ),
+              gradient: const RadialGradient(
+                colors: [
+                  Color(0xFF334155), // Slate 700 (light reflection point at center-top)
+                  Color(0xFF0F172A), // Slate 900 (shadow edge)
+                ],
+                center: Alignment(-0.15, -0.2),
+                radius: 0.85,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFE31837).withOpacity(0.3),
+                  color: const Color(0xFFE31837).withOpacity(0.4),
                   blurRadius: 8,
                   spreadRadius: 1,
                 )
               ],
             ),
           ),
-          // Robot Eyes (Glowing blue/cyan horizontal dots)
+          // Screen Reflection Glare (glossy 3D overlay)
           Positioned(
-            top: size * 0.42,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: size * 0.12,
-                  height: size * 0.12,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF38BDF8), // Sky 400
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: Color(0xFF0EA5E9), blurRadius: 4, spreadRadius: 1),
-                    ]
-                  ),
-                ),
-                SizedBox(width: size * 0.14),
-                Container(
-                  width: size * 0.12,
-                  height: size * 0.12,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF38BDF8),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(color: Color(0xFF0EA5E9), blurRadius: 4, spreadRadius: 1),
-                    ]
-                  ),
-                ),
-              ],
+            top: size * 0.18,
+            left: size * 0.22,
+            child: Container(
+              width: size * 0.2,
+              height: size * 0.08,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.15),
+                borderRadius: const BorderRadius.all(Radius.elliptical(20, 8)),
+              ),
             ),
           ),
-          // Metal cheeks blush
+          // Blinking Glowing Cyan Eyes
           Positioned(
-            top: size * 0.58,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: size * 0.08,
-                  height: size * 0.04,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE31837).withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                SizedBox(width: size * 0.28),
-                Container(
-                  width: size * 0.08,
-                  height: size * 0.04,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE31837).withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Medical Hat (Cap) placed on top
-          Positioned(
-            top: -size * 0.04,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // The cap shape (White half-rounded shape)
-                Container(
-                  width: size * 0.58,
-                  height: size * 0.26,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(8),
-                      bottom: Radius.circular(2),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.25),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      )
+            top: size * 0.38,
+            child: AnimatedBuilder(
+              animation: _blinkController,
+              builder: (context, child) {
+                return Transform.scale(
+                  scaleY: 1.0 - _blinkController.value,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildGlowingEye(size),
+                      SizedBox(width: size * 0.16),
+                      _buildGlowingEye(size),
                     ],
                   ),
-                ),
-                // Red medical cross
-                const Icon(
-                  Icons.add,
-                  color: Color(0xFFE31837),
-                  size: 9,
-                ),
+                );
+              },
+            ),
+          ),
+          // Empathetic Rosy Cheeks
+          Positioned(
+            top: size * 0.54,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildRosyCheek(size),
+                SizedBox(width: size * 0.32),
+                _buildRosyCheek(size),
               ],
             ),
+          ),
+          // Nurse/Medical Cap (Enlarged, detailed 3D curves)
+          Positioned(
+            top: -size * 0.08,
+            child: _buildNurseHat(size),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildEarCap(double size) {
+    return Container(
+      width: size * 0.12,
+      height: size * 0.22,
+      decoration: BoxDecoration(
+        color: const Color(0xFF64748B), // Slate 500
+        borderRadius: BorderRadius.circular(size * 0.04),
+        border: Border.all(color: const Color(0xFF1E293B), width: 1.0),
+      ),
+    );
+  }
+
+  Widget _buildGlowingEye(double size) {
+    return Container(
+      width: size * 0.12,
+      height: size * 0.12,
+      decoration: const BoxDecoration(
+        color: Color(0xFF38BDF8), // Cyan sky glow
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFF0EA5E9),
+            blurRadius: 6,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Center(
+        // Small white reflection point inside eye for extra life
+        child: Container(
+          width: size * 0.03,
+          height: size * 0.03,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRosyCheek(double size) {
+    return Container(
+      width: size * 0.09,
+      height: size * 0.05,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE31837).withOpacity(0.45),
+        borderRadius: BorderRadius.all(Radius.elliptical(size * 0.09, size * 0.05)),
+      ),
+    );
+  }
+
+  Widget _buildNurseHat(double size) {
+    final hatWidth = size * 0.65;
+    final hatHeight = size * 0.28;
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        // Nurse Cap base with curvy border radius
+        Container(
+          width: hatWidth,
+          height: hatHeight,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(size * 0.16),
+              topRight: Radius.circular(size * 0.16),
+              bottomLeft: Radius.circular(size * 0.04),
+              bottomRight: Radius.circular(size * 0.04),
+            ),
+            border: Border.all(
+              color: const Color(0xFFCBD5E1), // Slate 300 edge line
+              width: 0.8,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 1.5),
+              ),
+            ],
+          ),
+        ),
+        // Nurse hat blue/red stripe at the bottom edge (traditional medical cap detail)
+        Positioned(
+          bottom: 0,
+          child: Container(
+            width: hatWidth,
+            height: size * 0.04,
+            decoration: const BoxDecoration(
+              color: Color(0xFF1E3A8A), // Dark blue trim
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(2)),
+            ),
+          ),
+        ),
+        // Enlarged Bold Red Cross (bold sign)
+        Positioned(
+          top: hatHeight * 0.15,
+          child: _buildBoldRedCross(size * 0.18),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBoldRedCross(double size) {
+    final thickness = size * 0.28;
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: size,
+          height: thickness,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE31837),
+            borderRadius: BorderRadius.circular(1),
+          ),
+        ),
+        Container(
+          width: thickness,
+          height: size,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE31837),
+            borderRadius: BorderRadius.circular(1),
+          ),
+        ),
+      ],
     );
   }
 }

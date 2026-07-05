@@ -12,6 +12,7 @@ import {
   ShieldAlert,
   X,
   Settings,
+  HeartHandshake,
 } from '@lucide/vue'
 import SosModal from './components/SosModal.vue'
 import Login from './views/Login.vue'
@@ -23,11 +24,12 @@ import HospitalManagement from './views/HospitalManagement.vue'
 import RbacManagement from './views/RbacManagement.vue'
 import SosAlerts from './views/SosAlerts.vue'
 import SettingsView from './views/Settings.vue'
+import Donations from './views/Donations.vue'
 import type { SosPayload } from './types'
 import pulseLinkIcon from './assets/pulse_link_icon.png'
 import pulseLinkLogo from './assets/pulse_link_logo.png'
 
-type ViewKey = 'dashboard' | 'hospitals' | 'sos' | 'events' | 'community' | 'rbac' | 'settings'
+type ViewKey = 'dashboard' | 'hospitals' | 'sos' | 'events' | 'community' | 'rbac' | 'settings' | 'donations'
 
 interface NavItem {
   key: ViewKey
@@ -74,6 +76,7 @@ const navigation: NavItem[] = [
   { key: 'hospitals', label: 'Bệnh viện', shortLabel: 'BV', icon: Building2 },
   { key: 'sos', label: 'Cấp cứu SOS', shortLabel: 'SOS', icon: AlertTriangle },
   { key: 'events', label: 'Lịch hiến máu', shortLabel: 'Sự kiện', icon: CalendarRange },
+  { key: 'donations', label: 'Quản lý Quyên góp', shortLabel: 'Quyên góp', icon: HeartHandshake },
   { key: 'community', label: 'Bài viết cộng đồng', shortLabel: 'Bài viết', icon: FileText },
   { key: 'rbac', label: 'Nhân sự & RBAC', shortLabel: 'RBAC', icon: ShieldAlert },
   { key: 'settings', label: 'Cấu hình AI', shortLabel: 'AI', icon: Settings },
@@ -94,6 +97,8 @@ const filteredNavigation = computed(() => {
       case 'sos':
         return user.permissions?.includes('sos.activate')
       case 'events':
+        return user.permissions?.includes('events.manage')
+      case 'donations':
         return user.permissions?.includes('events.manage')
       case 'community':
         return user.permissions?.includes('posts.manage')
@@ -361,6 +366,7 @@ onBeforeUnmount(() => {
         />
         <HospitalManagement v-else-if="currentView === 'hospitals'" />
         <DonationEvents v-else-if="currentView === 'events'" />
+        <Donations v-else-if="currentView === 'donations'" :api-base-url="apiBaseUrl" />
         <CommunityPosts v-else-if="currentView === 'community'" />
         <RbacManagement v-else-if="currentView === 'rbac'" />
         <SettingsView v-else :api-base-url="apiBaseUrl" />

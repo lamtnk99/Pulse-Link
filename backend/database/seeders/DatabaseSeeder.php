@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             DailyScenarioSeeder::class,
             CommunityPostSeeder::class,
             EmergencyScenarioSeeder::class,
+            DonationCampaignSeeder::class,
         ]);
     }
 }

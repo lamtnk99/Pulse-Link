@@ -21,6 +21,7 @@ void main() {
       routePlannerService: MockRoutePlannerService(),
       audioService: MockEmergencyAudioService(),
       chatService: MockChatService(),
+      donationFundService: MockDonationFundService(),
     );
 
     await tester.pumpWidget(PulseLinkApp(controller: controller));

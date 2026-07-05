@@ -18,6 +18,9 @@ use App\Http\Controllers\Api\Mobile\MobileProfileController;
 use App\Http\Controllers\Api\Mobile\RoutePlannerController;
 use App\Http\Controllers\Api\Mobile\ChatController as MobileChatController;
 use App\Http\Controllers\Api\Admin\SettingsController as AdminSettingsController;
+use App\Http\Controllers\Api\Mobile\DonationController as MobileDonationFundController;
+use App\Http\Controllers\Api\Admin\CampaignManagerController;
+use App\Http\Controllers\Api\Mobile\MockPaymentController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/login', [AuthController::class, 'login']);
@@ -64,6 +67,12 @@ Route::prefix('mobile')->middleware(['role:donor'])->group(function () {
     Route::get('me/chats/quota', [MobileChatController::class, 'quota']);
     Route::get('me/chats/{chat}', [MobileChatController::class, 'show']);
     Route::post('me/chats/{chat}/messages', [MobileChatController::class, 'sendMessage']);
+
+    // Donation Campaigns
+    Route::get('donation/campaigns', [MobileDonationFundController::class, 'index']);
+    Route::get('donation/campaigns/{campaign}', [MobileDonationFundController::class, 'show']);
+    Route::post('donation/campaigns/{campaign}/donate-cash', [MobileDonationFundController::class, 'donateCash']);
+    Route::post('donation/campaigns/{campaign}/donate-points', [MobileDonationFundController::class, 'donatePoints']);
 });
 
 Route::prefix('admin')->middleware(['role:admin'])->group(function () {
@@ -93,4 +102,14 @@ Route::prefix('admin')->middleware(['role:admin'])->group(function () {
     Route::get('settings', [AdminSettingsController::class, 'index']);
     Route::put('settings', [AdminSettingsController::class, 'update']);
     Route::post('settings/test-ai', [AdminSettingsController::class, 'testProvider']);
+
+    // Donation Campaigns Manager
+    Route::apiResource('campaigns', CampaignManagerController::class)->except(['show']);
+    Route::get('campaigns/{campaign}/transactions', [CampaignManagerController::class, 'transactions']);
 });
+
+// Mock Payment Simulator & Webhook (Public Routes)
+Route::get('mock-payment/{transaction_id}', [MockPaymentController::class, 'show'])->name('mock-payment.show');
+Route::post('mock-payment/submit', [MockPaymentController::class, 'submit'])->name('mock-payment.submit');
+Route::post('payment/webhook', [MobileDonationFundController::class, 'paymentWebhook'])->name('payment.webhook');
+

@@ -29,6 +29,7 @@ import '../services/emergency_signal_service.dart';
 import '../services/location_service.dart';
 import '../services/route_planner_service.dart';
 import '../services/chat_service.dart';
+import '../services/donation_fund_service.dart';
 import 'pulse_link_state.dart';
 
 class PulseLinkController extends ChangeNotifier {
@@ -42,6 +43,7 @@ class PulseLinkController extends ChangeNotifier {
     required RoutePlannerService routePlannerService,
     required EmergencyAudioService audioService,
     required ChatService chatService,
+    required DonationFundService donationFundService,
   })  : _donorRepository = donorRepository,
         _eventRepository = eventRepository,
         _historyRepository = historyRepository,
@@ -50,7 +52,8 @@ class PulseLinkController extends ChangeNotifier {
         _locationService = locationService,
         _routePlannerService = routePlannerService,
         _audioService = audioService,
-        _chatService = chatService;
+        _chatService = chatService,
+        _donationFundService = donationFundService;
 
   final DonorRepository _donorRepository;
   final DonationEventRepository _eventRepository;
@@ -61,6 +64,7 @@ class PulseLinkController extends ChangeNotifier {
   final RoutePlannerService _routePlannerService;
   final EmergencyAudioService _audioService;
   final ChatService _chatService;
+  final DonationFundService _donationFundService;
 
   StreamSubscription<EmergencyAlert>? _alertSubscription;
   StreamSubscription<EmergencyCommitment>? _commitmentSubscription;
@@ -74,6 +78,7 @@ class PulseLinkController extends ChangeNotifier {
 
   PulseLinkState get state => _state;
   ChatService get chatService => _chatService;
+  DonationFundService get donationFundService => _donationFundService;
 
   Future<void> initialize() async {
     final themePreference = await _loadThemePreference();
@@ -890,15 +895,20 @@ class PulseLinkController extends ChangeNotifier {
     }
   }
 
-  void clearActiveLiveBloodJourney() {
+  Future<void> clearActiveLiveBloodJourney() async {
     final currentJourney = _state.activeLiveBloodJourney;
     if (currentJourney != null) {
-      SharedPreferences.getInstance().then((prefs) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
         final acknowledged = prefs.getStringList(_acknowledgedJourneysKey) ?? [];
         if (!acknowledged.contains(currentJourney.id)) {
-          prefs.setStringList(_acknowledgedJourneysKey, [...acknowledged, currentJourney.id]);
+          final newList = [...acknowledged, currentJourney.id];
+          await prefs.setStringList(_acknowledgedJourneysKey, newList);
+          debugPrint('PulseLinkController: Acknowledged journey ${currentJourney.id}. Saved list: $newList');
         }
-      });
+      } catch (e) {
+        debugPrint('PulseLinkController: Error saving acknowledged journey: $e');
+      }
     }
 
     _state = _state.copyWith(

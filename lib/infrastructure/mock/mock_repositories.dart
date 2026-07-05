@@ -13,6 +13,9 @@ import '../../services/community_post_repository.dart';
 import '../../services/chat_service.dart';
 import '../../features/chat/domain/chat_conversation.dart';
 import '../../features/chat/domain/chat_message.dart';
+import '../../services/donation_fund_service.dart';
+import '../../features/donation/domain/donation_campaign.dart';
+import '../../features/donation/domain/campaign_donation.dart';
 import 'mock_data.dart';
 
 class MockDonorRepository implements DonorRepository {
@@ -266,6 +269,115 @@ class MockChatService implements ChatService {
       'used': 0,
       'limit': 0,
       'remaining': -1,
+    };
+  }
+}
+
+class MockDonationFundService implements DonationFundService {
+  final List<DonationCampaign> _campaigns = [
+    DonationCampaign(
+      id: 'mock-campaign-1',
+      title: 'Quỹ Cấp Cứu SOS Bệnh Nhân Nghèo',
+      description: 'Hỗ trợ viện phí và chi phí truyền máu khẩn cấp cho các hoàn cảnh khó khăn tại bệnh viện Đa Khoa tỉnh.',
+      imageUrl: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef',
+      type: 'both',
+      targetAmount: 50000000.0,
+      currentAmount: 35000000.0,
+      targetPoints: 5000,
+      currentPoints: 2450,
+      status: 'active',
+      createdAt: DateTime.now().subtract(const Duration(days: 5)),
+    ),
+    DonationCampaign(
+      id: 'mock-campaign-2',
+      title: 'Hành Trình Đỏ 2026 - Bản Cao',
+      description: 'Chiến dịch mang các phần quà dinh dưỡng và trang bị y tế đến các điểm trường vùng sâu vùng xa.',
+      imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c',
+      type: 'points',
+      targetAmount: 0.0,
+      currentAmount: 0.0,
+      targetPoints: 10000,
+      currentPoints: 7200,
+      status: 'active',
+      createdAt: DateTime.now().subtract(const Duration(days: 10)),
+    )
+  ];
+
+  final Map<String, List<CampaignDonation>> _leaderboards = {
+    'mock-campaign-1': [
+      CampaignDonation(donorName: 'Nguyễn Văn A', amount: 5000000.0, points: 200, lastDonatedAt: DateTime.now()),
+      CampaignDonation(donorName: 'Hiệp sĩ ẩn danh', amount: 2000000.0, points: 50, lastDonatedAt: DateTime.now()),
+      CampaignDonation(donorName: 'Trần Thị B', amount: 1500000.0, points: 100, lastDonatedAt: DateTime.now()),
+    ],
+    'mock-campaign-2': [
+      CampaignDonation(donorName: 'Lê Văn C', amount: 0, points: 1500, lastDonatedAt: DateTime.now()),
+      CampaignDonation(donorName: 'Hiệp sĩ ẩn danh', amount: 0, points: 1000, lastDonatedAt: DateTime.now()),
+      CampaignDonation(donorName: 'Nguyễn Thị D', amount: 0, points: 800, lastDonatedAt: DateTime.now()),
+    ],
+  };
+
+  @override
+  Future<List<DonationCampaign>> getCampaigns() async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    return _campaigns;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getCampaignDetail(String campaignId) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final campaign = _campaigns.firstWhere((c) => c.id == campaignId);
+    return {
+      'campaign': campaign,
+      'leaderboard': _leaderboards[campaignId] ?? [],
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> donateCash({
+    required String campaignId,
+    required double amount,
+    required String paymentMethod,
+    String? donorName,
+    String? message,
+    bool isAnonymous = false,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    return {
+      'donation_id': 999,
+      'transaction_id': 'TXN-MOCK123456',
+      'payment_url': 'http://127.0.0.1:8000/mock-payment/TXN-MOCK123456',
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> donatePoints({
+    required String campaignId,
+    required int points,
+    String? donorName,
+    String? message,
+    bool isAnonymous = false,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 150));
+    final idx = _campaigns.indexWhere((c) => c.id == campaignId);
+    if (idx != -1) {
+      final prev = _campaigns[idx];
+      _campaigns[idx] = DonationCampaign(
+        id: prev.id,
+        title: prev.title,
+        description: prev.description,
+        imageUrl: prev.imageUrl,
+        type: prev.type,
+        targetAmount: prev.targetAmount,
+        currentAmount: prev.currentAmount,
+        targetPoints: prev.targetPoints,
+        currentPoints: prev.currentPoints + points,
+        status: prev.status,
+        createdAt: prev.createdAt,
+      );
+    }
+    return {
+      'donation_id': 999,
+      'remaining_points': 500,
     };
   }
 }

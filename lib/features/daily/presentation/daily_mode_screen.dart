@@ -20,6 +20,7 @@ import 'widgets/donation_history_tile.dart';
 import 'widgets/event_map_preview.dart';
 import 'widgets/hero_pass_card.dart';
 import '../../chat/presentation/draggable_chat_fab.dart';
+import '../../donation/presentation/donation_campaigns_screen.dart';
 
 class DailyModeScreen extends StatefulWidget {
   const DailyModeScreen({
@@ -571,6 +572,8 @@ class _HomeTab extends StatelessWidget {
             totalVolumeMl: state.totalVolumeMl,
             points: profile.points,
           ),
+          const SizedBox(height: 14),
+          _DonationPromoCard(controller: controller),
           const SizedBox(height: 24),
           _SectionHeader(
             title: 'Điểm hiến phù hợp',
@@ -2118,3 +2121,96 @@ class _DonationDraftSheetState extends State<_DonationDraftSheet> {
     );
   }
 }
+
+class _DonationPromoCard extends StatelessWidget {
+  const _DonationPromoCard({required this.controller});
+
+  final PulseLinkController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (context) => DonationCampaignsScreen(controller: controller),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E293B).withOpacity(0.6) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: const Color(0xFFE31837).withOpacity(0.3),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFE31837).withOpacity(isDark ? 0.08 : 0.04),
+                blurRadius: 16,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE31837).withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.volunteer_activism_rounded,
+                  color: Color(0xFFE31837),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'ĐỒNG HÀNH QUYÊN GÓP',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                        color: Color(0xFFE31837),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Ủng hộ tài chính cho ca SOS hoặc quyên góp điểm Hero đổi quà vùng cao.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: isDark ? Colors.white38 : Colors.black38,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

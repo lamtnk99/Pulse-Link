@@ -129,31 +129,7 @@ class _DraggableChatFabState extends State<DraggableChatFab>
                     },
                   ),
                   // Glowing FAB core
-                  Container(
-                    height: _fabSize,
-                    width: _fabSize,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFE31837), Color(0xFFB91C1C)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFE31837).withOpacity(0.35),
-                          blurRadius: 12,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.health_and_safety_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
+                  RobotMedicalAvatar(size: _fabSize),
                   // Notification red dot badge
                   if (_hasActiveCheckup)
                     Positioned(

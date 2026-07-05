@@ -605,23 +605,28 @@ Trang thai trien khai gan nhat:
 
 Da kiem tra:
 
-- `cd backend && php artisan test --filter=EmergencyAlertApiTest`: pass 7 tests.
-- `cd backend && php artisan test`: pass 30 tests, 339 assertions.
-- `cd admin && npm run build`: pass sau khi bo sung label `not_needed`.
-- `flutter analyze --no-fatal-infos --no-fatal-warnings`: exit 0; con cac info/warning cu ve `withOpacity`, mock `_intensity`, v.v.
+- `cd backend && php artisan test --filter=DonationApiTest`: pass 7 tests.
+- `cd backend && php artisan test`: pass 48 tests, 422 assertions (100% Passed).
+- `cd admin && npm run build`: build thành công 100% không cảnh báo/lỗi typescript.
+- `flutter analyze --no-fatal-infos --no-fatal-warnings`: phân tích mã tĩnh thành công 100% không phát sinh lỗi biên dịch.
 
-Dang do / can agent sau lam tiep:
+## Handoff 2026-07-05 - Quyên góp Tài chính & Điểm tích lũy (Hero Points)
 
-- Chay lai format backend: `cd backend && vendor\bin\pint`. Lan truoc bi user interrupt khi dang chay, nen can rerun va sau do chay `vendor\bin\pint --test`.
-- Sau Pint, chay lai:
-  - `cd backend && php artisan test`
-  - `cd admin && npm run build`
-  - `flutter analyze --no-fatal-infos --no-fatal-warnings`
-- Kiem tra lai Admin SOS UI bang trinh duyet: do da chen them nut "Hanh trinh" thanh cot thu 5, can xem table co can gom action lai cho dep hon khong.
-- Kiem tra mobile donation history: panel journey dang duoc chen kha som trong card; neu UI thay hoi day, chuyen panel xuong duoi result summary/gan nut certificate.
-- Certificate web da co payload `blood_journey`, public journey page da co; tuy nhien link "Theo doi hanh trinh" tren blade certificate chua chen duoc do file cu bi encoding/mojibake khi patch. Can sua bang editor/patch ky hon.
-- Mobile certificate screen chua co panel journey rieng; hien moi co trong history tile. Nen them mot panel tuong tu vao `DonationCertificateScreen`.
-- Realtime notification backend da broadcast event `mobile.notification.created`, mobile service da nghe event; can test manual voi Reverb that tren web/apk.
-- Native push FCM/APNs chua lam; V1 dang la in-app notification + realtime/polling.
-- Nen them badge unread ro hon tren nut chuong mobile; hien moi doi click mo sheet, chua them badge vi patch block UI bi can encoding.
-- Co mot so chuoi tieng Viet cu trong project dang hien mojibake khi doc qua PowerShell. Neu agent tiep theo dung formatter/editor, can can than khong lam hong them encoding.
+Trạng thái triển khai:
+
+- **Laravel Backend**:
+  - Tạo bảng migration lưu thông tin chiến dịch quyên góp `donation_campaigns` và lịch sử quyên góp `campaign_donations`.
+  - Tạo cổng thanh toán giả lập (Mock Payment Gateway) qua `MockPaymentController` trả về giao diện xác nhận/hủy thanh toán.
+  - Bắn sự kiện realtime `CampaignProgressUpdated` qua Reverb khi quyên góp thành công.
+  - Xây dựng seeder mẫu `DonationCampaignSeeder` nạp sẵn 3 dự án quyên góp thực tế kèm danh sách Tri ân.
+  - Bộ API đầy đủ gồm: lấy danh sách chiến dịch, chi tiết kèm BXH Top Donors, quyên góp tiền mặt, quyên góp điểm Hero, và xử lý webhook.
+- **Mobile Flutter (MoMo Style)**:
+  - Tích hợp thẻ banner `_DonationPromoCard` đẹp mắt trên Trang chủ di động dẫn sang phân hệ quyên góp.
+  - Trang danh sách chiến dịch chia tab (Tiền mặt/Điểm Hero) với giao diện mượt mà và thanh phần trăm tiến trình.
+  - Trang chi tiết chiến dịch tích hợp thanh tiến độ Glassmorphic, Bảng Vàng Tri Ân Top 10 kèm lời chúc ẩn sau.
+  - Tự động gọi API polling cập nhật UI realtime và gọi browser bên ngoài thanh toán giả lập qua `url_launcher`.
+- **Admin Vue 3 Dashboard**:
+  - Tích hợp tab **Quản lý Quyên góp** trên sidebar admin sử dụng biểu tượng `HeartHandshake`.
+  - Hiển thị thống kê tổng dòng tiền mặt VND và điểm Hero đã thu nhận toàn hệ thống.
+  - Form CRUD đầy đủ cho chiến dịch và cửa sổ xem chi tiết lịch sử giao dịch quyên góp từ donors.
+
