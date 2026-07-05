@@ -92,8 +92,17 @@ class DonationCampaign {
     return progress > 1.0 ? 1.0 : progress;
   }
 
-  bool get isFinancial => type == 'financial' || type == 'both';
-  bool get isPoints => type == 'points' || type == 'both';
+  /// Chiến dịch có đặt mục tiêu tài chính không (để hiện thanh tiến độ tiền).
+  bool get hasFinancialGoal => targetAmount > 0;
+
+  /// Chiến dịch có đặt mục tiêu điểm không (để hiện thanh tiến độ điểm).
+  bool get hasPointsGoal => targetPoints > 0;
+
+  // Mọi chiến dịch đều NHẬN cả tiền mặt lẫn điểm Hero. Các getter dưới đây chỉ
+  // quyết định việc HIỂN THỊ thanh tiến độ theo mục tiêu đã đặt, không giới hạn
+  // hình thức quyên góp.
+  bool get isFinancial => hasFinancialGoal;
+  bool get isPoints => hasPointsGoal;
 
   bool get hasStory => (beneficiaryStory ?? '').trim().isNotEmpty;
   bool get hasImpactUnit => (impactUnit ?? '').trim().isNotEmpty;

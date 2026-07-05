@@ -767,8 +767,9 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
     final user = widget.controller.state.profile;
     _nameController.text = user?.name ?? '';
     
-    // Choose index based on campaign type availability
-    if (widget.campaign.type == 'points') {
+    // Mọi chiến dịch đều nhận cả hai; mặc định mở tab Điểm nếu chiến dịch chỉ
+    // đặt mục tiêu điểm, còn lại mặc định Tiền mặt.
+    if (widget.campaign.hasPointsGoal && !widget.campaign.hasFinancialGoal) {
       _selectedTypeIndex = 1;
     }
   }
@@ -893,8 +894,8 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
               ),
               const SizedBox(height: 16),
 
-              // Tabs if campaign allows both
-              if (widget.campaign.type == 'both') ...[
+              // Mọi chiến dịch đều nhận cả hai — luôn cho người dùng chọn hình thức.
+              ...[
                 Row(
                   children: [
                     Expanded(
@@ -936,11 +937,18 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: DonationPalette.strongText(isDark)),
                 ),
                 const SizedBox(height: 8),
-                Row(
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 3.0,
                   children: [
                     _buildPaymentMethodTile('momo', 'Ví MoMo'),
-                    const SizedBox(width: 12),
-                    _buildPaymentMethodTile('vnpay', 'VNPay'),
+                    _buildPaymentMethodTile('zalopay', 'ZaloPay'),
+                    _buildPaymentMethodTile('sepay', 'Chuyển khoản (SePay)'),
+                    _buildPaymentMethodTile('vnpay', 'Cổng VNPay'),
                   ],
                 ),
               ] else ...[
@@ -976,13 +984,17 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
 
               const SizedBox(height: 20),
               
-              // Form details
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Quyên góp ẩn danh (Giấu tên trên bảng vàng)', style: TextStyle(fontSize: 13)),
-                value: _isAnonymous,
-                activeColor: const Color(0xFFE31837),
-                onChanged: (val) => setState(() => _isAnonymous = val ?? false),
+              // Form details. Bọc trong Material trong suốt để ink splash của
+              // CheckboxListTile không bị nền bo góc của bottom sheet che mất.
+              Material(
+                type: MaterialType.transparency,
+                child: CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Quyên góp ẩn danh (Giấu tên trên bảng vàng)', style: TextStyle(fontSize: 13)),
+                  value: _isAnonymous,
+                  activeColor: const Color(0xFFE31837),
+                  onChanged: (val) => setState(() => _isAnonymous = val ?? false),
+                ),
               ),
               
               if (!_isAnonymous) ...[
@@ -1147,27 +1159,25 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
   Widget _buildPaymentMethodTile(String method, String label) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isSel = _selectedPaymentMethod == method;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedPaymentMethod = method),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-          decoration: BoxDecoration(
-            color: isSel ? DonationPalette.primary.withOpacity(0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSel ? DonationPalette.primary : DonationPalette.subtleBorder(isDark),
-              width: isSel ? 1.5 : 1,
-            ),
+    return GestureDetector(
+      onTap: () => setState(() => _selectedPaymentMethod = method),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSel ? DonationPalette.primary.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSel ? DonationPalette.primary : DonationPalette.subtleBorder(isDark),
+            width: isSel ? 1.5 : 1,
           ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: isSel ? DonationPalette.primary : DonationPalette.mutedText(isDark),
-              ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              color: isSel ? DonationPalette.primary : DonationPalette.mutedText(isDark),
             ),
           ),
         ),

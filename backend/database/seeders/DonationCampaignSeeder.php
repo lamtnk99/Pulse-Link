@@ -107,7 +107,7 @@ class DonationCampaignSeeder extends Seeder
             'public_id' => (string) Str::uuid(),
             'title' => 'Chung Tay Chiến Dịch Hành Trình Đỏ 2026',
             'description' => 'Hành trình đỏ kết nối dòng máu Việt đi qua 40 tỉnh thành. Quỹ tiếp nhận cả đóng góp tài chính (tổ chức ngày hội hiến máu) và điểm Hero (chuẩn bị suất ăn bồi dưỡng cho người hiến máu).',
-            'image_url' => 'https://images.unsplash.com/photo-1505155485765-d06de4859332?w=800&auto=format&fit=crop&q=60',
+            'image_url' => 'https://images.unsplash.com/photo-1615461066841-6116e61058f4?w=800&auto=format&fit=crop&q=60',
             'type' => 'both',
             'target_amount' => 50000000.00,
             'current_amount' => 0.00,

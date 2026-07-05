@@ -74,13 +74,11 @@ class DonationController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
-        if ($campaign->type === 'points') {
-            return response()->json(['message' => 'Chiến dịch này chỉ chấp nhận quyên góp điểm Hero.'], 422);
-        }
+        // Mọi chiến dịch đều nhận cả tiền mặt lẫn điểm Hero — không chặn theo type nữa.
 
         $payload = $request->validate([
             'amount' => ['required', 'numeric', 'min:1000'],
-            'payment_method' => ['required', 'string', 'in:momo,vnpay,bank_transfer'],
+            'payment_method' => ['required', 'string', 'in:momo,zalopay,sepay,vnpay,bank_transfer'],
             'donor_name' => ['nullable', 'string', 'max:255'],
             'message' => ['nullable', 'string', 'max:500'],
             'is_anonymous' => ['nullable', 'boolean'],
@@ -121,9 +119,7 @@ class DonationController extends Controller
             ->where('status', 'active')
             ->firstOrFail();
 
-        if ($campaign->type === 'financial') {
-            return response()->json(['message' => 'Chiến dịch này chỉ chấp nhận quyên góp tài chính.'], 422);
-        }
+        // Mọi chiến dịch đều nhận cả tiền mặt lẫn điểm Hero — không chặn theo type nữa.
 
         $payload = $request->validate([
             'points' => ['required', 'integer', 'min:1'],

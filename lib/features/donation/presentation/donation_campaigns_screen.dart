@@ -17,9 +17,7 @@ class DonationCampaignsScreen extends StatefulWidget {
   State<DonationCampaignsScreen> createState() => _DonationCampaignsScreenState();
 }
 
-class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
-    with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
   List<DonationCampaign> _campaigns = [];
   bool _isLoading = true;
   String? _error;
@@ -27,14 +25,7 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadCampaigns();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadCampaigns() async {
@@ -66,18 +57,6 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
         title: const Text(
           'Đồng hành quyên góp',
           style: TextStyle(fontWeight: FontWeight.w800),
-        ),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: DonationPalette.primary,
-          unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
-          indicatorColor: DonationPalette.primary,
-          indicatorWeight: 3.0,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
-          tabs: const [
-            Tab(text: 'Góp tấm lòng', icon: Icon(Icons.favorite_rounded)),
-            Tab(text: 'Góp điểm Hero', icon: Icon(Icons.stars_rounded)),
-          ],
         ),
       ),
       body: RefreshIndicator(
@@ -129,24 +108,10 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
       );
     }
 
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        _buildCampaignList(
-          _campaigns.where((c) => c.isFinancial).toList(),
-          isFinancial: true,
-          isDark: isDark,
-        ),
-        _buildCampaignList(
-          _campaigns.where((c) => c.isPoints).toList(),
-          isFinancial: false,
-          isDark: isDark,
-        ),
-      ],
-    );
+    return _buildCampaignList(_campaigns, isDark: isDark);
   }
 
-  Widget _buildCampaignList(List<DonationCampaign> list, {required bool isFinancial, required bool isDark}) {
+  Widget _buildCampaignList(List<DonationCampaign> list, {required bool isDark}) {
     if (list.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -175,20 +140,23 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen>
       itemCount: list.length,
       itemBuilder: (context, index) {
         final campaign = list[index];
-        return _buildCampaignCard(campaign, isFinancial, isDark);
+        return _buildCampaignCard(campaign, isDark);
       },
     );
   }
 
-  Widget _buildCampaignCard(DonationCampaign campaign, bool isFinancial, bool isDark) {
-    final progress = isFinancial ? campaign.financialProgress : campaign.pointsProgress;
+  Widget _buildCampaignCard(DonationCampaign campaign, bool isDark) {
+    // Thanh tiến độ chính: ưu tiên mục tiêu tài chính nếu có, không thì mục tiêu điểm.
+    // (Mọi chiến dịch đều nhận cả hai; đây chỉ là chỉ số hiển thị nổi bật nhất.)
+    final showFinancial = campaign.hasFinancialGoal;
+    final progress = showFinancial ? campaign.financialProgress : campaign.pointsProgress;
     final progressPercent = (progress * 100).round();
 
     // Framing tích cực, hướng hành động: nêu phần còn thiếu thay vì chỉ "tiến độ".
-    final remaining = isFinancial
+    final remaining = showFinancial
         ? campaign.targetAmount - campaign.currentAmount
         : (campaign.targetPoints - campaign.currentPoints).toDouble();
-    final remainingText = isFinancial
+    final remainingText = showFinancial
         ? '${_formatCurrency(remaining < 0 ? 0 : remaining)}đ'
         : '${remaining < 0 ? 0 : remaining.toInt()} điểm';
 
