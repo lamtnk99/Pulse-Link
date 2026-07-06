@@ -358,9 +358,12 @@ class EmergencyController extends Controller
             );
         }
 
-        $journey = DB::transaction(function () use ($alert, $commitment, $payload, $aiFinalMessage, $willComplete, $isFinalStep, $isOldOrEmpty): BloodJourney {
+        $wasAlreadyCompleted = false;
+        $journey = DB::transaction(function () use ($alert, $commitment, $payload, $aiFinalMessage, $willComplete, $isFinalStep, $isOldOrEmpty, &$wasAlreadyCompleted): BloodJourney {
             $history = DonationHistory::query()->findOrFail($commitment->donation_history_id);
             $journey = $this->ensureBloodJourney($alert, $commitment->loadMissing('donor'), $history, $payload['destination_type'] ?? null);
+
+            $wasAlreadyCompleted = !empty($journey->completed_at);
 
             if (($payload['destination_type'] ?? $journey->destination_type) !== $journey->destination_type) {
                 $journey = $this->resetJourneySteps($journey, $payload['destination_type']);
@@ -393,7 +396,7 @@ class EmergencyController extends Controller
             $journey->steps()->whereIn('step_key', $completedStepKeys->all())->whereNull('occurred_at')->update(['occurred_at' => now()]);
             $journey->steps()->whereNotIn('step_key', $completedStepKeys->all())->update(['occurred_at' => null]);
 
-            if ($willComplete) {
+            if ($willComplete && !$wasAlreadyCompleted) {
                 $this->createMobileNotification(
                     $journey->donor_id,
                     'blood_journey_completed',
@@ -406,7 +409,7 @@ class EmergencyController extends Controller
             return $journey->refresh()->load('hospital', 'steps');
         });
 
-        if ($willComplete) {
+        if ($willComplete && !$wasAlreadyCompleted) {
             $commitment->refresh()->load('donor', 'alert', 'bloodJourney.steps');
             $this->broadcastCommitment($commitment);
         }
