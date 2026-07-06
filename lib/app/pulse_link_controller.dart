@@ -984,19 +984,42 @@ class PulseLinkController extends ChangeNotifier {
     final history = _state.donationHistory;
     if (history.isNotEmpty) {
       final latest = history.first;
-      if (latest.bloodJourney != null) {
-        final journeyId = latest.bloodJourney!.id;
+      final journey = latest.bloodJourney;
+      if (journey != null) {
         final prefs = await SharedPreferences.getInstance();
         final acknowledged = prefs.getStringList(_acknowledgedJourneysKey) ?? [];
-        if (!acknowledged.contains(journeyId)) {
+        if (!acknowledged.contains(journey.id)) {
           _state = _state.copyWith(
-            activeLiveBloodJourney: latest.bloodJourney,
+            activeLiveBloodJourney: journey,
             activeLiveBloodJourneyHospitalName: latest.locationName,
             activeLiveBloodJourneyBloodType: latest.bloodType,
           );
           notifyListeners();
+
+          // Journey đã hoàn tất (có lá thư cảm ơn): chỉ auto-bung MỘT lần. Đánh dấu
+          // đã xem ngay khi hiển thị để không lặp lại mỗi lần mở/ build lại app —
+          // lá thư vẫn đọc lại được bất cứ lúc nào qua nút "Đọc lời cảm ơn" ở Sổ hiến.
+          if (journey.completedAt != null) {
+            await _markJourneyAcknowledged(journey.id);
+          }
         }
       }
+    }
+  }
+
+  /// Ghi nhận một journey đã được xem vào bộ nhớ cục bộ + state, không lặp lại.
+  Future<void> _markJourneyAcknowledged(String journeyId) async {
+    if (_state.acknowledgedJourneyIds.contains(journeyId)) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final acknowledged = prefs.getStringList(_acknowledgedJourneysKey) ?? [];
+      if (!acknowledged.contains(journeyId)) {
+        final newList = [...acknowledged, journeyId];
+        await prefs.setStringList(_acknowledgedJourneysKey, newList);
+        _state = _state.copyWith(acknowledgedJourneyIds: newList.toSet());
+      }
+    } catch (e) {
+      debugPrint('PulseLinkController: Error marking journey acknowledged: $e');
     }
   }
 
