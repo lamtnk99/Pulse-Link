@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/pulse_link_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/pulse_link_controller.dart';
 import 'chat_overlay_panel.dart';
 
@@ -23,6 +23,9 @@ class _DraggableChatFabState extends State<DraggableChatFab>
   double? _y;
   bool _isOpen = false;
   bool _hasActiveCheckup = false;
+  String? _activeCheckupId;
+
+  static const _readCheckupsKey = 'read_chat_checkups';
 
   final double _fabSize = 60.0;
   final double _edgePadding = 16.0;
@@ -58,10 +61,41 @@ class _DraggableChatFabState extends State<DraggableChatFab>
   Future<void> _checkActiveCheckup() async {
     try {
       final activeCheckup = await widget.controller.chatService.getActiveCheckup();
-      if (activeCheckup != null && mounted) {
+      if (activeCheckup == null || !mounted) return;
+
+      // Chỉ báo chấm đỏ cho các cuộc trò chuyện chăm sóc THẬT (checkup sau hiến,
+      // dặn dò trước hiến, hoãn hiến, nhắc lịch) — KHÔNG báo cho chat general/lời
+      // chào hàng ngày (backend luôn trả về một conversation nên nếu không lọc sẽ
+      // báo mỗi lần mở app).
+      final isRealCheckup = activeCheckup.isPostDonationCheckup ||
+          activeCheckup.isPreDonationGuidance ||
+          activeCheckup.isAppointmentReminder ||
+          activeCheckup.isDonationDeferred;
+      if (!isRealCheckup) return;
+
+      // Bỏ qua nếu người dùng đã đọc checkup này rồi (lưu cục bộ).
+      final prefs = await SharedPreferences.getInstance();
+      final read = prefs.getStringList(_readCheckupsKey) ?? [];
+      if (read.contains(activeCheckup.id)) return;
+
+      if (mounted) {
         setState(() {
           _hasActiveCheckup = true;
+          _activeCheckupId = activeCheckup.id;
         });
+      }
+    } catch (_) {}
+  }
+
+  /// Đánh dấu checkup hiện tại đã đọc để không báo lại sau khi mở app.
+  Future<void> _markCheckupRead() async {
+    final id = _activeCheckupId;
+    if (id == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final read = prefs.getStringList(_readCheckupsKey) ?? [];
+      if (!read.contains(id)) {
+        await prefs.setStringList(_readCheckupsKey, [...read, id]);
       }
     } catch (_) {}
   }
@@ -108,8 +142,9 @@ class _DraggableChatFabState extends State<DraggableChatFab>
             },
             onTap: () {
               widget.controller.openChat();
+              _markCheckupRead(); // Lưu đã đọc để không báo lại khi mở app
               setState(() {
-                _hasActiveCheckup = false; // Dismiss badge on click
+                _hasActiveCheckup = false; // Tắt chấm đỏ ngay
               });
             },
             child: SizedBox(
