@@ -799,8 +799,8 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
           }
         }
       } else {
-        // Points donation
-        await widget.controller.donationFundService.donatePoints(
+        // Điểm Hero: đi qua controller để số dư điểm được trừ ngay trong state.
+        await widget.controller.donatePointsToCampaign(
           campaignId: widget.campaign.id,
           points: _selectedPointsAmount,
           donorName: _nameController.text,

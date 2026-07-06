@@ -129,6 +129,12 @@ class _DailyModeScreenState extends State<DailyModeScreen> {
                 currentIndex: _currentIndex,
                 onSelected: (index) {
                   setState(() => _currentIndex = index);
+                  // Sổ hiến (3) và Lịch đặt (2) hiển thị dữ liệu backend cập nhật ngầm
+                  // (vd tiến trình hành trình giọt máu qua các bước trung gian không
+                  // broadcast). Refetch khi mở tab để luôn thấy trạng thái mới nhất.
+                  if (index == 2 || index == 3) {
+                    widget.controller.refreshDailyData();
+                  }
                 },
               ),
             ),

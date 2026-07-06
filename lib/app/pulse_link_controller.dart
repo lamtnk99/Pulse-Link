@@ -309,6 +309,38 @@ class PulseLinkController extends ChangeNotifier {
     return _communityPostRepository.getPostDetail(slug);
   }
 
+  /// Quyên góp điểm Hero cho một chiến dịch, rồi cập nhật ngay số dư điểm trong
+  /// state để UI phản ánh việc trừ điểm mà không cần reload.
+  Future<Map<String, dynamic>> donatePointsToCampaign({
+    required String campaignId,
+    required int points,
+    String? donorName,
+    String? message,
+    bool isAnonymous = false,
+  }) async {
+    final result = await _donationFundService.donatePoints(
+      campaignId: campaignId,
+      points: points,
+      donorName: donorName,
+      message: message,
+      isAnonymous: isAnonymous,
+    );
+
+    final profile = _state.profile;
+    if (profile != null) {
+      // Ưu tiên số dư backend trả về; nếu thiếu thì tự trừ để UI vẫn đúng.
+      final remaining = (result['remaining_points'] as num?)?.toInt();
+      final updatedProfile = profile.copyWith(
+        points: remaining ?? (profile.points - points),
+      );
+      await _donorRepository.saveProfile(updatedProfile);
+      _state = _state.copyWith(profile: updatedProfile);
+      notifyListeners();
+    }
+
+    return result;
+  }
+
   Future<void> logDonation(PastDonationDraft draft) async {
     final profile = _state.profile;
     if (profile == null) return;

@@ -48,5 +48,9 @@ void main() {
       }
     }
     expect(find.text('Lịch đã đặt'), findsOneWidget);
+
+    // Mở tab kích hoạt refreshDailyData() → mock service tạo các Future.delayed.
+    // Drain hết để không còn timer treo khi test kết thúc.
+    await tester.pump(const Duration(seconds: 1));
   });
 }

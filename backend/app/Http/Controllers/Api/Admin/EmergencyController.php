@@ -247,9 +247,14 @@ class EmergencyController extends Controller
             ? Carbon::parse($payload['donated_at'])
             : now();
         $volumeMl = $payload['volume_ml'];
-        $alreadyDonated = $commitment->status === 'donated' || $commitment->donation_history_id !== null;
 
-        $commitment = DB::transaction(function () use ($alert, $admin, $commitment, $donatedAt, $volumeMl, $payload, $alreadyDonated): EmergencyCommitment {
+        $commitment = DB::transaction(function () use ($alert, $admin, $commitment, $donatedAt, $volumeMl, $payload): EmergencyCommitment {
+            // Chống double-submit: khóa hàng commitment và đọc lại trạng thái NGAY TRONG
+            // transaction. Nếu admin bấm xác nhận nhiều lần, chỉ lần đầu tiên mới tính là
+            // "mới hiến" — tránh cộng điểm và tạo thông báo cảm ơn trùng lặp.
+            $locked = EmergencyCommitment::query()->lockForUpdate()->findOrFail($commitment->id);
+            $alreadyDonated = $locked->status === 'donated' || $locked->donation_history_id !== null;
+
             $certificateId = 'SOS-'.$alert->id.'-'.$commitment->id;
             $history = DonationHistory::query()->updateOrCreate(
                 ['certificate_id' => $certificateId],
@@ -409,7 +414,13 @@ class EmergencyController extends Controller
             return $journey->refresh()->load('hospital', 'steps');
         });
 
-        if ($willComplete && !$wasAlreadyCompleted) {
+        // Chỉ broadcast tới mobile khi journey đạt BƯỚC CUỐI và được công bố — đây là
+        // lúc bật màn cảm ơn cho người hiến. Các bước trung gian (tiếp nhận, kiểm tra
+        // chất lượng, vận chuyển...) không đẩy realtime.
+        // Lưu ý: KHÔNG gate thêm "!wasAlreadyCompleted" — để việc lưu lại bước cuối vẫn
+        // re-broadcast nếu mobile lỡ mất lần đầu. Notification vẫn được gate trong
+        // transaction nên không tạo thông báo trùng.
+        if ($willComplete) {
             $commitment->refresh()->load('donor', 'alert', 'bloodJourney.steps');
             $this->broadcastCommitment($commitment);
         }
