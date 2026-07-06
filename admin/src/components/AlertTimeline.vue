@@ -35,7 +35,10 @@ function alertStatusLabel(status: string) {
           <p class="font-black text-red-700">{{ alert.required_blood_type }} - {{ alert.level }}</p>
           <span class="text-xs font-bold uppercase text-red-500">{{ alertStatusLabel(alert.status) }}</span>
         </div>
-        <p class="mt-1 text-sm text-slate-700">{{ alert.message }}</p>
+        <div class="mt-2 text-sm text-slate-700 space-y-0.5">
+          <p><strong>Bệnh viện:</strong> {{ alert.hospital?.name || 'Bệnh viện' }}</p>
+          <p><strong>Nhu cầu khẩn cấp:</strong> {{ alert.units_needed }} đơn vị máu {{ alert.required_blood_type }}</p>
+        </div>
         <p class="mt-2 text-xs font-semibold text-slate-500">
           {{ alert.dispatch_summary?.recipient_count ?? alert.recipients?.length ?? 0 }} tình nguyện viên đã nhận tin
         </p>
