@@ -295,6 +295,9 @@ class PulseLinkController extends ChangeNotifier {
   Future<GeoPoint?> _resolveCurrentLocation() async {
     try {
       _lastKnownLocation = await _locationService.getCurrentLocation();
+      if (_lastKnownLocation != null) {
+        await _donorRepository.updateBaseLocation(_lastKnownLocation!);
+      }
     } on Object {
       // Location permission is optional for daily mode; backend can still fall
       // back to the demo user's saved location.

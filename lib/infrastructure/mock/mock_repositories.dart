@@ -33,6 +33,11 @@ class MockDonorRepository implements DonorRepository {
   Future<void> saveProfile(DonorProfile profile) async {
     _profile = profile;
   }
+
+  @override
+  Future<void> updateBaseLocation(GeoPoint location) async {
+    // No-op for mock repository
+  }
 }
 
 class MockDonationEventRepository implements DonationEventRepository {

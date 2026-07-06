@@ -28,6 +28,17 @@ class LaravelDonorRepository implements DonorRepository {
       body: profile.toJson(),
     );
   }
+
+  @override
+  Future<void> updateBaseLocation(GeoPoint location) async {
+    await _client.postJson(
+      '/api/mobile/me/hero-pass',
+      body: {
+        'latitude': location.latitude,
+        'longitude': location.longitude,
+      },
+    );
+  }
 }
 
 class LaravelDonationEventRepository implements DonationEventRepository {
