@@ -474,8 +474,13 @@ class _HomeTab extends StatelessWidget {
     PastDonation? activeDonation;
     for (final item in state.donationHistory) {
       if (item.bloodJourney != null && item.bloodJourney!.completedAt == null) {
-        activeDonation = item;
-        break;
+        final journeyId = item.bloodJourney!.id;
+        final publishedAt = item.bloodJourney!.publishedAt;
+        final isExpired = publishedAt != null && DateTime.now().difference(publishedAt).inDays >= 3;
+        if (!state.acknowledgedJourneyIds.contains(journeyId) && !isExpired) {
+          activeDonation = item;
+          break;
+        }
       }
     }
 
@@ -488,77 +493,99 @@ class _HomeTab extends StatelessWidget {
           _DailyHeader(controller: controller),
           if (activeDonation != null) ...[
             const SizedBox(height: 14),
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  controller.showLiveBloodJourney(
-                    activeDonation!.bloodJourney!,
-                    activeDonation.locationName,
-                    activeDonation.bloodType,
-                  );
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Ink(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFE31837),
-                        Color(0xFFB91C1C),
-                      ],
-                    ),
+            Stack(
+              children: [
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      controller.showLiveBloodJourney(
+                        activeDonation!.bloodJourney!,
+                        activeDonation.locationName,
+                        activeDonation.bloodType,
+                      );
+                    },
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFE31837).withOpacity(0.35),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.favorite_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'HÀNH TRÌNH GIỢT MÁU TRỰC TIẾP',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.1,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Theo dõi tiến trình giọt máu nhóm ${activeDonation.bloodType} tại ${activeDonation.locationName}',
-                              style: const TextStyle(
-                                color: Color(0xDEFFFFFF),
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                    child: Ink(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 36, 12),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFE31837),
+                            Color(0xFFB91C1C),
                           ],
                         ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE31837).withOpacity(0.35),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
-                      const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: Colors.white70,
-                        size: 14,
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.favorite_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'HÀNH TRÌNH GIỢT MÁU TRỰC TIẾP',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.1,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Theo dõi tiến trình giọt máu nhóm ${activeDonation.bloodType} tại ${activeDonation.locationName}',
+                                  style: const TextStyle(
+                                    color: Color(0xDEFFFFFF),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios_rounded,
+                            color: Colors.white70,
+                            size: 14,
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
+                Positioned(
+                  right: 4,
+                  top: 4,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white70, size: 18),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                      onPressed: () {
+                        controller.dismissLiveBloodJourney(activeDonation!.bloodJourney!.id);
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
           const SizedBox(height: 14),

@@ -114,6 +114,10 @@ class PulseLinkController extends ChangeNotifier {
 
     try {
       final prefs = await SharedPreferences.getInstance();
+      final acknowledged = prefs.getStringList(_acknowledgedJourneysKey) ?? [];
+      _state = _state.copyWith(
+        acknowledgedJourneyIds: acknowledged.toSet(),
+      );
       final token = prefs.getString('auth_token');
       if (token == null || token.isEmpty) {
         _state = _state.copyWith(
@@ -945,6 +949,7 @@ class PulseLinkController extends ChangeNotifier {
 
   Future<void> clearActiveLiveBloodJourney() async {
     final currentJourney = _state.activeLiveBloodJourney;
+    Set<String> newSet = _state.acknowledgedJourneyIds;
     if (currentJourney != null) {
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -952,6 +957,7 @@ class PulseLinkController extends ChangeNotifier {
         if (!acknowledged.contains(currentJourney.id)) {
           final newList = [...acknowledged, currentJourney.id];
           await prefs.setStringList(_acknowledgedJourneysKey, newList);
+          newSet = newList.toSet();
           debugPrint('PulseLinkController: Acknowledged journey ${currentJourney.id}. Saved list: $newList');
         }
       } catch (e) {
@@ -963,8 +969,26 @@ class PulseLinkController extends ChangeNotifier {
       clearActiveLiveBloodJourney: true,
       clearActiveLiveBloodJourneyHospitalName: true,
       clearActiveLiveBloodJourneyBloodType: true,
+      acknowledgedJourneyIds: newSet,
     );
     notifyListeners();
+  }
+
+  Future<void> dismissLiveBloodJourney(String journeyId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final acknowledged = prefs.getStringList(_acknowledgedJourneysKey) ?? [];
+      if (!acknowledged.contains(journeyId)) {
+        final newList = [...acknowledged, journeyId];
+        await prefs.setStringList(_acknowledgedJourneysKey, newList);
+        _state = _state.copyWith(
+          acknowledgedJourneyIds: newList.toSet(),
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('PulseLinkController: Error dismissing journey: $e');
+    }
   }
 }
 

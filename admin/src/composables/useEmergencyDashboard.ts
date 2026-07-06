@@ -64,7 +64,7 @@ export function useEmergencyDashboard(apiBaseUrl: string) {
     visibleAlerts.value.filter((alert) => ['active', 'fulfilled'].includes(alert.status)),
   )
   const activeAlert = computed(() =>
-    activeAlerts.value.find((alert) => alert.id === selectedAlertId.value) ?? activeAlerts.value[0] ?? null,
+    visibleAlerts.value.find((alert) => alert.id === selectedAlertId.value) ?? activeAlerts.value[0] ?? null,
   )
   const activeAlertCommitments = computed(() =>
     activeAlert.value

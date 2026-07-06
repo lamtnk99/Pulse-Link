@@ -40,12 +40,14 @@ class PulseLinkState {
     this.activeLiveBloodJourneyHospitalName,
     this.activeLiveBloodJourneyBloodType,
     this.pendingLevelUp,
+    this.acknowledgedJourneyIds = const {},
   });
 
   factory PulseLinkState.initial() {
     return const PulseLinkState(
       activeMode: AppMode.daily,
       isLoading: true,
+      acknowledgedJourneyIds: {},
     );
   }
 
@@ -79,6 +81,8 @@ class PulseLinkState {
   /// Cấp Hero vừa đạt (giá trị gốc như 'Gold Badge') chờ được ăn mừng toàn màn hình.
   /// Null khi không có gì để celebrate.
   final String? pendingLevelUp;
+
+  final Set<String> acknowledgedJourneyIds;
 
   bool get hasActiveSosAlert => activeAlerts.any((alert) => alert.active && !alert.isExpired);
 
@@ -128,6 +132,7 @@ class PulseLinkState {
     bool clearActiveLiveBloodJourneyBloodType = false,
     String? pendingLevelUp,
     bool clearPendingLevelUp = false,
+    Set<String>? acknowledgedJourneyIds,
   }) {
     return PulseLinkState(
       activeMode: activeMode ?? this.activeMode,
@@ -172,6 +177,7 @@ class PulseLinkState {
       pendingLevelUp: clearPendingLevelUp
           ? null
           : pendingLevelUp ?? this.pendingLevelUp,
+      acknowledgedJourneyIds: acknowledgedJourneyIds ?? this.acknowledgedJourneyIds,
     );
   }
 }
