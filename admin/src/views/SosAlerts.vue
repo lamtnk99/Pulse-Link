@@ -88,7 +88,7 @@ const journeyStepOptions = computed(() => {
 })
 
 const completedAlerts = computed(() =>
-  props.alerts.filter((alert) => alert.status === 'completed')
+  props.alerts.filter((alert) => alert.status === 'fulfilled')
 )
 
 watch(
