@@ -266,7 +266,17 @@ class EmergencyController extends Controller
                 );
             }
 
-            $this->ensureBloodJourney($alert, $commitment, $history);
+            $journey = $this->ensureBloodJourney($alert, $commitment, $history);
+
+            if (! $alreadyDonated) {
+                $this->createMobileNotification(
+                    $commitment->donor_id,
+                    'donation_verified',
+                    'Cảm ơn bạn đã hiến máu cứu người ❤️',
+                    "Chứng nhận hiến máu SOS của bạn đã được ghi nhận. Cảm ơn nghĩa cử cao đẹp của bạn!",
+                    ['blood_journey_id' => $journey->public_id, 'destination_type' => $journey->destination_type]
+                );
+            }
 
             return $commitment->refresh()->load('donor.province', 'donor.ward', 'alert.hospital', 'bloodJourney.hospital', 'bloodJourney.steps');
         });
