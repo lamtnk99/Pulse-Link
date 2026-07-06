@@ -281,12 +281,91 @@ class _BloodJourneyPanel extends StatelessWidget {
 
   final PastDonation donation;
 
+  void _showGratitudeLetter(BuildContext context, String message) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: PulseLinkTheme.surfaceColor(context),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 48,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: PulseLinkTheme.mutedColor(context).withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: PulseLinkTheme.primaryRed.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.mail_rounded, color: PulseLinkTheme.primaryRed, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Lời cảm ơn gửi tới bạn',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: PulseLinkTheme.textColor(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.format_quote_rounded, size: 20, color: Color(0xFFFF9E9E)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          VietnameseLabels.text(message),
+                          style: TextStyle(
+                            color: PulseLinkTheme.textColor(context).withOpacity(0.9),
+                            fontSize: 15,
+                            height: 1.6,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final journey = donation.bloodJourney!;
-    final message = journey.publishedAt == null
-        ? 'Bệnh viện đang cập nhật hành trình giọt máu của bạn.'
-        : journey.finalMessage ?? 'Hành trình giọt máu đã được ghi nhận.';
+    final isPublished = journey.publishedAt != null;
+    final letter = (journey.finalMessage ?? '').trim();
+    final hasLetter = isPublished && letter.isNotEmpty;
 
     return Container(
       width: double.infinity,
@@ -336,16 +415,36 @@ class _BloodJourneyPanel extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            VietnameseLabels.text(message),
-            style: TextStyle(
-              color: PulseLinkTheme.mutedColor(context),
-              fontSize: 12,
-              height: 1.35,
-              fontWeight: FontWeight.w700,
+          const SizedBox(height: 8),
+          if (hasLetter)
+            // Lời cảm ơn có thể dài — ẩn sau nút, bấm mới mở đọc để tile gọn gàng.
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _showGratitudeLetter(context, letter),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: PulseLinkTheme.primaryRed,
+                  side: BorderSide(color: PulseLinkTheme.primaryRed.withOpacity(0.4)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                icon: const Icon(Icons.mail_outline_rounded, size: 18),
+                label: const Text(
+                  'Đọc lời cảm ơn',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                ),
+              ),
+            )
+          else
+            Text(
+              'Bệnh viện đang cập nhật hành trình giọt máu của bạn.',
+              style: TextStyle(
+                color: PulseLinkTheme.mutedColor(context),
+                fontSize: 12,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
         ],
       ),
     );
