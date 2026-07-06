@@ -295,7 +295,7 @@ function saveJourney() {
             <p class="text-[11px] font-black uppercase tracking-[0.14em] text-slate-400">Trạng thái</p>
             <span
               class="mt-1 inline-flex min-w-28 justify-center rounded-full px-2 py-1 text-xs font-black"
-              :class="commitment.status === 'donated' ? 'bg-amber-50 text-amber-700' : commitment.status === 'cancelled' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700'"
+              :class="commitment.status === 'donated' ? 'bg-amber-50 text-amber-700' : ['cancelled', 'not_needed'].includes(commitment.status) ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700'"
             >
               {{ commitmentStatusLabels[commitment.status] }}
             </span>
@@ -324,7 +324,7 @@ function saveJourney() {
             <button
               class="inline-flex h-11 w-40 items-center justify-center gap-2 rounded-md px-3 text-xs font-black uppercase tracking-wide transition disabled:cursor-not-allowed disabled:opacity-60 lg:justify-self-end"
               :class="commitment.status === 'donated' ? 'bg-amber-50 text-amber-700' : 'bg-slate-950 text-white hover:bg-slate-800'"
-              :disabled="commitment.status === 'donated' || commitment.status === 'cancelled' || commitment.status === 'not_needed'"
+              :disabled="commitment.status === 'donated' || commitment.status === 'cancelled'"
               @click="markDonated(commitment)"
             >
               <BadgeCheck class="h-4 w-4" />
