@@ -311,9 +311,14 @@ class EmergencyController extends Controller
             ?? ($alert->status === 'fulfilled' ? 'reserve' : 'patient');
         $stepKeysPre = collect(BloodJourney::defaultSteps($destinationTypePre))->pluck('step_key');
         $requestedStep = $payload['current_step'] ?? $existingJourney?->current_step ?? 'received';
+        
+        $hasStepChanged = ($existingJourney === null)
+            || ($existingJourney->destination_type !== $destinationTypePre)
+            || ($existingJourney->current_step !== $requestedStep);
+
         $willComplete = ($payload['publish'] ?? false)
             && $stepKeysPre->last() === $requestedStep
-            && $existingJourney?->completed_at === null;
+            && $hasStepChanged;
 
         $aiFinalMessage = null;
         if ($willComplete) {
@@ -329,7 +334,7 @@ class EmergencyController extends Controller
             );
         }
 
-        $journey = DB::transaction(function () use ($alert, $commitment, $payload, $aiFinalMessage): BloodJourney {
+        $journey = DB::transaction(function () use ($alert, $commitment, $payload, $aiFinalMessage, $willComplete): BloodJourney {
             $history = DonationHistory::query()->findOrFail($commitment->donation_history_id);
             $journey = $this->ensureBloodJourney($alert, $commitment->loadMissing('donor'), $history, $payload['destination_type'] ?? null);
 
@@ -358,7 +363,7 @@ class EmergencyController extends Controller
             $journey->steps()->whereIn('step_key', $completedStepKeys->all())->whereNull('occurred_at')->update(['occurred_at' => now()]);
             $journey->steps()->whereNotIn('step_key', $completedStepKeys->all())->update(['occurred_at' => null]);
 
-            if (($payload['publish'] ?? false) && $isFinalStep) {
+            if ($willComplete) {
                 $this->createMobileNotification(
                     $journey->donor_id,
                     'blood_journey_completed',
@@ -371,7 +376,9 @@ class EmergencyController extends Controller
             return $journey->refresh()->load('hospital', 'steps');
         });
 
-        $this->broadcastCommitment($commitment);
+        if ($hasStepChanged) {
+            $this->broadcastCommitment($commitment);
+        }
 
         return BloodJourneyResource::make($journey);
     }
