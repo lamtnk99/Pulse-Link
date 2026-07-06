@@ -77,10 +77,10 @@ class EmergencyDispatchService
     {
         $alerts = EmergencyAlert::query()
             ->with(['hospital.province', 'hospital.ward', 'recipients.donor.province', 'commitments.donor.province', 'commitments.bloodJourney.steps'])
-            ->where('status', 'active')
+            ->whereIn('status', ['active', 'fulfilled'])
             ->when($hospitalId, fn ($query) => $query->where('hospital_id', $hospitalId))
             ->latest()
-            ->limit(10)
+            ->limit(30)
             ->get();
 
         $commitments = $alerts->flatMap(fn (EmergencyAlert $alert): Collection => $alert->commitments)
@@ -88,8 +88,8 @@ class EmergencyDispatchService
 
         return [
             'stats' => [
-                'active_alerts' => $alerts->count(),
-                'notified_donors' => $alerts->sum(fn (EmergencyAlert $alert) => $alert->recipients->count()),
+                'active_alerts' => $alerts->where('status', 'active')->count(),
+                'notified_donors' => $alerts->where('status', 'active')->sum(fn (EmergencyAlert $alert) => $alert->recipients->count()),
                 'committed_donors' => $commitments->where('status', '!=', 'cancelled')->count(),
                 'donated_donors' => $commitments->where('status', 'donated')->count(),
             ],
