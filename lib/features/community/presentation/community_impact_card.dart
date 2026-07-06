@@ -115,7 +115,7 @@ class _CommunityImpactCardState extends State<CommunityImpactCard> {
           if (impact.gratitudeWall.isNotEmpty) ...[
             const SizedBox(height: 16),
             SizedBox(
-              height: 96,
+              height: 118,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 clipBehavior: Clip.none,
@@ -173,6 +173,7 @@ class _CommunityImpactCardState extends State<CommunityImpactCard> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Expanded(
             child: Text(
@@ -181,7 +182,7 @@ class _CommunityImpactCardState extends State<CommunityImpactCard> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 12,
-                height: 1.4,
+                height: 1.35,
                 fontStyle: FontStyle.italic,
                 color: PulseLinkTheme.textColor(context).withOpacity(0.9),
               ),
