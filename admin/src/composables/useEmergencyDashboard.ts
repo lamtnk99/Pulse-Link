@@ -80,8 +80,23 @@ export function useEmergencyDashboard(apiBaseUrl: string) {
     try {
       const params = normalizedSelectedHospitalId.value ? `?hospital_id=${normalizedSelectedHospitalId.value}` : ''
       const response = await fetch(`${apiBaseUrl}/api/admin/dashboard${params}`)
+      
+      if (response.status === 401) {
+        localStorage.removeItem('admin_token')
+        localStorage.removeItem('admin_user')
+        window.location.reload()
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
       const payload = (await response.json()) as DashboardResponse
       if (requestId !== dashboardRequestId) return
+      if (!payload || !payload.data) {
+        throw new Error('Invalid dashboard payload data')
+      }
 
       hospitals.value = payload.data.hospitals
       stats.value = payload.data.stats
