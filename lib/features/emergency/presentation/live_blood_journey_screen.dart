@@ -300,12 +300,14 @@ class _LiveBloodJourneyScreenState extends State<LiveBloodJourneyScreen>
                                       size: 16,
                                     ),
                                     SizedBox(width: 8),
-                                    Text(
-                                      'Mỗi lần hiến máu có thể cứu đến 3 mạng người',
-                                      style: TextStyle(
-                                        color: Color(0xFFE31837),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
+                                    Flexible(
+                                      child: Text(
+                                        'Mỗi lần hiến máu có thể cứu đến 3 mạng người',
+                                        style: TextStyle(
+                                          color: Color(0xFFE31837),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                        ),
                                       ),
                                     ),
                                   ],
