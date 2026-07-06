@@ -76,6 +76,11 @@ class EmergencyAlertApiTest extends TestCase
             ->where('status', 'active')
             ->count();
 
+        $initialTotalAlerts = EmergencyAlert::query()
+            ->where('hospital_id', $hospital->id)
+            ->whereIn('status', ['active', 'fulfilled'])
+            ->count();
+
         foreach (['O+', 'A+'] as $index => $bloodType) {
             $this->postJson('/api/admin/emergency-alerts', [
                 'hospital_id' => $hospital->id,
@@ -96,7 +101,7 @@ class EmergencyAlertApiTest extends TestCase
         $this->getJson("/api/admin/dashboard?hospital_id={$hospital->id}")
             ->assertOk()
             ->assertJsonPath('data.stats.active_alerts', $initialActiveAlerts + 2)
-            ->assertJsonCount($initialActiveAlerts + 2, 'data.alerts');
+            ->assertJsonCount($initialTotalAlerts + 2, 'data.alerts');
     }
 
     public function test_hospital_staff_can_only_view_sos_alerts_for_their_hospital(): void
@@ -312,6 +317,13 @@ class EmergencyAlertApiTest extends TestCase
             'public_id' => $alertId,
             'status' => 'fulfilled',
         ]);
+        $this->assertDatabaseHas('emergency_commitments', [
+            'donor_id' => $donors[1]->id,
+            'status' => 'committed',
+        ]);
+
+        $this->postJson("/api/admin/emergency-alerts/{$alertId}/complete?admin_user_id={$staff->id}")->assertOk();
+
         $this->assertDatabaseHas('emergency_commitments', [
             'donor_id' => $donors[1]->id,
             'status' => 'not_needed',

@@ -80,6 +80,11 @@ Thư mục chính:
 - Mobile có hold-to-confirm 3 giây cho cam kết hiến máu khẩn cấp.
 - Route planner trả polyline, khoảng cách và thời gian dự kiến.
 - Firebase Web config là optional; nếu thiếu, Daily Mode vẫn chạy và app sẽ tắt Firebase SOS listener.
+- **Quản lý ca SOS đã hoàn thành**:
+  - Giao diện Admin Vue 3 hỗ trợ Modal lịch sử ca SOS hoàn thành. Xem chi tiết từng ca hoàn thành (lồng ghép trực tiếp bên trong Modal) kèm nút "Quay lại", đảm bảo trang giám sát chính (Dashboard) hoạt động độc lập và không bị ảnh hưởng. Hỗ trợ ghi nhận hiến máu thành công ("Đã hiến") cho các cam kết cũ hoặc cam kết ở trạng thái "Ca đã đủ" (`not_needed`).
+  - **Cho phép hiến vượt chỉ tiêu**: Khi ca SOS đạt chỉ tiêu (ví dụ 4/4 đơn vị máu), trạng thái ca chuyển sang `fulfilled` nhưng hệ thống không tự động hủy ngang các cam kết đang di chuyển. Những người hiến đang trên đường đi vẫn giữ nguyên trạng thái cam kết để tiếp tục hiến máu (cho phép vượt chỉ tiêu 5, 6 người). Chỉ hủy các cam kết còn lại sang `not_needed` khi Admin kết thúc ca thủ công hoặc ca hết hạn.
+  - **Kiểm soát hành trình máu**: Các bước của hành trình máu chỉ có thể tăng tiến đi lên (không cho phép cập nhật lùi bước) cả ở Web và Mobile. Chỉ phát sóng broadcast cập nhật hành trình máu ở bước cuối cùng (`willComplete`) để tối ưu hiệu năng.
+  - **Mobile Flutter (Banner hành trình)**: Banner hành trình máu có nút tắt ẩn "x", lưu trữ offline trạng thái ẩn theo ID hành trình và chỉ hiển thị tối đa trong vòng 3 ngày kể từ khi bắt đầu.
 
 ### Admin Daily Mode
 

@@ -106,18 +106,20 @@ class GratitudeMessageService
         $isReserve = ($context['destination_type'] ?? 'patient') === 'reserve';
 
         $voice = $isReserve
-            ? "Bạn viết với giọng của đội ngũ y tế bệnh viện — ấm áp, trân trọng."
-            : "Bạn viết với giọng của gia đình bệnh nhân vừa được cứu — xúc động, chân thành, biết ơn.";
+            ? "Bạn viết với giọng của đội ngũ y bác sĩ tuyến đầu — những người vừa trải qua ca trực căng thẳng, giờ thở phào nhẹ nhõm và thật lòng biết ơn."
+            : "Bạn viết với giọng của người nhà bệnh nhân vừa thoát khỏi ranh giới sinh tử — run rẩy, nghẹn ngào, biết ơn từ tận đáy lòng.";
 
         return "Bạn là người viết lời cảm ơn cho Pulse Link - hệ sinh thái hiến máu tại Việt Nam.\n"
-            . "Nhiệm vụ: viết MỘT lời cảm ơn ngắn, thật lòng, chạm tới cảm xúc, gửi tới người vừa hiến máu.\n\n"
+            . "Nhiệm vụ: viết MỘT lời cảm ơn ngắn, THẬT LÒNG, chạm tới cảm xúc sâu nhất, gửi tới người vừa hiến máu.\n\n"
             . $voice . "\n\n"
             . "QUY TẮC:\n"
-            . "1. Độ dài 2-3 câu, tiếng Việt tự nhiên, ấm áp như lời nói thật.\n"
-            . "2. Gọi tên người hiến nếu được cung cấp, xưng hô gần gũi.\n"
-            . "3. TUYỆT ĐỐI KHÔNG bịa chi tiết y tế cụ thể (tên bệnh, kết quả xét nghiệm, tiên lượng).\n"
-            . "4. Không dùng markdown, không emoji quá 1 cái, không ký tên, không tiêu đề.\n"
-            . "5. Chỉ trả về đúng nội dung lời cảm ơn, không thêm lời dẫn.";
+            . "1. Độ dài 2-3 câu, tiếng Việt tự nhiên, mộc mạc như lời nói từ trái tim, KHÔNG được giống văn mẫu hay template.\n"
+            . "2. Gọi tên người hiến nếu được cung cấp, xưng hô gần gũi (anh/chị/bạn).\n"
+            . "3. PHẢI có chi tiết cảm xúc cụ thể — ví dụ: nỗi lo lắng trước đó, khoảnh khắc nhận tin, cảm giác khi biết máu đã truyền thành công.\n"
+            . "4. Mỗi lần phải viết KHÁC NHAU, tránh lặp lại cấu trúc câu hay từ ngữ với các lần trước.\n"
+            . "5. TUYỆT ĐỐI KHÔNG bịa chi tiết y tế cụ thể (tên bệnh, kết quả xét nghiệm, tiên lượng).\n"
+            . "6. Không dùng markdown, không emoji quá 1 cái, không ký tên, không tiêu đề.\n"
+            . "7. Chỉ trả về đúng nội dung lời cảm ơn, không thêm lời dẫn hay giải thích.";
     }
 
     private function buildUserPrompt(array $context): string

@@ -846,6 +846,10 @@ class PulseLinkController extends ChangeNotifier {
         destination: alert.hospitalLocation,
         preferredDistanceKm: distanceKm,
       );
+      if (_locationSyncTimer == null || !_state.committedAlertIds.contains(alert.id)) {
+        _isSyncingEmergencyLocation = false;
+        return;
+      }
       await _emergencySignalService.updateCommitmentLocation(
         alertId: alert.id,
         donorId: profile.id,
@@ -863,6 +867,15 @@ class PulseLinkController extends ChangeNotifier {
           lastLocationAt: DateTime.now(),
         ),
         clearLocationSyncError: true,
+      );
+      notifyListeners();
+    } on LaravelApiException catch (error) {
+      if (error.statusCode == 409) {
+        _stopEmergencyLocationSync();
+      }
+      _state = _state.copyWith(
+        locationSyncError:
+            'Chưa gửi được vị trí mới. Bạn vẫn có thể đi theo chỉ đường.',
       );
       notifyListeners();
     } on Object {
@@ -901,6 +914,7 @@ class PulseLinkController extends ChangeNotifier {
 
   void _handleEmergencyCommitmentUpdate(EmergencyCommitment commitment) {
     if (commitment.status == EmergencyCommitmentStatus.donated && commitment.bloodJourney != null) {
+      _stopEmergencyLocationSync();
       _state = _state.copyWith(
         activeLiveBloodJourney: commitment.bloodJourney,
         activeLiveBloodJourneyHospitalName: _state.activeAlert?.hospitalName ?? 'Bệnh viện',
@@ -909,7 +923,11 @@ class PulseLinkController extends ChangeNotifier {
       unawaited(refreshDailyData());
       notifyListeners();
     } else if (commitment.status == EmergencyCommitmentStatus.donated) {
+      _stopEmergencyLocationSync();
       unawaited(refreshDailyData());
+    } else if (commitment.status == EmergencyCommitmentStatus.cancelled || commitment.status == EmergencyCommitmentStatus.notNeeded) {
+      _stopEmergencyLocationSync();
+      unawaited(_removeEmergencyAlert(commitment.alertId));
     } else if (_state.activeLiveBloodJourney != null && commitment.bloodJourney != null && commitment.bloodJourney!.id == _state.activeLiveBloodJourney!.id) {
       _state = _state.copyWith(
         activeLiveBloodJourney: commitment.bloodJourney,

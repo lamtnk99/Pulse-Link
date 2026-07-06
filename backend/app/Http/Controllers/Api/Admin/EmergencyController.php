@@ -93,7 +93,26 @@ class EmergencyController extends Controller
         abort_unless($this->adminUserResolver->hasPermission($admin, 'sos.activate'), 403);
         abort_unless($this->adminUserResolver->canAccessHospital($admin, $alert->hospital_id), 403);
 
-        $alert->update(['status' => 'fulfilled']);
+        DB::transaction(function () use ($alert): void {
+            $alert->update(['status' => 'fulfilled']);
+
+            $lateCommitments = $alert->commitments()
+                ->whereIn('status', ['committed', 'en_route'])
+                ->get();
+
+            foreach ($lateCommitments as $commitment) {
+                $commitment->update(['status' => 'not_needed', 'last_location_at' => now()]);
+                $this->createMobileNotification(
+                    $commitment->donor_id,
+                    'sos_fulfilled',
+                    'Ca SOS đã nhận đủ máu',
+                    'Cảm ơn bạn, ca hiến máu này đã nhận đủ đơn vị máu cần thiết. Hệ thống đã lưu ghi nhận và xin hẹn bạn ở lượt tiếp theo nhé!',
+                    ['alert_id' => $alert->public_id],
+                );
+                $this->broadcastCommitment($commitment->refresh()->load('donor.province', 'donor.ward', 'alert.hospital'));
+            }
+        });
+
         $alert->load('hospital.province', 'hospital.ward', 'recipients.donor.province', 'commitments.donor.province', 'commitments.bloodJourney.steps');
         $this->realtimeGateway->publish($alert);
         $this->broadcastAlert($alert);
@@ -316,12 +335,17 @@ class EmergencyController extends Controller
             || ($existingJourney->destination_type !== $destinationTypePre)
             || ($existingJourney->current_step !== $requestedStep);
 
-        $willComplete = ($payload['publish'] ?? false)
-            && $stepKeysPre->last() === $requestedStep
-            && $hasStepChanged;
+        $isFinalStep = $stepKeysPre->last() === $requestedStep;
+        $willComplete = ($payload['publish'] ?? false) && $isFinalStep;
+
+        $oldFallbacks = [
+            'Giọt máu quý giá của bạn đã được truyền cho bệnh nhân tại phòng cấp cứu. Cảm ơn bạn đã giành lại một mạng sống!',
+            'Ca cấp cứu hiện đã ổn định nhờ sự hỗ trợ kịp thời. Đơn vị máu của bạn đã được lưu trữ an toàn tại kho máu dự trữ để sẵn sàng cứu sống những bệnh nhân tiếp theo. Cảm ơn nghĩa cử cao đẹp của bạn!'
+        ];
+        $isOldOrEmpty = empty($existingJourney?->final_message) || in_array($existingJourney?->final_message, $oldFallbacks);
 
         $aiFinalMessage = null;
-        if ($willComplete) {
+        if ($willComplete && (empty($existingJourney?->completed_at) || $isOldOrEmpty)) {
             $commitment->loadMissing('donor');
             $aiFinalMessage = $this->gratitudeService->generate(
                 [
@@ -330,11 +354,11 @@ class EmergencyController extends Controller
                     'hospital_name' => $alert->hospital?->name,
                     'destination_type' => $destinationTypePre,
                 ],
-                BloodJourney::finalMessageFor($destinationTypePre),
+                BloodJourney::finalMessageFor($destinationTypePre, $commitment->id),
             );
         }
 
-        $journey = DB::transaction(function () use ($alert, $commitment, $payload, $aiFinalMessage, $willComplete): BloodJourney {
+        $journey = DB::transaction(function () use ($alert, $commitment, $payload, $aiFinalMessage, $willComplete, $isFinalStep, $isOldOrEmpty): BloodJourney {
             $history = DonationHistory::query()->findOrFail($commitment->donation_history_id);
             $journey = $this->ensureBloodJourney($alert, $commitment->loadMissing('donor'), $history, $payload['destination_type'] ?? null);
 
@@ -354,11 +378,10 @@ class EmergencyController extends Controller
             }
 
             $completedStepKeys = $stepKeys->take($stepKeys->search($stepKey) + 1);
-            $isFinalStep = $stepKeys->last() === $stepKey;
+
             // Ưu tiên lời cảm ơn AI vừa sinh; nếu không có, giữ nội dung đã lưu; cuối cùng rơi về mẫu tĩnh.
             $finalMessage = $aiFinalMessage
-                ?? $journey->final_message
-                ?? BloodJourney::finalMessageFor($journey->destination_type);
+                ?? ($isOldOrEmpty ? BloodJourney::finalMessageFor($journey->destination_type, $commitment->id) : $journey->final_message);
             $journey->update([
                 'current_step' => $stepKey,
                 'location_label' => $payload['location_label'] ?? $journey->location_label,
@@ -375,7 +398,7 @@ class EmergencyController extends Controller
                     $journey->donor_id,
                     'blood_journey_completed',
                     'Lời cảm ơn từ hành trình giọt máu',
-                    $journey->final_message ?? BloodJourney::finalMessageFor($journey->destination_type),
+                    $journey->final_message ?? BloodJourney::finalMessageFor($journey->destination_type, $commitment->id),
                     ['blood_journey_id' => $journey->public_id, 'destination_type' => $journey->destination_type],
                 );
             }
@@ -384,6 +407,7 @@ class EmergencyController extends Controller
         });
 
         if ($willComplete) {
+            $commitment->refresh()->load('donor', 'alert', 'bloodJourney.steps');
             $this->broadcastCommitment($commitment);
         }
 
@@ -459,7 +483,7 @@ class EmergencyController extends Controller
             ->where('donor_id', $donor->id)
             ->firstOrFail();
 
-        abort_if($commitment->status === 'donated', 409, 'Ca SOS này đã được bệnh viện ghi nhận hiến máu.');
+        abort_if(in_array($commitment->status, ['donated', 'cancelled', 'not_needed']), 409, 'Cam kết này đã kết thúc, bị hủy hoặc không còn hoạt động.');
 
         $commitment->update([
             'latitude' => $payload['latitude'],
@@ -547,22 +571,6 @@ class EmergencyController extends Controller
 
         DB::transaction(function () use ($alert): void {
             $alert->update(['status' => 'fulfilled']);
-
-            $lateCommitments = $alert->commitments()
-                ->whereIn('status', ['committed', 'en_route'])
-                ->get();
-
-            foreach ($lateCommitments as $commitment) {
-                $commitment->update(['status' => 'not_needed', 'last_location_at' => now()]);
-                $this->createMobileNotification(
-                    $commitment->donor_id,
-                    'sos_fulfilled',
-                    'Ca SOS đã nhận đủ máu',
-                    'Cảm ơn bạn, ca hiến máu này đã nhận đủ đơn vị máu cần thiết. Hệ thống đã lưu ghi nhận và xin hẹn bạn ở lượt tiếp theo nhé!',
-                    ['alert_id' => $alert->public_id],
-                );
-                $this->broadcastCommitment($commitment->refresh()->load('donor.province', 'donor.ward', 'alert.hospital'));
-            }
         });
 
         $alert->load('hospital.province', 'hospital.ward', 'recipients.donor.province', 'commitments.donor.province', 'commitments.bloodJourney.steps');
@@ -584,7 +592,7 @@ class EmergencyController extends Controller
                 'destination_type' => $destinationType,
                 'current_step' => 'received',
                 'location_label' => $alert->hospital?->name,
-                'final_message' => BloodJourney::finalMessageFor($destinationType),
+                'final_message' => BloodJourney::finalMessageFor($destinationType, $commitment->id),
             ],
         );
 
@@ -602,7 +610,7 @@ class EmergencyController extends Controller
             'current_step' => 'received',
             'completed_at' => null,
             'published_at' => null,
-            'final_message' => BloodJourney::finalMessageFor($destinationType),
+            'final_message' => BloodJourney::finalMessageFor($destinationType, $journey->emergency_commitment_id),
         ]);
         $journey->steps()->delete();
         $this->seedJourneySteps($journey);

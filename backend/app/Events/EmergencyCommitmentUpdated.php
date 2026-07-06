@@ -57,6 +57,7 @@ class EmergencyCommitmentUpdated implements ShouldBroadcastNow
                     'current_step' => $journey->current_step,
                     'location_label' => $journey->location_label,
                     'destination_type' => $journey->destination_type,
+                    'final_message' => $journey->final_message,
                     'completed_at' => $journey->completed_at?->toIso8601String(),
                     'published_at' => $journey->published_at?->toIso8601String(),
                     'steps' => $journey->steps->map(fn ($step) => [
