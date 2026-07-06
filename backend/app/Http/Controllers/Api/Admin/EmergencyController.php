@@ -296,7 +296,7 @@ class EmergencyController extends Controller
                 $this->createMobileNotification(
                     $commitment->donor_id,
                     'donation_verified',
-                    'Cảm ơn bạn đã hiến máu cứu người ❤️',
+                    'Cảm ơn bạn đã hiến máu cứu người',
                     "Chứng nhận hiến máu SOS của bạn đã được ghi nhận. Cảm ơn nghĩa cử cao đẹp của bạn!",
                     ['blood_journey_id' => $journey->public_id, 'destination_type' => $journey->destination_type]
                 );

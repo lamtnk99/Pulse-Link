@@ -76,13 +76,13 @@ class DonationAppointmentObserver
             ]);
 
             // Welcome message
-            $content = "Chào {$user->name}! 👋 Cảm ơn bạn đã đăng ký lịch hiến máu tại sự kiện \"{$eventTitle}\" vào lúc {$startsAt} ở {$location}.\n\n"
+            $content = "Chào {$user->name}! Cảm ơn bạn đã đăng ký lịch hiến máu tại sự kiện \"{$eventTitle}\" vào lúc {$startsAt} ở {$location}.\n\n"
                 . "Để hành trình hiến máu của bạn diễn ra an toàn và thuận lợi nhất, hãy ghi nhớ một số dặn dò từ mình nhé:\n"
-                . "1. 💤 Ngủ đủ giấc (ít nhất 6 tiếng) vào đêm trước ngày hiến.\n"
-                . "2. 🍳 Hãy ăn nhẹ trước khi hiến (tránh đồ ăn nhiều mỡ, sữa).\n"
-                . "3. 💧 Uống nhiều nước lọc (300-500ml) trước khi hiến.\n"
-                . "4. ❌ Tuyệt đối không sử dụng rượu bia, chất kích thích.\n\n"
-                . "Chúc bạn có một trải nghiệm hiến máu thật ý nghĩa! Bạn có thắc mắc gì cần mình tư vấn thêm không? ❤️";
+                . "1. Ngủ đủ giấc (ít nhất 6 tiếng) vào đêm trước ngày hiến.\n"
+                . "2. Hãy ăn nhẹ trước khi hiến (tránh đồ ăn nhiều mỡ, sữa).\n"
+                . "3. Uống nhiều nước lọc (300-500ml) trước khi hiến.\n"
+                . "4. Tuyệt đối không sử dụng rượu bia, chất kích thích.\n\n"
+                . "Chúc bạn có một trải nghiệm hiến máu thật ý nghĩa! Bạn có thắc mắc gì cần mình tư vấn thêm không?";
 
             ChatMessage::create([
                 'chat_conversation_id' => $chat->id,
@@ -97,7 +97,7 @@ class DonationAppointmentObserver
             $notification = MobileNotification::create([
                 'user_id' => $user->id,
                 'type' => 'pre_donation_guidance',
-                'title' => 'Dặn dò trước ngày hiến máu ❤️',
+                'title' => 'Dặn dò trước ngày hiến máu',
                 'body' => "Chuẩn bị tốt nhất cho buổi hiến máu của bạn tại {$eventTitle} nhé.",
                 'payload' => [
                     'conversation_id' => $chat->id,
@@ -155,11 +155,11 @@ class DonationAppointmentObserver
             $reason = $appointment->screening_notes ? " do: {$appointment->screening_notes}" : "";
             $content = "Chào {$user->name}! Mình biết hôm nay bạn chưa thể hoàn thành ca hiến máu tại sự kiện \"{$eventTitle}\"{$reason}. Cảm giác này có thể hơi tiếc nuối một chút, nhưng không sao cả đâu bạn nhé!\n\n"
                 . "Sức khỏe của bạn mới là điều quan trọng số một. Rất nhiều người hiến máu tình nguyện cũng từng gặp các chỉ số tạm thời chưa đạt chuẩn (như huyết áp chưa ổn định, huyết sắc tố thấp, thiếu ngủ, v.v.).\n\n"
-                . "🌸 Lời khuyên bồi bổ từ mình:\n"
+                . "Lời khuyên bồi bổ từ mình:\n"
                 . "- Ăn thêm thực phẩm giàu sắt (thịt bò, gan, trứng, rau chân vịt, các loại hạt).\n"
                 . "- Nghỉ ngơi điều độ, ngủ đủ giấc và uống nhiều nước ấm.\n"
                 . "- Giữ tinh thần thoải mái để chuẩn bị cho lần hiến tiếp theo nhé!\n\n"
-                . "Bạn có muốn mình tư vấn thực đơn bổ máu hay cách cải thiện chỉ số sức khỏe không? Cứ chia sẻ với mình nha! ❤️";
+                . "Bạn có muốn mình tư vấn thực đơn bổ máu hay cách cải thiện chỉ số sức khỏe không? Cứ chia sẻ với mình nha!";
 
             ChatMessage::create([
                 'chat_conversation_id' => $chat->id,
@@ -174,7 +174,7 @@ class DonationAppointmentObserver
             $notification = MobileNotification::create([
                 'user_id' => $user->id,
                 'type' => 'donation_deferred',
-                'title' => 'Món quà sức khỏe dành riêng cho bạn ❤️',
+                'title' => 'Món quà sức khỏe dành riêng cho bạn',
                 'body' => "Sức khỏe của bạn là ưu tiên số một. Hãy cùng Pulse Link bồi bổ cơ thể nhé.",
                 'payload' => [
                     'conversation_id' => $chat->id,

@@ -77,8 +77,8 @@ class SendPostDonationCheckup extends Command
                 ]);
 
                 // 2. Create the first care message from AI
-                $content = "Chào {$donation->user->name}! 👋 Đã khoảng {$timeSinceText} giờ kể từ khi bạn hiến máu nhóm {$donation->blood_type} tại {$hospitalName}.\n\n"
-                    . "Pulse Link muốn hỏi thăm xem sức khỏe của bạn hiện tại thế nào? Bạn có cảm thấy chóng mặt, mệt mỏi hay có vết bầm tím nào quanh vị trí tiêm không? Hãy chia sẻ để mình hỗ trợ tư vấn chăm sóc sức khỏe nhé! ❤️";
+                $content = "Chào {$donation->user->name}! Đã khoảng {$timeSinceText} giờ kể từ khi bạn hiến máu nhóm {$donation->blood_type} tại {$hospitalName}.\n\n"
+                    . "Pulse Link muốn hỏi thăm xem sức khỏe của bạn hiện tại thế nào? Bạn có cảm thấy chóng mặt, mệt mỏi hay có vết bầm tím nào quanh vị trí tiêm không? Hãy chia sẻ để mình hỗ trợ tư vấn chăm sóc sức khỏe nhé!";
 
                 ChatMessage::create([
                     'chat_conversation_id' => $chat->id,
@@ -93,7 +93,7 @@ class SendPostDonationCheckup extends Command
                 $notification = MobileNotification::create([
                     'user_id' => $donation->user_id,
                     'type' => 'post_donation_checkup',
-                    'title' => 'Pulse Link hỏi thăm sức khỏe ❤️',
+                    'title' => 'Pulse Link hỏi thăm sức khỏe',
                     'body' => "Chúng tôi muốn biết tình hình sức khỏe của bạn sau ca hiến máu tại {$hospitalName}.",
                     'payload' => [
                         'conversation_id' => $chat->id,

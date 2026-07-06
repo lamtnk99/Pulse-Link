@@ -186,13 +186,13 @@ class ChatController extends Controller
             if (!$hasDailyGreetingToday) {
                 // Tạo lời chào thấu cảm theo thời gian thực (Giờ địa phương hoặc UTC tùy cấu hình - dùng Carbon hỗ trợ múi giờ)
                 $hour = now()->timezone('Asia/Ho_Chi_Minh')->hour;
-                $greeting = "Chào bạn! Chúc bạn một ngày mới tốt lành. ❤️";
+                $greeting = "Chào bạn! Chúc bạn một ngày mới tốt lành.";
                 if ($hour >= 5 && $hour < 12) {
-                    $greeting = "Chào buổi sáng {$user->name}! Chúc bạn một ngày mới tràn đầy năng lượng tích cực. Hãy nhớ uống một cốc nước lọc ấm để khởi đầu ngày mới nhé! ☀️";
+                    $greeting = "Chào buổi sáng {$user->name}! Chúc bạn một ngày mới tràn đầy năng lượng tích cực. Hãy nhớ uống một cốc nước lọc ấm để khởi đầu ngày mới nhé!";
                 } elseif ($hour >= 12 && $hour < 18) {
-                    $greeting = "Chào {$user->name}, nửa ngày đã trôi qua rồi. Bạn đã dành vài phút để nghỉ ngơi và uống nước chưa? Hãy cùng thư giãn một chút nhé! ☕";
+                    $greeting = "Chào {$user->name}, nửa ngày đã trôi qua rồi. Bạn đã dành vài phút để nghỉ ngơi và uống nước chưa? Hãy cùng thư giãn một chút nhé!";
                 } else {
-                    $greeting = "Chào buổi tối {$user->name}! Một ngày vất vả đã trôi qua, hãy nghỉ ngơi thật tốt và chuẩn bị cho một giấc ngủ thật ngon để cơ thể tái tạo máu tốt nhất nhé! 💤";
+                    $greeting = "Chào buổi tối {$user->name}! Một ngày vất vả đã trôi qua, hãy nghỉ ngơi thật tốt và chuẩn bị cho một giấc ngủ thật ngon để cơ thể tái tạo máu tốt nhất nhé!";
                 }
 
                 ChatMessage::create([

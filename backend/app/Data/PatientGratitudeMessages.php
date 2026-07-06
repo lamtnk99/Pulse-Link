@@ -9,7 +9,7 @@ class PatientGratitudeMessages
         return [
             'Gia đình tôi không biết nói gì hơn ngoài hai chữ cảm ơn. Bạn đã chạy đến bệnh viện giữa đêm để cứu người thân của tôi, điều đó tôi sẽ nhớ đến suốt đời.',
 
-            'Khi bác sĩ nói cần máu gấp, cả nhà tôi như chết đứng. Rồi bạn xuất hiện — tôi không tin là có người tốt đến vậy trên đời này 🙏',
+            'Khi bác sĩ nói cần máu gấp, cả nhà tôi như chết đứng. Rồi bạn xuất hiện — tôi không tin là có người tốt đến vậy trên đời này.',
 
             'Con tôi vừa mở mắt nhìn tôi cười. Nếu không có bạn, tôi không dám nghĩ chuyện gì sẽ xảy ra. Cảm ơn bạn, từ tận đáy lòng của một người mẹ.',
 

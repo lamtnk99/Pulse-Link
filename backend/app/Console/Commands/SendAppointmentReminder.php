@@ -77,8 +77,8 @@ class SendAppointmentReminder extends Command
                 ]);
 
                 // 2. Create the first care message from AI
-                $content = "Chào {$user->name}! 🔔 Hôm nay là ngày hẹn hiến máu của bạn tại sự kiện \"{$eventTitle}\" lúc {$startsAt} ở {$location}.\n\n"
-                    . "Pulse Link chúc bạn một ngày mới ngập tràn năng lượng! Bạn nhớ uống một ly nước lọc lớn trước khi di chuyển đến điểm hiến nhé. Mình có thể hỗ trợ chỉ đường hoặc hướng dẫn các giấy tờ cần chuẩn bị giúp bạn không? ❤️";
+                $content = "Chào {$user->name}! Hôm nay là ngày hẹn hiến máu của bạn tại sự kiện \"{$eventTitle}\" lúc {$startsAt} ở {$location}.\n\n"
+                    . "Pulse Link chúc bạn một ngày mới ngập tràn năng lượng! Bạn nhớ uống một ly nước lọc lớn trước khi di chuyển đến điểm hiến nhé. Mình có thể hỗ trợ chỉ đường hoặc hướng dẫn các giấy tờ cần chuẩn bị giúp bạn không?";
 
                 ChatMessage::create([
                     'chat_conversation_id' => $chat->id,
