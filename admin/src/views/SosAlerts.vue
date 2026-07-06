@@ -40,6 +40,18 @@ const journeyForm = reactive({
   location_label: '',
   publish: false,
 })
+
+const isStepDisabled = (stepKey: string) => {
+  const currentJourneyStep = editingJourneyCommitment.value?.blood_journey?.current_step ?? 'received'
+  const options = journeyStepOptions.value
+  const currentIndex = options.findIndex(opt => opt.key === currentJourneyStep)
+  const optionIndex = options.findIndex(opt => opt.key === stepKey)
+  
+  const destinationTypeChanged = journeyForm.destination_type !== (editingJourneyCommitment.value?.blood_journey?.destination_type ?? 'patient')
+  if (destinationTypeChanged) return false
+  
+  return optionIndex < currentIndex
+}
 const commitmentStatusLabels: Record<EmergencyCommitment['status'], string> = {
   committed: 'Đã cam kết',
   en_route: 'Đang di chuyển',
@@ -399,7 +411,7 @@ function saveJourney() {
           <label class="block">
             <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Tiến trình hiện tại</span>
             <select v-model="journeyForm.current_step" class="mt-1 h-11 w-full rounded-md border border-slate-200 px-3 text-sm font-bold outline-none focus:border-[#E31837]">
-              <option v-for="step in journeyStepOptions" :key="step.key" :value="step.key">
+              <option v-for="step in journeyStepOptions" :key="step.key" :value="step.key" :disabled="isStepDisabled(step.key)">
                 {{ step.label }}
               </option>
             </select>

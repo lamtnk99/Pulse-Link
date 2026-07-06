@@ -342,9 +342,16 @@ class EmergencyController extends Controller
                 $journey = $this->resetJourneySteps($journey, $payload['destination_type']);
             }
 
+            $destinationTypeChanged = (($payload['destination_type'] ?? $journey->destination_type) !== $journey->destination_type);
             $stepKeys = collect(BloodJourney::defaultSteps($journey->destination_type))->pluck('step_key')->values();
             $stepKey = $payload['current_step'] ?? $journey->current_step;
             abort_unless($stepKeys->contains($stepKey), 422);
+
+            if (!$destinationTypeChanged) {
+                $currentIndex = $stepKeys->search($journey->current_step);
+                $newIndex = $stepKeys->search($stepKey);
+                abort_if($newIndex < $currentIndex, 422, 'Không thể quay ngược lại bước hành trình cũ.');
+            }
 
             $completedStepKeys = $stepKeys->take($stepKeys->search($stepKey) + 1);
             $isFinalStep = $stepKeys->last() === $stepKey;
@@ -376,7 +383,7 @@ class EmergencyController extends Controller
             return $journey->refresh()->load('hospital', 'steps');
         });
 
-        if ($hasStepChanged) {
+        if ($willComplete) {
             $this->broadcastCommitment($commitment);
         }
 
