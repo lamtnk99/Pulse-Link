@@ -197,7 +197,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         setState(() => _applyBloodType(latestProfile));
       }
 
-      await widget.controller.updateProfile({
+      final payload = <String, dynamic>{
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         if (!bloodTypeLocked) 'blood_type': _bloodType,
@@ -206,12 +206,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         'address': _addressController.text.trim(),
         'province_code': _provinceCode,
         'ward_code': _wardCode,
-        'national_id': _nationalIdController.text.trim().isEmpty
-            ? null
-            : _nationalIdController.text.trim(),
-        'id_card_front_url': _idFrontUrl,
-        'id_card_back_url': _idBackUrl,
-      });
+      };
+      if (_identityTouched) {
+        payload.addAll({
+          'national_id': _nationalIdController.text.trim().isEmpty
+              ? null
+              : _nationalIdController.text.trim(),
+          'id_card_front_url': _idFrontUrl,
+          'id_card_back_url': _idBackUrl,
+        });
+      }
+
+      await widget.controller.updateProfile(payload);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

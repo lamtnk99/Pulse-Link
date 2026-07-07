@@ -184,6 +184,35 @@ class AuthApiTest extends TestCase
         $this->assertSame('unverified', $user->id_verification_status);
     }
 
+    public function test_donor_can_update_profile_without_resubmitting_id_verification()
+    {
+        $user = User::factory()->create([
+            'role' => 'donor',
+            'national_id' => '012345678901',
+            'id_card_front_url' => null,
+            'id_card_back_url' => null,
+            'id_verification_status' => 'unverified',
+        ]);
+        $token = $user->createToken('test-token')->plainTextToken;
+
+        $response = $this->postJson('/api/mobile/me/hero-pass', [
+            'phone' => '0909000000',
+        ], [
+            'Authorization' => 'Bearer '.$token,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.phone', '0909000000')
+            ->assertJsonPath('data.id_verification_status', 'unverified');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'phone' => '0909000000',
+            'national_id' => '012345678901',
+            'id_verification_status' => 'unverified',
+        ]);
+    }
+
     public function test_admin_can_approve_id_verification()
     {
         $donor = User::factory()->create([
