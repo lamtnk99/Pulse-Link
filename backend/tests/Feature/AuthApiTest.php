@@ -162,6 +162,28 @@ class AuthApiTest extends TestCase
         ]);
     }
 
+    public function test_donor_submitting_id_card_images_without_national_id_is_rejected()
+    {
+        $user = User::factory()->create(['role' => 'donor']);
+        $token = $user->createToken('test-token')->plainTextToken;
+
+        $response = $this->postJson('/api/mobile/me/hero-pass', [
+            'id_card_front_url' => 'https://cdn.test/front.jpg',
+            'id_card_back_url' => 'https://cdn.test/back.jpg',
+        ], [
+            'Authorization' => 'Bearer '.$token,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['national_id']);
+
+        $user->refresh();
+        $this->assertNull($user->national_id);
+        $this->assertNull($user->id_card_front_url);
+        $this->assertNull($user->id_card_back_url);
+        $this->assertSame('unverified', $user->id_verification_status);
+    }
+
     public function test_admin_can_approve_id_verification()
     {
         $donor = User::factory()->create([

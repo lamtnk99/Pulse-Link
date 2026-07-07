@@ -40,10 +40,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   bool _syncingProfile = true;
   bool _uploadingFront = false;
   bool _uploadingBack = false;
+  bool _identityTouched = false;
   String? _errorMessage;
 
   static const List<String> _bloodTypes = [
-    'O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+',
+    'O-',
+    'O+',
+    'A-',
+    'A+',
+    'B-',
+    'B+',
+    'AB-',
+    'AB+',
   ];
 
   static const String _apiBaseUrl = String.fromEnvironment(
@@ -73,6 +81,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _wardCode = profile.wardCode;
     _idFrontUrl = profile.idCardFrontUrl;
     _idBackUrl = profile.idCardBackUrl;
+    _idFrontBytes = null;
+    _idBackBytes = null;
+    _identityTouched = false;
   }
 
   void _applyBloodType(DonorProfile profile) {
@@ -124,6 +135,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         _idBackBytes = bytes;
         _uploadingBack = true;
       }
+      _identityTouched = true;
       _errorMessage = null;
     });
 
@@ -159,6 +171,18 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Future<void> _save() async {
     if (_syncingProfile) return;
     if (!_formKey.currentState!.validate()) return;
+
+    final identityWarning = _identitySubmissionWarning();
+    if (identityWarning != null) {
+      setState(() => _errorMessage = identityWarning);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(identityWarning),
+          backgroundColor: Colors.orange.shade700,
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _saving = true;
@@ -212,6 +236,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final profile = widget.controller.state.profile;
     final bloodTypeLocked =
         _syncingProfile || profile?.bloodTypeVerificationStatus == 'verified';
+    final identityWarning = _identitySubmissionWarning();
+    final busy =
+        _saving || _syncingProfile || _uploadingFront || _uploadingBack;
 
     return Scaffold(
       appBar: AppBar(
@@ -250,8 +277,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             TextFormField(
               controller: _nameController,
               decoration: _dec('Họ và tên', Icons.person_outline_rounded),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Vui lòng nhập họ tên' : null,
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? 'Vui lòng nhập họ tên'
+                  : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -261,13 +289,16 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              key: ValueKey('blood-type-${_bloodType ?? 'empty'}-$bloodTypeLocked'),
+              key: ValueKey(
+                  'blood-type-${_bloodType ?? 'empty'}-$bloodTypeLocked'),
               initialValue: _bloodType,
               decoration: _dec('Nhóm máu', Icons.bloodtype_outlined),
               items: _bloodTypes
                   .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                   .toList(),
-              onChanged: bloodTypeLocked ? null : (v) => setState(() => _bloodType = v),
+              onChanged: bloodTypeLocked
+                  ? null
+                  : (v) => setState(() => _bloodType = v),
             ),
             if (bloodTypeLocked) ...[
               const SizedBox(height: 8),
@@ -313,7 +344,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             const SizedBox(height: 28),
             _sectionTitle('Xác thực căn cước công dân'),
             const SizedBox(height: 6),
-            if (profile != null) _verificationBadge(profile.idVerificationStatus),
+            if (profile != null)
+              _verificationBadge(profile.idVerificationStatus),
             if (profile?.idVerificationStatus == 'rejected' &&
                 (profile?.idRejectionReason ?? '').isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -338,6 +370,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               keyboardType: TextInputType.number,
               maxLength: 12,
               decoration: _dec('Số CCCD (12 số)', Icons.badge_outlined),
+              onChanged: (_) => setState(() => _identityTouched = true),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return null; // optional
                 if (v.trim().length != 12) return 'Số CCCD phải đủ 12 chữ số';
@@ -370,17 +403,21 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 ),
               ],
             ),
+            if (identityWarning != null) ...[
+              const SizedBox(height: 12),
+              _identityNotice(identityWarning, isDark),
+            ],
             const SizedBox(height: 28),
             SizedBox(
               height: 52,
               child: FilledButton.icon(
-                onPressed: (_saving || _syncingProfile) ? null : _save,
+                onPressed: busy ? null : _save,
                 style: FilledButton.styleFrom(
                   backgroundColor: PulseLinkTheme.primaryRed,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                 ),
-                icon: (_saving || _syncingProfile)
+                icon: busy
                     ? const SizedBox(
                         height: 20,
                         width: 20,
@@ -388,11 +425,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                             strokeWidth: 2.2, color: Colors.white),
                       )
                     : const Icon(Icons.save_rounded),
-                label: Text(_syncingProfile
-                    ? 'ĐANG ĐỒNG BỘ...'
-                    : _saving
-                        ? 'ĐANG LƯU...'
-                        : 'LƯU HỒ SƠ',
+                label: Text(
+                    _syncingProfile
+                        ? 'ĐANG ĐỒNG BỘ...'
+                        : (_uploadingFront || _uploadingBack)
+                            ? 'ĐANG TẢI ẢNH...'
+                            : _saving
+                                ? 'ĐANG LƯU...'
+                                : 'LƯU HỒ SƠ',
                     style: const TextStyle(
                         fontWeight: FontWeight.w900, letterSpacing: 1)),
               ),
@@ -487,6 +527,54 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
   }
 
+  String? _identitySubmissionWarning() {
+    if (!_identityTouched) return null;
+
+    final nationalId = _nationalIdController.text.trim();
+    final hasFront = _idFrontUrl?.isNotEmpty == true;
+    final hasBack = _idBackUrl?.isNotEmpty == true;
+
+    if (nationalId.isEmpty) {
+      return 'Bạn đã chọn ảnh CCCD nhưng chưa nhập số CCCD. Hồ sơ chỉ được gửi admin xác thực khi có đủ số CCCD và ảnh hai mặt.';
+    }
+
+    if (!hasFront || !hasBack) {
+      return 'Vui lòng tải đủ ảnh mặt trước và mặt sau CCCD để gửi admin xác thực.';
+    }
+
+    return null;
+  }
+
+  Widget _identityNotice(String message, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: isDark ? 0.18 : 0.12),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded,
+              color: Colors.orange.shade700, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: isDark ? Colors.orange.shade100 : Colors.orange.shade900,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _idImageSlot({
     required String label,
     required String? url,
@@ -496,12 +584,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     required bool isDark,
   }) {
     // Ưu tiên bytes vừa chọn (hiển thị tức thì), sau đó tới ảnh đã lưu trên server.
-    final DecorationImage? bgImage = previewBytes != null
-        ? DecorationImage(image: MemoryImage(previewBytes), fit: BoxFit.cover)
-        : (url != null
-            ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
+    final hasServerImage = url?.isNotEmpty == true;
+    final hasImage = previewBytes != null || hasServerImage;
+    final Widget? preview = previewBytes != null
+        ? Image.memory(
+            previewBytes,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+          )
+        : (hasServerImage
+            ? Image.network(
+                url!,
+                width: double.infinity,
+                height: double.infinity,
+                fit: BoxFit.cover,
+                webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                errorBuilder: (context, error, stackTrace) => Center(
+                  child: Icon(
+                    Icons.image_not_supported_outlined,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                    size: 28,
+                  ),
+                ),
+              )
             : null);
-    final hasImage = previewBytes != null || url != null;
 
     return InkWell(
       onTap: uploading ? null : onTap,
@@ -512,9 +619,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           color: isDark ? const Color(0xFF0B2747) : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
+            color:
+                (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
           ),
-          image: uploading ? null : bgImage,
         ),
         child: uploading
             ? const Center(child: CircularProgressIndicator(strokeWidth: 2.4))
@@ -529,18 +636,27 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                               fontSize: 12, fontWeight: FontWeight.w700)),
                     ],
                   )
-                : Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      color: Colors.black54,
-                      child: Text(label,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700)),
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(13),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (preview != null) preview,
+                        Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            color: Colors.black54,
+                            child: Text(label,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700)),
+                          ),
+                        ),
+                      ],
                     ),
                   )),
       ),

@@ -109,9 +109,17 @@ class MobileProfileController extends Controller
             }
         }
 
-        $hasFullIdSubmission = filled($payload['national_id'] ?? null)
-            && filled($payload['id_card_front_url'] ?? null)
-            && filled($payload['id_card_back_url'] ?? null);
+        $hasNationalId = filled($payload['national_id'] ?? null);
+        $hasIdFront = filled($payload['id_card_front_url'] ?? null);
+        $hasIdBack = filled($payload['id_card_back_url'] ?? null);
+        $hasAnyIdSubmission = $hasNationalId || $hasIdFront || $hasIdBack;
+        $hasFullIdSubmission = $hasNationalId && $hasIdFront && $hasIdBack;
+
+        if ($hasAnyIdSubmission && ! $hasFullIdSubmission) {
+            throw ValidationException::withMessages([
+                'national_id' => ['Cần nhập đủ số CCCD và tải ảnh hai mặt để gửi hồ sơ xác thực cho quản trị viên.'],
+            ]);
+        }
 
         if ($hasFullIdSubmission) {
             $updates['id_verification_status'] = 'pending';
