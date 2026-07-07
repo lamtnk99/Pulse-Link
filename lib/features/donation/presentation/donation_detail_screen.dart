@@ -182,9 +182,6 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
   }
 
   Widget _buildProgressCard(DonationCampaign campaign, bool isDark) {
-    final showCash = campaign.isFinancial;
-    final showPoints = campaign.isPoints;
-
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.all(16),
@@ -216,26 +213,14 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
             ),
           ),
           const SizedBox(height: 16),
-          if (showCash) ...[
-            _buildProgressRow(
-              label: 'Tấm lòng tài chính',
-              current: campaign.currentAmount,
-              target: campaign.targetAmount,
-              progress: campaign.financialProgress,
-              isCash: true,
-              campaign: campaign,
-            ),
-            if (showPoints) const SizedBox(height: 16),
-          ],
-          if (showPoints)
-            _buildProgressRow(
-              label: 'Điểm Hero đồng hành',
-              current: campaign.currentPoints.toDouble(),
-              target: campaign.targetPoints.toDouble(),
-              progress: campaign.pointsProgress,
-              isCash: false,
-              campaign: campaign,
-            ),
+          _buildProgressRow(
+            label: 'Quỹ quyên góp',
+            current: campaign.currentAmount,
+            target: campaign.targetAmount,
+            progress: campaign.progress,
+            isCash: true,
+            campaign: campaign,
+          ),
           // Social proof: cộng đồng đang cùng chung tay.
           if (campaign.donorCount > 0) ...[
             const SizedBox(height: 16),
@@ -736,11 +721,7 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
     final user = widget.controller.state.profile;
     _nameController.text = user?.name ?? '';
     
-    // Mọi chiến dịch đều nhận cả hai; mặc định mở tab Điểm nếu chiến dịch chỉ
-    // đặt mục tiêu điểm, còn lại mặc định Tiền mặt.
-    if (widget.campaign.hasPointsGoal && !widget.campaign.hasFinancialGoal) {
-      _selectedTypeIndex = 1;
-    }
+    // Mọi chiến dịch đều nhận cả tiền mặt lẫn điểm Hero; mặc định mở tab Tiền mặt.
   }
 
   @override
@@ -960,6 +941,18 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                       onTap: () => setState(() => _selectedPointsAmount = points),
                     );
                   }).toList(),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(Icons.swap_horiz_rounded, size: 15, color: DonationPalette.mutedText(isDark)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Tương đương ${NumberFormat('#,###').format(widget.campaign.amountFromPoints(_selectedPointsAmount))}đ '
+                      'góp vào quỹ (1 điểm = ${widget.campaign.pointValueVnd}đ)',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: DonationPalette.mutedText(isDark)),
+                    ),
+                  ],
                 ),
               ],
 

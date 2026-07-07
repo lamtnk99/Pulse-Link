@@ -215,12 +215,18 @@ class DonorSeeder extends Seeder
             ['Võ Gia Bảo', 'bao.vo@pulselink.test', 'O+', 10.8521, 106.6297, '79', '27004', 140],
             ['Bùi Khánh Linh', 'khanhlinh.bui@pulselink.test', 'A-', 10.8040, 106.7300, '79', '26876', 91],
             ['Hoàng Đức Nam', 'nam.hoang@pulselink.test', 'B-', 10.9700, 106.6500, '79', '25747', 103],
-            ['Đặng Thu Hà', 'ha.dang@pulselink.test', 'O-', 10.9574, 106.8427, '75', '25987', 87],
-            ['Mai Anh Tuấn', 'tuan.mai@pulselink.test', 'O+', 11.3352, 106.1099, '80', '27628', 118],
+            ['Đặng Thu Hà', 'ha.dang@pulselink.test', 'O-', 11.5340, 106.8890, '75', '25210', 87],
+            ['Mai Anh Tuấn', 'tuan.mai@pulselink.test', 'O+', 11.3100, 106.0980, '80', '25459', 118],
             ['Cao Minh Thư', 'thu.cao@pulselink.test', 'AB-', 10.0306, 105.7683, '92', '31135', 100],
             ['Phan Ngọc Diệp', 'diep.phan@pulselink.test', 'A+', 16.0718, 108.2140, '48', '20275', 77],
             ['Lý Bảo Châu', 'chau.ly@pulselink.test', 'O+', 21.0008, 105.8413, '01', '00292', 89],
             ['Trịnh Gia Hân', 'han.trinh@pulselink.test', 'B+', 16.4628, 107.5908, '46', '19753', 29],
+            // 5 tài khoản client demo mới — phân bổ Hải Phòng (2), Hà Nội, Hưng Yên, Bắc Ninh.
+            ['Bùi Ngọc Minh', 'minh.bui@pulselink.test', 'O+', 20.8570, 106.6830, '31', '11311', 15],
+            ['Bùi Đức Đại', 'dai.bui@pulselink.test', 'A+', 20.8580, 106.6930, '31', '11329', 22],
+            ['Phùng Văn Đại', 'dai.phung@pulselink.test', 'B+', 21.0350, 105.8340, '01', '00004', 30],
+            ['Đào Minh Quân', 'quan.dao@pulselink.test', 'O-', 20.6460, 106.0510, '33', '11953', 12],
+            ['Nguyễn Văn Dân', 'dan.nguyen@pulselink.test', 'AB+', 21.1830, 106.0760, '24', '09187', 40],
         ];
 
         $extraNames = [
@@ -233,8 +239,8 @@ class DonorSeeder extends Seeder
         $anchors = [
             ['79', '27301', 10.7565, 106.6594],
             ['79', '27004', 10.8040, 106.6530],
-            ['75', '25987', 10.9574, 106.8427],
-            ['80', '27628', 11.0850, 106.2050],
+            ['75', '25210', 11.5340, 106.8890],
+            ['80', '25459', 11.3100, 106.0980],
             ['92', '31135', 10.0452, 105.7469],
             ['48', '20275', 16.0471, 108.2068],
             ['01', '00292', 21.0285, 105.8542],

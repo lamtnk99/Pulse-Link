@@ -46,6 +46,53 @@ class AuthController extends Controller
         ]);
     }
 
+    public function register(Request $request): JsonResponse
+    {
+        $payload = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+            'phone' => ['nullable', 'string', 'max:24'],
+            'blood_type' => ['nullable', 'in:O-,O+,A-,A+,B-,B+,AB-,AB+'],
+            'province_code' => ['nullable', 'exists:provinces,code'],
+            'ward_code' => ['nullable', 'exists:wards,code'],
+        ]);
+
+        $user = User::query()->create([
+            'name' => $payload['name'],
+            'email' => $payload['email'],
+            'password' => Hash::make($payload['password']),
+            'phone' => $payload['phone'] ?? null,
+            'role' => 'donor',
+            'blood_type' => $payload['blood_type'] ?? null,
+            'hero_level' => 'Bronze Badge',
+            'badge_title' => 'Hiệp Sĩ Đồng',
+            'total_donations' => 0,
+            'points' => 0,
+            'province_code' => $payload['province_code'] ?? null,
+            'ward_code' => $payload['ward_code'] ?? null,
+            'id_verification_status' => 'unverified',
+            'last_seen_at' => now(),
+        ]);
+
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        return response()->json([
+            'data' => [
+                'token' => $token,
+                'user' => [
+                    'id' => (string) $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'hospital_id' => null,
+                    'permissions' => [],
+                    'blood_type' => $user->blood_type,
+                ],
+            ],
+        ], 201);
+    }
+
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();

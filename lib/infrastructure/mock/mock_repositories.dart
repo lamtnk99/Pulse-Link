@@ -38,6 +38,36 @@ class MockDonorRepository implements DonorRepository {
   Future<void> updateBaseLocation(GeoPoint location) async {
     // No-op for mock repository
   }
+
+  @override
+  Future<DonorProfile> updateProfile(Map<String, dynamic> fields) async {
+    await Future<void>.delayed(const Duration(milliseconds: 180));
+    final submittingId = (fields['national_id'] as String?)?.isNotEmpty ?? false;
+    final hasBothImages = (fields['id_card_front_url'] as String?)?.isNotEmpty == true &&
+        (fields['id_card_back_url'] as String?)?.isNotEmpty == true;
+    _profile = _profile.copyWith(
+      name: fields['name'] as String?,
+      phone: fields['phone'] as String?,
+      bloodType: fields['blood_type'] as String?,
+      dateOfBirth: fields['date_of_birth'] as String?,
+      gender: fields['gender'] as String?,
+      address: fields['address'] as String?,
+      provinceCode: fields['province_code'] as String?,
+      wardCode: fields['ward_code'] as String?,
+      nationalId: fields['national_id'] as String?,
+      idCardFrontUrl: fields['id_card_front_url'] as String?,
+      idCardBackUrl: fields['id_card_back_url'] as String?,
+      idVerificationStatus: submittingId && hasBothImages ? 'pending' : null,
+    );
+    return _profile;
+  }
+
+  @override
+  Future<String> uploadIdImage(String filePath) async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    final fileName = filePath.split(RegExp(r'[\\/]')).last;
+    return 'https://mock.pulselink.test/id-cards/${Uri.encodeComponent(fileName)}';
+  }
 }
 
 class MockDonationEventRepository implements DonationEventRepository {
@@ -287,18 +317,14 @@ class MockDonationFundService implements DonationFundService {
       title: 'Quỹ Cấp Cứu SOS Bệnh Nhân Nghèo',
       description: 'Hỗ trợ viện phí và chi phí truyền máu khẩn cấp cho các hoàn cảnh khó khăn tại bệnh viện Đa Khoa tỉnh.',
       imageUrl: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef',
-      type: 'both',
       targetAmount: 50000000.0,
       currentAmount: 35000000.0,
-      targetPoints: 5000,
-      currentPoints: 2450,
       status: 'active',
       beneficiaryName: 'Bé Gia Bảo, 6 tuổi',
       beneficiaryStory:
           'Gia Bảo mắc bệnh tan máu bẩm sinh, mỗi tháng em cần truyền máu để duy trì sự sống. Ba làm phụ hồ, mẹ bán vé số, khoản viện phí hơn 8 triệu mỗi đợt vượt xa sức của gia đình. "Con chỉ mong được đi học lại với các bạn" — Gia Bảo nói khi nằm trên giường bệnh.',
       impactUnit: 'ngày điều trị',
       impactPerUnitAmount: 250000,
-      impactPerUnitPoints: 50,
       urgencyLevel: 'critical',
       donorCount: 128,
       createdAt: DateTime.now().subtract(const Duration(days: 5)),
@@ -309,17 +335,14 @@ class MockDonationFundService implements DonationFundService {
       title: 'Hành Trình Đỏ 2026 - Bản Cao',
       description: 'Chiến dịch mang các phần quà dinh dưỡng và trang bị y tế đến các điểm trường vùng sâu vùng xa.',
       imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c',
-      type: 'points',
-      targetAmount: 0.0,
-      currentAmount: 0.0,
-      targetPoints: 10000,
-      currentPoints: 7200,
+      targetAmount: 30000000.0,
+      currentAmount: 18000000.0,
       status: 'active',
       beneficiaryName: 'Điểm trường Lũng Cú, Hà Giang',
       beneficiaryStory:
           'Điểm trường có 42 em nhỏ, cách trạm y tế gần nhất hơn 15km đường núi. Mùa lũ về, một vết thương nhỏ cũng có thể trở nên nguy hiểm khi không có bông băng, thuốc sát trùng. Điểm Hero bạn tích lũy nay có thể hóa thành một tủ thuốc thật đặt ngay tại lớp học.',
       impactUnit: 'bộ sơ cứu',
-      impactPerUnitPoints: 200,
+      impactPerUnitAmount: 50000,
       urgencyLevel: 'normal',
       donorCount: 54,
       createdAt: DateTime.now().subtract(const Duration(days: 10)),
@@ -390,17 +413,15 @@ class MockDonationFundService implements DonationFundService {
         title: prev.title,
         description: prev.description,
         imageUrl: prev.imageUrl,
-        type: prev.type,
         targetAmount: prev.targetAmount,
-        currentAmount: prev.currentAmount,
-        targetPoints: prev.targetPoints,
-        currentPoints: prev.currentPoints + points,
+        // Điểm quy đổi thẳng ra VND rồi gộp vào cùng trục tiền.
+        currentAmount: prev.currentAmount + prev.amountFromPoints(points),
+        pointValueVnd: prev.pointValueVnd,
         status: prev.status,
         beneficiaryName: prev.beneficiaryName,
         beneficiaryStory: prev.beneficiaryStory,
         impactUnit: prev.impactUnit,
         impactPerUnitAmount: prev.impactPerUnitAmount,
-        impactPerUnitPoints: prev.impactPerUnitPoints,
         urgencyLevel: prev.urgencyLevel,
         donorCount: prev.donorCount + 1,
         createdAt: prev.createdAt,

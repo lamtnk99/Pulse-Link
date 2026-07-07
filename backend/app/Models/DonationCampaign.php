@@ -10,16 +10,19 @@ class DonationCampaign extends Model
 {
     use HasFactory;
 
+    /**
+     * Tỉ giá quy đổi điểm Hero sang tiền: 1 điểm = 250 VND.
+     * Mọi khoản góp (tiền mặt hay điểm) đều gộp vào cùng một trục tiền.
+     */
+    public const POINT_VALUE_VND = 250;
+
     protected $fillable = [
         'public_id',
         'title',
         'description',
         'image_url',
-        'type',
         'target_amount',
         'current_amount',
-        'target_points',
-        'current_points',
         'status',
         'beneficiary_name',
         'beneficiary_story',
@@ -36,8 +39,6 @@ class DonationCampaign extends Model
             'expires_at' => 'datetime',
             'target_amount' => 'float',
             'current_amount' => 'float',
-            'target_points' => 'integer',
-            'current_points' => 'integer',
             'impact_per_unit_amount' => 'float',
             'impact_per_unit_points' => 'integer',
         ];

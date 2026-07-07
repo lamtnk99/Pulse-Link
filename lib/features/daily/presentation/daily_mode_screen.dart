@@ -9,6 +9,7 @@ import '../../community/domain/community_post.dart';
 import '../../community/presentation/community_post_card.dart';
 import '../../community/presentation/community_post_detail_screen.dart';
 import '../../profile/domain/donor_profile.dart';
+import '../../profile/presentation/profile_edit_screen.dart';
 import '../domain/donation_appointment.dart';
 import '../domain/donation_event.dart';
 import '../domain/past_donation.dart';
@@ -1054,16 +1055,12 @@ class _CampaignEventCard extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    final progress = campaign.isFinancial ? campaign.financialProgress : campaign.pointsProgress;
+    final progress = campaign.progress;
     final progressPercent = (progress * 100).round();
-    
-    final remaining = campaign.isFinancial
-        ? campaign.targetAmount - campaign.currentAmount
-        : (campaign.targetPoints - campaign.currentPoints).toDouble();
-        
-    final remainingText = campaign.isFinancial
-        ? '${NumberFormat.compact(locale: 'vi').format(remaining < 0 ? 0 : remaining)}đ'
-        : '${remaining < 0 ? 0 : remaining.toInt()} điểm';
+
+    final remaining = campaign.targetAmount - campaign.currentAmount;
+
+    final remainingText = '${NumberFormat.compact(locale: 'vi').format(remaining < 0 ? 0 : remaining)}đ';
 
     final urgency = DonationPalette.urgency(campaign.urgencyLevel);
     final beneficiary = (campaign.beneficiaryName ?? '').trim();
@@ -1810,6 +1807,35 @@ class _ProfileTab extends StatelessWidget {
           icon: Icons.qr_code_2_outlined,
         ),
         const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: FilledButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ProfileEditScreen(controller: controller),
+                ),
+              );
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: PulseLinkTheme.primaryRed,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text(
+              'CẬP NHẬT HỒ SƠ',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
           height: 48,
@@ -2699,8 +2725,7 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
   }
 
   Widget _buildMiniCard(bool isDark, DonationCampaign c) {
-    final isFinancial = c.isFinancial;
-    final progress = isFinancial ? c.financialProgress : c.pointsProgress;
+    final progress = c.progress;
     final percent = (progress * 100).round();
     final urgency = DonationPalette.urgency(c.urgencyLevel);
     final headline = (c.beneficiaryName ?? '').trim().isNotEmpty
@@ -2849,8 +2874,7 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
   }
 
   Widget _buildStoryCard(bool isDark, DonationCampaign c) {
-    final isFinancial = c.isFinancial;
-    final progress = isFinancial ? c.financialProgress : c.pointsProgress;
+    final progress = c.progress;
     final percent = (progress * 100).round();
     final urgency = DonationPalette.urgency(c.urgencyLevel);
     final beneficiary = (c.beneficiaryName ?? '').trim();

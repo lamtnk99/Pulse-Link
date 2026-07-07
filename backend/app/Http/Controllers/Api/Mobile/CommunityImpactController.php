@@ -7,7 +7,6 @@ use App\Models\CampaignDonation;
 use App\Models\DonationHistory;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Số liệu tác động tập thể của cộng đồng Pulse Link, phục vụ cảm giác
@@ -66,18 +65,13 @@ class CommunityImpactController extends Controller
             ->where('created_at', '>=', $startOfMonth)
             ->count();
 
-        // Tổng số tiền quyên góp trong tháng (quy đổi 1 điểm = 5,000 VND)
-        $cashAmountThisMonth = CampaignDonation::query()
+        // Mọi khoản góp (tiền mặt lẫn điểm Hero) đều đã được quy đổi và lưu trên
+        // cột `amount` (điểm quy đổi 1 điểm = 250 VND ngay khi quyên góp), nên chỉ
+        // cần cộng dồn `amount` — không nhân điểm lần nữa để tránh đếm trùng.
+        $totalDonatedAmount = CampaignDonation::query()
             ->where('payment_status', 'success')
             ->where('created_at', '>=', $startOfMonth)
             ->sum('amount');
-
-        $pointsThisMonth = CampaignDonation::query()
-            ->where('payment_status', 'success')
-            ->where('created_at', '>=', $startOfMonth)
-            ->sum('points');
-
-        $totalDonatedAmount = $cashAmountThisMonth + ($pointsThisMonth * 250);
 
         // 1 đơn vị máu ~ giúp được 3 người bệnh (ước lượng phổ biến trong ngành).
         $livesTouched = $donationsThisMonth * 3;

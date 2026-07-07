@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/pulse_link_controller.dart';
 import '../../../core/theme/pulse_link_theme.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
@@ -480,7 +481,33 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 36),
+                    const SizedBox(height: 16),
+                    // Link sang màn đăng ký tài khoản mới
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => RegisterScreen(controller: widget.controller),
+                          ),
+                        );
+                      },
+                      child: const Text.rich(
+                        TextSpan(
+                          text: 'Chưa có tài khoản? ',
+                          style: TextStyle(color: Colors.white54, fontSize: 13),
+                          children: [
+                            TextSpan(
+                              text: 'Đăng ký ngay',
+                              style: TextStyle(
+                                color: Color(0xFFE31837),
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     // Quick Login Test Accounts Section
                     const Text(
                       'TÀI KHOẢN THỬ NGHIỆM (CLICK ĐỂ ĐIỀN)',
@@ -500,6 +527,11 @@ class _LoginScreenState extends State<LoginScreen>
                         _buildQuickLoginChip('quan.tran@pulselink.test', 'Minh Quân (O+)'),
                         _buildQuickLoginChip('an.nguyen@pulselink.test', 'Hoài An (O-)'),
                         _buildQuickLoginChip('huy.le@pulselink.test', 'Quang Huy (A+)'),
+                        _buildQuickLoginChip('minh.bui@pulselink.test', 'Ngọc Minh - HP'),
+                        _buildQuickLoginChip('dai.bui@pulselink.test', 'Đức Đại - HP'),
+                        _buildQuickLoginChip('dai.phung@pulselink.test', 'Văn Đại - HN'),
+                        _buildQuickLoginChip('quan.dao@pulselink.test', 'Minh Quân - HY'),
+                        _buildQuickLoginChip('dan.nguyen@pulselink.test', 'Văn Dân - BN'),
                       ],
                     ),
                   ],

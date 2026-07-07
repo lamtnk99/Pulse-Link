@@ -97,4 +97,95 @@ class AuthApiTest extends TestCase
 
         $this->assertCount(0, $user->tokens);
     }
+
+    public function test_new_donor_can_register()
+    {
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Người Hiến Mới',
+            'email' => 'newdonor@test.com',
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
+            'phone' => '0900123456',
+            'blood_type' => 'O+',
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonStructure(['data' => ['token', 'user' => ['id', 'name', 'email', 'role']]])
+            ->assertJsonPath('data.user.role', 'donor');
+
+        $this->assertDatabaseHas('users', [
+            'email' => 'newdonor@test.com',
+            'role' => 'donor',
+            'id_verification_status' => 'unverified',
+        ]);
+    }
+
+    public function test_register_rejects_duplicate_email_and_mismatched_password()
+    {
+        User::factory()->create(['email' => 'taken@test.com']);
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Trùng Email',
+            'email' => 'taken@test.com',
+            'password' => 'secret123',
+            'password_confirmation' => 'secret123',
+        ])->assertStatus(422)->assertJsonValidationErrors(['email']);
+
+        $this->postJson('/api/auth/register', [
+            'name' => 'Sai Xác Nhận',
+            'email' => 'fresh@test.com',
+            'password' => 'secret123',
+            'password_confirmation' => 'different',
+        ])->assertStatus(422)->assertJsonValidationErrors(['password']);
+    }
+
+    public function test_donor_submitting_id_card_moves_to_pending_verification()
+    {
+        $user = User::factory()->create(['role' => 'donor']);
+        $token = $user->createToken('test-token')->plainTextToken;
+
+        $response = $this->postJson('/api/mobile/me/hero-pass', [
+            'national_id' => '012345678901',
+            'id_card_front_url' => 'https://cdn.test/front.jpg',
+            'id_card_back_url' => 'https://cdn.test/back.jpg',
+        ], [
+            'Authorization' => 'Bearer '.$token,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.id_verification_status', 'pending');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'national_id' => '012345678901',
+            'id_verification_status' => 'pending',
+        ]);
+    }
+
+    public function test_admin_can_approve_id_verification()
+    {
+        $donor = User::factory()->create([
+            'role' => 'donor',
+            'national_id' => '012345678901',
+            'id_card_front_url' => 'https://cdn.test/front.jpg',
+            'id_card_back_url' => 'https://cdn.test/back.jpg',
+            'id_verification_status' => 'pending',
+        ]);
+
+        $admin = User::factory()->create(['role' => 'system_admin']);
+        $token = $admin->createToken('admin-token')->plainTextToken;
+
+        $this->getJson('/api/admin/id-verifications?status=pending', [
+            'Authorization' => 'Bearer '.$token,
+        ])->assertOk()->assertJsonPath('data.0.id', $donor->id);
+
+        $this->postJson("/api/admin/id-verifications/{$donor->id}/approve", [], [
+            'Authorization' => 'Bearer '.$token,
+        ])->assertOk()->assertJsonPath('data.id_verification_status', 'verified');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $donor->id,
+            'id_verification_status' => 'verified',
+        ]);
+    }
 }

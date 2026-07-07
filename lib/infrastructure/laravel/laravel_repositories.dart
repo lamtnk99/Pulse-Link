@@ -39,6 +39,24 @@ class LaravelDonorRepository implements DonorRepository {
       },
     );
   }
+
+  @override
+  Future<DonorProfile> updateProfile(Map<String, dynamic> fields) async {
+    final json = await _client.postJson(
+      '/api/mobile/me/hero-pass',
+      body: fields,
+    );
+    return DonorProfile.fromJson(_unwrapData(json));
+  }
+
+  @override
+  Future<String> uploadIdImage(String filePath) async {
+    final json = await _client.uploadFile(
+      '/api/mobile/uploads',
+      filePath: filePath,
+    );
+    return _unwrapData(json)['url'] as String;
+  }
 }
 
 class LaravelDonationEventRepository implements DonationEventRepository {

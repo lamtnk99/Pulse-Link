@@ -13,23 +13,47 @@ class DonorProfile {
     required this.provinceCode,
     required this.heroPassCode,
     this.recognition = const DonorRecognition.empty(),
+    this.wardCode,
+    this.email,
+    this.phone,
+    this.dateOfBirth,
+    this.gender,
+    this.address,
+    this.nationalId,
+    this.idCardFrontUrl,
+    this.idCardBackUrl,
+    this.idVerificationStatus = 'unverified',
+    this.idRejectionReason,
   });
 
   factory DonorProfile.fromJson(Map<String, dynamic> json) {
     return DonorProfile(
       id: json['id'] as String,
       name: json['name'] as String,
-      bloodType: json['blood_type'] as String,
-      heroLevel: json['hero_level'] as String,
-      badgeTitle: json['badge_title'] as String,
-      totalDonations: json['total_donations'] as int,
-      lastDonationDate: DateTime.parse(json['last_donation_date'] as String),
-      points: json['points'] as int,
-      provinceCode: json['province_code'] as String,
-      heroPassCode: json['hero_pass_code'] as String,
+      bloodType: json['blood_type'] as String? ?? '',
+      heroLevel: json['hero_level'] as String? ?? 'Bronze Badge',
+      badgeTitle: json['badge_title'] as String? ?? 'Hiệp Sĩ Đồng',
+      totalDonations: json['total_donations'] as int? ?? 0,
+      lastDonationDate: DateTime.parse(
+        json['last_donation_date'] as String? ?? DateTime.now().toIso8601String(),
+      ),
+      points: json['points'] as int? ?? 0,
+      provinceCode: json['province_code'] as String? ?? '',
+      heroPassCode: json['hero_pass_code'] as String? ?? '',
       recognition: DonorRecognition.fromJson(
         json['recognition'] as Map<String, dynamic>?,
       ),
+      wardCode: json['ward_code'] as String?,
+      email: json['email'] as String?,
+      phone: json['phone'] as String?,
+      dateOfBirth: json['date_of_birth'] as String?,
+      gender: json['gender'] as String?,
+      address: json['address'] as String?,
+      nationalId: json['national_id'] as String?,
+      idCardFrontUrl: json['id_card_front_url'] as String?,
+      idCardBackUrl: json['id_card_back_url'] as String?,
+      idVerificationStatus: json['id_verification_status'] as String? ?? 'unverified',
+      idRejectionReason: json['id_rejection_reason'] as String?,
     );
   }
 
@@ -44,6 +68,19 @@ class DonorProfile {
   final String provinceCode;
   final String heroPassCode;
   final DonorRecognition recognition;
+
+  /// Thông tin cá nhân mở rộng + trạng thái xác thực CCCD (nullable, tương thích ngược).
+  final String? wardCode;
+  final String? email;
+  final String? phone;
+  final String? dateOfBirth;
+  final String? gender;
+  final String? address;
+  final String? nationalId;
+  final String? idCardFrontUrl;
+  final String? idCardBackUrl;
+  final String idVerificationStatus;
+  final String? idRejectionReason;
 
   DateTime get nextEligibleDate {
     return lastDonationDate.add(const Duration(days: 84));
@@ -71,6 +108,17 @@ class DonorProfile {
       'province_code': provinceCode,
       'hero_pass_code': heroPassCode,
       'recognition': recognition.toJson(),
+      'ward_code': wardCode,
+      'email': email,
+      'phone': phone,
+      'date_of_birth': dateOfBirth,
+      'gender': gender,
+      'address': address,
+      'national_id': nationalId,
+      'id_card_front_url': idCardFrontUrl,
+      'id_card_back_url': idCardBackUrl,
+      'id_verification_status': idVerificationStatus,
+      'id_rejection_reason': idRejectionReason,
     };
   }
 
@@ -86,6 +134,17 @@ class DonorProfile {
     String? provinceCode,
     String? heroPassCode,
     DonorRecognition? recognition,
+    String? wardCode,
+    String? email,
+    String? phone,
+    String? dateOfBirth,
+    String? gender,
+    String? address,
+    String? nationalId,
+    String? idCardFrontUrl,
+    String? idCardBackUrl,
+    String? idVerificationStatus,
+    String? idRejectionReason,
   }) {
     return DonorProfile(
       id: id ?? this.id,
@@ -99,6 +158,17 @@ class DonorProfile {
       provinceCode: provinceCode ?? this.provinceCode,
       heroPassCode: heroPassCode ?? this.heroPassCode,
       recognition: recognition ?? this.recognition,
+      wardCode: wardCode ?? this.wardCode,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      gender: gender ?? this.gender,
+      address: address ?? this.address,
+      nationalId: nationalId ?? this.nationalId,
+      idCardFrontUrl: idCardFrontUrl ?? this.idCardFrontUrl,
+      idCardBackUrl: idCardBackUrl ?? this.idCardBackUrl,
+      idVerificationStatus: idVerificationStatus ?? this.idVerificationStatus,
+      idRejectionReason: idRejectionReason ?? this.idRejectionReason,
     );
   }
 }

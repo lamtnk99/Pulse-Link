@@ -44,6 +44,16 @@ class MobileProfileController extends Controller
                     'name' => $user->ward->name,
                     'full_name' => $user->ward->full_name,
                 ] : null,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'date_of_birth' => $user->date_of_birth?->toDateString(),
+                'gender' => $user->gender,
+                'address' => $user->address,
+                'national_id' => $user->national_id,
+                'id_card_front_url' => $user->id_card_front_url,
+                'id_card_back_url' => $user->id_card_back_url,
+                'id_verification_status' => $user->id_verification_status ?? 'unverified',
+                'id_rejection_reason' => $user->id_rejection_reason,
                 'hero_pass_code' => 'PL-'.$user->id.'-'.strtoupper(str_replace(' ', '', $user->name)),
             ],
         ]);
@@ -58,12 +68,34 @@ class MobileProfileController extends Controller
             'longitude' => ['nullable', 'numeric'],
             'province_code' => ['nullable', 'exists:provinces,code'],
             'ward_code' => ['nullable', 'exists:wards,code'],
+            'name' => ['sometimes', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:24'],
+            'blood_type' => ['nullable', 'in:O-,O+,A-,A+,B-,B+,AB-,AB+'],
+            'date_of_birth' => ['nullable', 'date'],
+            'gender' => ['nullable', 'in:male,female,other'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'national_id' => ['nullable', 'string', 'size:12'],
+            'id_card_front_url' => ['nullable', 'url'],
+            'id_card_back_url' => ['nullable', 'url'],
         ]);
 
-        $user->update([
+        $updates = [
             ...$payload,
             'last_seen_at' => now(),
-        ]);
+        ];
+
+        // Nộp đủ số CCCD + 2 ảnh → chuyển sang chờ admin duyệt căn cước.
+        $hasFullIdSubmission = filled($payload['national_id'] ?? null)
+            && filled($payload['id_card_front_url'] ?? null)
+            && filled($payload['id_card_back_url'] ?? null);
+
+        if ($hasFullIdSubmission) {
+            $updates['id_verification_status'] = 'pending';
+            $updates['id_rejection_reason'] = null;
+            $updates['id_verified_at'] = null;
+        }
+
+        $user->update($updates);
 
         return $this->heroPass($request);
     }

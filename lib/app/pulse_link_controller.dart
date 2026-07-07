@@ -75,6 +75,11 @@ class PulseLinkController extends ChangeNotifier {
   StreamSubscription<MobileNotification>? _notificationSubscription;
   Timer? _locationSyncTimer;
   bool _isSyncingEmergencyLocation = false;
+
+  /// Số hiệu phiên đăng nhập. Mỗi lần đăng xuất sẽ tăng lên để các tác vụ nạp
+  /// hồ sơ đang chạy dở (initialize/refreshDailyData) không ghi đè lại state
+  /// sau khi người dùng đã thoát — tránh việc app tự bật lại vào màn chính.
+  int _sessionEpoch = 0;
   GeoPoint? _lastKnownLocation;
   PulseLinkState _state = PulseLinkState.initial();
   static const _themePreferenceKey = 'pulse_link_theme_preference';
@@ -104,6 +109,7 @@ class PulseLinkController extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
+    final epoch = _sessionEpoch;
     final themePreference = await _loadThemePreference();
     _state = _state.copyWith(
       isLoading: true,
@@ -122,7 +128,7 @@ class PulseLinkController extends ChangeNotifier {
       if (token == null || token.isEmpty) {
         _state = _state.copyWith(
           isLoading: false,
-          profile: null,
+          clearProfile: true,
         );
         notifyListeners();
         return;
@@ -137,6 +143,9 @@ class PulseLinkController extends ChangeNotifier {
       final notifications = await _emergencySignalService.fetchNotifications(
         profile: profile,
       );
+
+      // Người dùng đã đăng xuất trong lúc đang khởi tạo → bỏ qua kết quả.
+      if (epoch != _sessionEpoch) return;
 
       _state = _state.copyWith(
         isLoading: false,
@@ -184,6 +193,8 @@ class PulseLinkController extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Vô hiệu hoá mọi tác vụ nạp hồ sơ đang chạy dở của phiên hiện tại.
+    _sessionEpoch++;
     _stopEmergencyLocationSync();
     await _alertSubscription?.cancel();
     await _commitmentSubscription?.cancel();
@@ -196,16 +207,14 @@ class PulseLinkController extends ChangeNotifier {
     await prefs.remove('auth_token');
 
     _state = _state.copyWith(
-      profile: null,
+      clearProfile: true,
       events: const [],
       bookedAppointments: const [],
       communityPosts: const [],
       donationHistory: const [],
       notifications: const [],
       activeAlerts: const [],
-      activeAlert: null,
       activeEmergencyCommitment: null,
-      routePlan: null,
       emergencyCommitted: false,
       clearActiveAlert: true,
       clearActiveEmergencyCommitment: true,
@@ -224,6 +233,7 @@ class PulseLinkController extends ChangeNotifier {
   }
 
   Future<void> refreshDailyData() async {
+    final epoch = _sessionEpoch;
     final profile = await _donorRepository.getCurrentProfile();
     final origin = await _resolveCurrentLocation();
     final events = await _eventRepository.getUpcomingEvents(origin: origin);
@@ -234,6 +244,9 @@ class PulseLinkController extends ChangeNotifier {
       profile: profile,
     );
 
+    // Người dùng đã đăng xuất trong lúc đang tải → không ghi đè lại hồ sơ.
+    if (epoch != _sessionEpoch) return;
+
     _state = _state.copyWith(
       profile: profile,
       events: events,
@@ -243,6 +256,18 @@ class PulseLinkController extends ChangeNotifier {
       notifications: notifications,
     );
     notifyListeners();
+  }
+
+  /// Cập nhật hồ sơ người hiến (chỉ gửi các field thay đổi) rồi đồng bộ vào state.
+  Future<void> updateProfile(Map<String, dynamic> fields) async {
+    final updated = await _donorRepository.updateProfile(fields);
+    _state = _state.copyWith(profile: updated);
+    notifyListeners();
+  }
+
+  /// Tải ảnh CCCD lên và trả về URL công khai để đính vào hồ sơ.
+  Future<String> uploadIdImage(String filePath) {
+    return _donorRepository.uploadIdImage(filePath);
   }
 
   Future<void> handleAppResumed() async {

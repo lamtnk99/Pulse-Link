@@ -42,16 +42,13 @@ class DonationApiTest extends TestCase
         DonationCampaign::create([
             'title' => 'Campaign 1',
             'description' => 'Description 1',
-            'type' => 'both',
             'target_amount' => 50000000,
-            'target_points' => 5000,
             'status' => 'active',
         ]);
 
         DonationCampaign::create([
             'title' => 'Campaign 2',
             'description' => 'Description 2',
-            'type' => 'financial',
             'target_amount' => 10000000,
             'status' => 'completed', // completed shouldn't show in active list
         ]);
@@ -70,7 +67,6 @@ class DonationApiTest extends TestCase
         $campaign = DonationCampaign::create([
             'title' => 'SOS Case Fund',
             'description' => 'Help poor patient',
-            'type' => 'both',
             'target_amount' => 10000000,
             'target_points' => 1000,
             'status' => 'active',
@@ -104,8 +100,6 @@ class DonationApiTest extends TestCase
         $campaign = DonationCampaign::create([
             'title' => 'Village Food Pack',
             'description' => 'Sponsor food packs',
-            'type' => 'points',
-            'target_points' => 5000,
             'status' => 'active',
         ]);
 
@@ -130,7 +124,8 @@ class DonationApiTest extends TestCase
         ]);
 
         $campaign->refresh();
-        $this->assertEquals(200, $campaign->current_points);
+        // Điểm được quy đổi ra tiền (200 điểm × 250đ) và gộp vào current_amount.
+        $this->assertEquals(200 * DonationCampaign::POINT_VALUE_VND, $campaign->current_amount);
 
         Event::assertDispatched(CampaignProgressUpdated::class);
     }
@@ -140,8 +135,6 @@ class DonationApiTest extends TestCase
         $campaign = DonationCampaign::create([
             'title' => 'Village Food Pack',
             'description' => 'Sponsor food packs',
-            'type' => 'points',
-            'target_points' => 5000,
             'status' => 'active',
         ]);
 
@@ -160,7 +153,6 @@ class DonationApiTest extends TestCase
         $campaign = DonationCampaign::create([
             'title' => 'SOS Surgery Fund',
             'description' => 'Help heart surgery',
-            'type' => 'financial',
             'target_amount' => 100000000,
             'status' => 'active',
         ]);
@@ -192,7 +184,6 @@ class DonationApiTest extends TestCase
         $campaign = DonationCampaign::create([
             'title' => 'SOS Surgery Fund',
             'description' => 'Help heart surgery',
-            'type' => 'financial',
             'target_amount' => 100000000,
             'status' => 'active',
         ]);
@@ -223,7 +214,6 @@ class DonationApiTest extends TestCase
         $campaign = DonationCampaign::create([
             'title' => 'SOS Surgery Fund',
             'description' => 'Help heart surgery',
-            'type' => 'financial',
             'target_amount' => 100000000,
             'status' => 'active',
         ]);
@@ -260,7 +250,6 @@ class DonationApiTest extends TestCase
         $campaign = DonationCampaign::create([
             'title' => 'SOS Surgery Fund',
             'description' => 'Help heart surgery',
-            'type' => 'financial',
             'target_amount' => 100000000,
             'status' => 'active',
         ]);
@@ -289,7 +278,6 @@ class DonationApiTest extends TestCase
         $response = $this->postJson('/api/admin/campaigns', [
             'title' => 'Admin Campaign',
             'description' => 'Admin description',
-            'type' => 'both',
             'target_amount' => 20000000,
             'target_points' => 2000,
         ], [

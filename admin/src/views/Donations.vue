@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { Plus, Trash2, Edit, Eye, HeartHandshake, AlertCircle, CheckCircle, XCircle } from '@lucide/vue'
+import { Plus, Trash2, Edit, Eye, HeartHandshake, AlertCircle, CheckCircle, XCircle, ImagePlus, Loader2 } from '@lucide/vue'
 
 const props = defineProps<{
   apiBaseUrl: string
@@ -12,11 +12,8 @@ interface Campaign {
   title: string
   description: string
   image_url: string | null
-  type: 'financial' | 'points' | 'both'
   target_amount: number
   current_amount: number
-  target_points: number
-  current_points: number
   status: 'active' | 'completed' | 'cancelled'
   beneficiary_name: string | null
   beneficiary_story: string | null
@@ -44,6 +41,7 @@ interface Transaction {
 
 const campaigns = ref<Campaign[]>([])
 const isLoading = ref(false)
+const isUploading = ref(false)
 const showModal = ref(false)
 const showTxModal = ref(false)
 const errorMsg = ref<string | null>(null)
@@ -54,9 +52,7 @@ const editingCampaignId = ref<number | null>(null)
 const formTitle = ref('')
 const formDescription = ref('')
 const formImageUrl = ref('')
-const formType = ref<'financial' | 'points' | 'both'>('both')
 const formTargetAmount = ref<number>(50000000)
-const formTargetPoints = ref<number>(5000)
 const formExpiresAt = ref('')
 const formStatus = ref<'active' | 'completed' | 'cancelled'>('active')
 // Empathy fields
@@ -64,7 +60,6 @@ const formBeneficiaryName = ref('')
 const formBeneficiaryStory = ref('')
 const formImpactUnit = ref('')
 const formImpactPerUnitAmount = ref<number | null>(null)
-const formImpactPerUnitPoints = ref<number | null>(null)
 const formUrgencyLevel = ref<'' | 'normal' | 'urgent' | 'critical'>('')
 
 // Transactions state
@@ -76,8 +71,8 @@ const totalFinancialRaised = computed(() => {
   return campaigns.value.reduce((acc, c) => acc + c.current_amount, 0)
 })
 
-const totalPointsDonated = computed(() => {
-  return campaigns.value.reduce((acc, c) => acc + c.current_points, 0)
+const activeCampaignsCount = computed(() => {
+  return campaigns.value.filter((c) => c.status === 'active').length
 })
 
 async function fetchCampaigns() {
@@ -115,16 +110,13 @@ function openCreateModal() {
   formTitle.value = ''
   formDescription.value = ''
   formImageUrl.value = ''
-  formType.value = 'both'
   formTargetAmount.value = 50000000
-  formTargetPoints.value = 5000
   formExpiresAt.value = ''
   formStatus.value = 'active'
   formBeneficiaryName.value = ''
   formBeneficiaryStory.value = ''
   formImpactUnit.value = ''
   formImpactPerUnitAmount.value = null
-  formImpactPerUnitPoints.value = null
   formUrgencyLevel.value = ''
   showModal.value = true
 }
@@ -134,16 +126,13 @@ function openEditModal(campaign: Campaign) {
   formTitle.value = campaign.title
   formDescription.value = campaign.description
   formImageUrl.value = campaign.image_url ?? ''
-  formType.value = campaign.type
   formTargetAmount.value = campaign.target_amount
-  formTargetPoints.value = campaign.target_points
   formStatus.value = campaign.status
   formExpiresAt.value = campaign.expires_at ? campaign.expires_at.split('T')[0] : ''
   formBeneficiaryName.value = campaign.beneficiary_name ?? ''
   formBeneficiaryStory.value = campaign.beneficiary_story ?? ''
   formImpactUnit.value = campaign.impact_unit ?? ''
   formImpactPerUnitAmount.value = campaign.impact_per_unit_amount
-  formImpactPerUnitPoints.value = campaign.impact_per_unit_points
   formUrgencyLevel.value = campaign.urgency_level ?? ''
   showModal.value = true
 }
@@ -155,18 +144,13 @@ async function submitForm() {
     title: formTitle.value,
     description: formDescription.value,
     image_url: formImageUrl.value || null,
-    type: formType.value,
-    target_amount: formType.value !== 'points' ? formTargetAmount.value : 0,
-    target_points: formType.value !== 'financial' ? formTargetPoints.value : 0,
+    target_amount: formTargetAmount.value,
     expires_at: formExpiresAt.value || null,
     status: formStatus.value,
     beneficiary_name: formBeneficiaryName.value || null,
     beneficiary_story: formBeneficiaryStory.value || null,
     impact_unit: formImpactUnit.value || null,
-    impact_per_unit_amount:
-      formType.value !== 'points' ? formImpactPerUnitAmount.value : null,
-    impact_per_unit_points:
-      formType.value !== 'financial' ? formImpactPerUnitPoints.value : null,
+    impact_per_unit_amount: formImpactPerUnitAmount.value,
     urgency_level: formUrgencyLevel.value || null,
   }
 
@@ -193,6 +177,33 @@ async function submitForm() {
     await fetchCampaigns()
   } catch (e: any) {
     errorMsg.value = e.message
+  }
+}
+
+async function uploadImage(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  isUploading.value = true
+  errorMsg.value = null
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+
+    const res = await fetch(`${props.apiBaseUrl}/api/admin/uploads`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      body: fd,
+    })
+    const payload = await res.json()
+    if (!res.ok) throw new Error(payload.message || 'Không thể tải ảnh lên.')
+    formImageUrl.value = payload.data.url
+  } catch (e: any) {
+    errorMsg.value = e.message
+  } finally {
+    isUploading.value = false
+    input.value = ''
   }
 }
 
@@ -232,7 +243,7 @@ onMounted(() => {
           <HeartHandshake class="h-7 w-7 text-[#E31837]" />
           QUẢN LÝ QUYÊN GÓP
         </h1>
-        <p class="text-sm text-slate-500">Quản lý quỹ tài chính SOS và tích lũy đổi quà điểm Hero.</p>
+        <p class="text-sm text-slate-500">Quản lý các quỹ quyên góp. Người dùng có thể góp bằng tiền mặt hoặc điểm Hero (quy đổi 1 điểm = 250đ).</p>
       </div>
       <button
         @click="openCreateModal"
@@ -264,8 +275,8 @@ onMounted(() => {
         <div class="mt-2 text-3xl font-black text-emerald-600">{{ formatCurrency(totalFinancialRaised) }}</div>
       </div>
       <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Quỹ điểm Hero đóng góp</div>
-        <div class="mt-2 text-3xl font-black text-rose-600">{{ totalPointsDonated }} Pts</div>
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Chiến dịch đang diễn ra</div>
+        <div class="mt-2 text-3xl font-black text-rose-600">{{ activeCampaignsCount }}</div>
       </div>
     </div>
 
@@ -275,9 +286,7 @@ onMounted(() => {
         <thead>
           <tr class="border-b border-slate-200 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-500">
             <th class="p-4">Tên chiến dịch</th>
-            <th class="p-4">Hình thức</th>
-            <th class="p-4">Tài chính (VND)</th>
-            <th class="p-4">Điểm Hero</th>
+            <th class="p-4">Quỹ quyên góp (VND)</th>
             <th class="p-4">Thời hạn</th>
             <th class="p-4">Trạng thái</th>
             <th class="p-4 text-right">Hành động</th>
@@ -290,23 +299,8 @@ onMounted(() => {
               <div class="text-[11px] text-slate-500 font-normal line-clamp-1 mt-1">{{ c.description }}</div>
             </td>
             <td class="p-4">
-              <span v-if="c.type === 'financial'" class="rounded bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 font-bold">TIỀN MẶT</span>
-              <span v-else-if="c.type === 'points'" class="rounded bg-rose-50 text-rose-700 text-xs px-2 py-0.5 font-bold">ĐIỂM HERO</span>
-              <span v-else class="rounded bg-slate-100 text-slate-700 text-xs px-2 py-0.5 font-bold">CẢ HAI</span>
-            </td>
-            <td class="p-4">
-              <div v-if="c.type !== 'points'">
-                <div class="font-bold text-emerald-600">{{ formatCurrency(c.current_amount) }}</div>
-                <div class="text-[11px] text-slate-500 mt-0.5">Mục tiêu: {{ formatCurrency(c.target_amount) }}</div>
-              </div>
-              <span v-else class="text-slate-400">-</span>
-            </td>
-            <td class="p-4">
-              <div v-if="c.type !== 'financial'">
-                <div class="font-bold text-rose-600">{{ c.current_points }} Pts</div>
-                <div class="text-[11px] text-slate-500 mt-0.5">Mục tiêu: {{ c.target_points }} Pts</div>
-              </div>
-              <span v-else class="text-slate-400">-</span>
+              <div class="font-bold text-emerald-600">{{ formatCurrency(c.current_amount) }}</div>
+              <div class="text-[11px] text-slate-500 mt-0.5">Mục tiêu: {{ formatCurrency(c.target_amount) }}</div>
             </td>
             <td class="p-4 text-slate-500">{{ formatDate(c.expires_at) }}</td>
             <td class="p-4">
@@ -327,7 +321,7 @@ onMounted(() => {
             </td>
           </tr>
           <tr v-if="campaigns.length === 0">
-            <td colspan="7" class="p-8 text-center text-slate-400 font-bold">
+            <td colspan="5" class="p-8 text-center text-slate-400 font-bold">
               Không tìm thấy chiến dịch quyên góp nào.
             </td>
           </tr>
@@ -337,11 +331,13 @@ onMounted(() => {
 
     <!-- Add/Edit Campaign Modal -->
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div class="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
-        <h3 class="text-lg font-black text-slate-900 uppercase tracking-wide">
-          {{ editingCampaignId ? 'CẬP NHẬT CHIẾN DỊCH' : 'TẠO CHIẾN DỊCH MỚI' }}
-        </h3>
-        <form @submit.prevent="submitForm" class="mt-4 space-y-4">
+      <form @submit.prevent="submitForm" class="flex w-full max-w-lg flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-[90vh]">
+        <div class="px-6 pt-6 pb-4 border-b border-slate-100">
+          <h3 class="text-lg font-black text-slate-900 uppercase tracking-wide">
+            {{ editingCampaignId ? 'CẬP NHẬT CHIẾN DỊCH' : 'TẠO CHIẾN DỊCH MỚI' }}
+          </h3>
+        </div>
+        <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           <div>
             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tiêu đề chiến dịch</label>
             <input v-model="formTitle" type="text" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Ví dụ: Hỗ trợ viện phí ca SOS em bé A" />
@@ -354,43 +350,45 @@ onMounted(() => {
 
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Hình thức</label>
-              <select v-model="formType" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50">
-                <option value="both">Cả hai (Tiền & Điểm)</option>
-                <option value="financial">Quyên góp tiền mặt</option>
-                <option value="points">Quyên góp điểm Hero</option>
-              </select>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Mục tiêu quỹ (VND)</label>
+              <input v-model.number="formTargetAmount" type="number" min="0" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Thời hạn đóng</label>
               <input v-model="formExpiresAt" type="date" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" />
             </div>
           </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div v-if="formType !== 'points'">
-              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Mục tiêu tiền (VND)</label>
-              <input v-model.number="formTargetAmount" type="number" min="0" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" />
-            </div>
-            <div v-if="formType !== 'financial'">
-              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Mục tiêu điểm Hero</label>
-              <input v-model.number="formTargetPoints" type="number" min="0" required class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" />
-            </div>
-          </div>
+          <p class="text-[11px] text-slate-500 -mt-1">
+            Người dùng có thể góp bằng tiền mặt hoặc điểm Hero — điểm sẽ tự quy đổi ra VND (1 điểm = 250đ) và cộng vào cùng quỹ này.
+          </p>
 
           <div>
-            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Link ảnh đại diện (URL)</label>
-            <input v-model="formImageUrl" type="url" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="https://images.unsplash.com/..." />
+            <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Ảnh đại diện</label>
+            <div class="grid gap-3 sm:grid-cols-[180px_1fr]">
+              <div class="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                <img v-if="formImageUrl" :src="formImageUrl" alt="Ảnh chiến dịch" class="h-28 w-full object-cover" />
+                <div v-else class="grid h-28 place-items-center text-xs font-bold text-slate-400">Chưa có ảnh</div>
+              </div>
+              <div class="grid content-start gap-2">
+                <label class="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm font-bold text-slate-600 hover:bg-slate-100">
+                  <Loader2 v-if="isUploading" class="h-4 w-4 animate-spin" />
+                  <ImagePlus v-else class="h-4 w-4" />
+                  {{ isUploading ? 'Đang tải ảnh...' : 'Tải ảnh từ máy (jpg, png, webp)' }}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" :disabled="isUploading" @change="uploadImage" />
+                </label>
+                <input v-model="formImageUrl" type="url" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Hoặc nhập URL ảnh thủ công https://..." />
+              </div>
+            </div>
           </div>
 
           <!-- Empathy section -->
           <div class="rounded-xl border border-[#E31837]/20 bg-[#E31837]/[0.02] p-4 space-y-4">
             <div class="flex items-center gap-2 text-[#E31837]">
               <HeartHandshake class="h-4 w-4" />
-              <span class="text-xs font-black uppercase tracking-wide">Nội dung thấu cảm</span>
+              <span class="text-xs font-black uppercase tracking-wide">Câu chuyện hoàn cảnh</span>
             </div>
             <p class="text-[11px] text-slate-500 -mt-2">
-              Giúp người quyên góp hình dung mình đang giúp ai, và mỗi đóng góp tạo ra tác động gì. Bỏ trống nếu chưa có.
+              Cho người quyên góp biết họ đang giúp ai và mỗi khoản đóng góp dùng vào việc gì. Có thể bỏ trống.
             </p>
 
             <div>
@@ -400,7 +398,7 @@ onMounted(() => {
 
             <div>
               <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Câu chuyện hoàn cảnh</label>
-              <textarea v-model="formBeneficiaryStory" rows="4" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Kể câu chuyện thật, gần gũi về người thụ hưởng để chạm tới cảm xúc người đọc..."></textarea>
+              <textarea v-model="formBeneficiaryStory" rows="4" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Kể hoàn cảnh thật của người thụ hưởng: họ là ai, đang gặp khó khăn gì..."></textarea>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
@@ -419,15 +417,10 @@ onMounted(() => {
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
-              <div v-if="formType !== 'points'">
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">VND cho 1 đơn vị tác động</label>
-                <input v-model.number="formImpactPerUnitAmount" type="number" min="0" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Ví dụ: 35000" />
-              </div>
-              <div v-if="formType !== 'financial'">
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Điểm Hero cho 1 đơn vị</label>
-                <input v-model.number="formImpactPerUnitPoints" type="number" min="0" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Ví dụ: 50" />
-              </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-500 uppercase mb-1">VND cho 1 đơn vị tác động</label>
+              <input v-model.number="formImpactPerUnitAmount" type="number" min="0" class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-[#E31837] focus:ring-2 focus:ring-red-50" placeholder="Ví dụ: 35000" />
+              <p class="text-[11px] text-slate-400 mt-1">Số tiền để tạo ra một đơn vị tác động, dùng hiển thị "≈ N {{ formImpactUnit || 'đơn vị' }}" cho người quyên góp.</p>
             </div>
           </div>
 
@@ -440,12 +433,12 @@ onMounted(() => {
             </select>
           </div>
 
-          <div class="flex justify-end gap-2 pt-4 border-t border-slate-100">
-            <button type="button" @click="showModal = false" class="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-500 hover:bg-slate-50">Hủy</button>
-            <button type="submit" class="rounded-xl bg-[#E31837] px-5 py-2 text-sm font-bold text-white hover:bg-[#E31837]/90 transition">Xác nhận</button>
-          </div>
-        </form>
-      </div>
+        </div>
+        <div class="flex justify-end gap-2 px-6 py-4 border-t border-slate-100">
+          <button type="button" @click="showModal = false" class="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-500 hover:bg-slate-50">Hủy</button>
+          <button type="submit" class="rounded-xl bg-[#E31837] px-5 py-2 text-sm font-bold text-white hover:bg-[#E31837]/90 transition">Xác nhận</button>
+        </div>
+      </form>
     </div>
 
     <!-- View Transactions Modal -->

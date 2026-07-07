@@ -13,6 +13,8 @@ import {
   X,
   Settings,
   HeartHandshake,
+  Database,
+  ShieldCheck,
 } from '@lucide/vue'
 import SosModal from './components/SosModal.vue'
 import Login from './views/Login.vue'
@@ -25,11 +27,13 @@ import RbacManagement from './views/RbacManagement.vue'
 import SosAlerts from './views/SosAlerts.vue'
 import SettingsView from './views/Settings.vue'
 import Donations from './views/Donations.vue'
+import BloodInventoryAi from './views/BloodInventoryAi.vue'
+import IdVerifications from './views/IdVerifications.vue'
 import type { SosPayload } from './types'
 import pulseLinkIcon from './assets/pulse_link_icon.png'
 import pulseLinkLogo from './assets/pulse_link_logo.png'
 
-type ViewKey = 'dashboard' | 'hospitals' | 'sos' | 'events' | 'community' | 'rbac' | 'settings' | 'donations'
+type ViewKey = 'dashboard' | 'hospitals' | 'sos' | 'events' | 'community' | 'rbac' | 'settings' | 'donations' | 'inventory' | 'id-verifications'
 
 interface NavItem {
   key: ViewKey
@@ -73,10 +77,12 @@ let clockTimer: number | undefined
 
 const navigation: NavItem[] = [
   { key: 'dashboard', label: 'Tổng quan', shortLabel: 'Tổng quan', icon: LayoutDashboard },
+  { key: 'inventory', label: 'Kho máu & Dự báo AI', shortLabel: 'Kho & AI', icon: Database },
   { key: 'hospitals', label: 'Bệnh viện', shortLabel: 'BV', icon: Building2 },
   { key: 'sos', label: 'Cấp cứu SOS', shortLabel: 'SOS', icon: AlertTriangle },
   { key: 'events', label: 'Lịch hiến máu', shortLabel: 'Sự kiện', icon: CalendarRange },
   { key: 'donations', label: 'Quản lý Quyên góp', shortLabel: 'Quyên góp', icon: HeartHandshake },
+  { key: 'id-verifications', label: 'Xác thực căn cước', shortLabel: 'CCCD', icon: ShieldCheck },
   { key: 'community', label: 'Bài viết cộng đồng', shortLabel: 'Bài viết', icon: FileText },
   { key: 'rbac', label: 'Nhân sự & RBAC', shortLabel: 'RBAC', icon: ShieldAlert },
   { key: 'settings', label: 'Cấu hình AI', shortLabel: 'AI', icon: Settings },
@@ -92,6 +98,8 @@ const filteredNavigation = computed(() => {
     switch (item.key) {
       case 'dashboard':
         return true
+      case 'inventory':
+        return true
       case 'hospitals':
         return false // Chỉ có system_admin quản lý bệnh viện
       case 'sos':
@@ -100,6 +108,8 @@ const filteredNavigation = computed(() => {
         return user.permissions?.includes('events.manage')
       case 'donations':
         return user.permissions?.includes('events.manage')
+      case 'id-verifications':
+        return user.permissions?.includes('staff.manage')
       case 'community':
         return user.permissions?.includes('posts.manage')
       case 'rbac':
@@ -367,8 +377,10 @@ onBeforeUnmount(() => {
         <HospitalManagement v-else-if="currentView === 'hospitals'" />
         <DonationEvents v-else-if="currentView === 'events'" />
         <Donations v-else-if="currentView === 'donations'" :api-base-url="apiBaseUrl" />
+        <IdVerifications v-else-if="currentView === 'id-verifications'" :api-base-url="apiBaseUrl" />
         <CommunityPosts v-else-if="currentView === 'community'" />
         <RbacManagement v-else-if="currentView === 'rbac'" />
+        <BloodInventoryAi v-else-if="currentView === 'inventory'" :api-base-url="apiBaseUrl" :selected-hospital-id="selectedHospitalId" />
         <SettingsView v-else :api-base-url="apiBaseUrl" />
       </main>
     </div>

@@ -18,13 +18,14 @@ class DonationCampaignSeeder extends Seeder
         $huy = User::query()->where('email', 'huy.le@pulselink.test')->first();
         $vy = User::query()->where('email', 'vy.pham@pulselink.test')->first();
 
-        // 1. Financial Campaign
+        $pointValue = DonationCampaign::POINT_VALUE_VND;
+
+        // 1. Chiến dịch viện phí (chỉ nhận tiền mặt)
         $campaign1 = DonationCampaign::create([
             'public_id' => (string) Str::uuid(),
             'title' => 'Quỹ Hỗ Trợ Viện Phí Ca SOS Hoàn Cảnh Khó Khăn',
             'description' => 'Hỗ trợ chi phí điều trị khẩn cấp và truyền máu cho các bệnh nhi nghèo đang điều trị tại Khoa Cấp cứu Bệnh viện Nhi Đồng 1. Mỗi đóng góp của bạn là niềm hy vọng sống cho các em.',
             'image_url' => 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=800&auto=format&fit=crop&q=60',
-            'type' => 'financial',
             'target_amount' => 80000000.00,
             'current_amount' => 0.00,
             'status' => 'active',
@@ -60,24 +61,25 @@ class DonationCampaignSeeder extends Seeder
             $campaign1->increment('current_amount', $d['amount']);
         }
 
-        // 2. Points Campaign
+        // 2. Chiến dịch thiết bị y tế bản cao — nhiều người góp bằng điểm Hero,
+        //    điểm được quy đổi thẳng ra tiền (1 điểm = 250đ) và gộp vào tiến độ tiền.
         $campaign2 = DonationCampaign::create([
             'public_id' => (string) Str::uuid(),
-            'title' => 'Góp Điểm Hero - Đổi Thiết Bị Y Tế Bản Cao',
-            'description' => 'Pulse Link quy đổi số điểm Hero của bạn thành các tủ thuốc y tế bản làng, cặp phao cứu sinh và thiết bị sơ cứu gửi tới học sinh vùng biên giới Hà Giang trong mùa lũ.',
+            'title' => 'Góp Sức Đổi Thiết Bị Y Tế Bản Cao',
+            'description' => 'Pulse Link quy đổi đóng góp của bạn thành các tủ thuốc y tế bản làng, cặp phao cứu sinh và thiết bị sơ cứu gửi tới học sinh vùng biên giới Hà Giang trong mùa lũ. Bạn có thể góp bằng tiền mặt hoặc bằng điểm Hero tích lũy.',
             'image_url' => 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=800&auto=format&fit=crop&q=60',
-            'type' => 'points',
-            'target_points' => 10000,
-            'current_points' => 0,
+            'target_amount' => 30000000.00,
+            'current_amount' => 0.00,
             'status' => 'active',
             'beneficiary_name' => 'Điểm trường Lũng Cú, Hà Giang',
             'beneficiary_story' => 'Điểm trường Lũng Cú có 42 em nhỏ, cách trạm y tế gần nhất hơn 15km đường núi. Mùa lũ về, một vết thương nhỏ cũng có thể trở thành nguy hiểm khi không có bông băng, thuốc sát trùng. Thầy cô ở đây vẫn tự bỏ tiền túi mua thuốc dự phòng cho các em. Điểm Hero bạn tích lũy từ những lần hiến máu nay có thể hóa thành một tủ thuốc thật, đặt ngay tại lớp học của các em.',
             'impact_unit' => 'bộ sơ cứu',
-            'impact_per_unit_points' => 200,
+            'impact_per_unit_amount' => 50000,
             'urgency_level' => 'normal',
             'expires_at' => now()->addDays(45),
         ]);
 
+        // Các lượt góp bằng điểm Hero: giữ points gốc, quy đổi ra amount.
         $donations2 = [
             ['user' => $quan, 'pts' => 500, 'name' => 'Trần Minh Quân', 'msg' => 'Gửi chút hơi ấm tới vùng cao.', 'anon' => false],
             ['user' => $an, 'pts' => 800, 'name' => 'Nguyễn Hoài An', 'msg' => 'Quyên góp điểm tích lũy của tôi.', 'anon' => false],
@@ -86,10 +88,11 @@ class DonationCampaignSeeder extends Seeder
         ];
 
         foreach ($donations2 as $d) {
+            $amount = $d['pts'] * $pointValue;
             CampaignDonation::create([
                 'donation_campaign_id' => $campaign2->id,
                 'user_id' => $d['user']?->id,
-                'amount' => 0,
+                'amount' => $amount,
                 'points' => $d['pts'],
                 'payment_method' => 'points',
                 'payment_status' => 'success',
@@ -99,31 +102,27 @@ class DonationCampaignSeeder extends Seeder
                 'is_anonymous' => $d['anon'],
                 'created_at' => now()->subDays(rand(1, 8)),
             ]);
-            $campaign2->increment('current_points', $d['pts']);
+            $campaign2->increment('current_amount', $amount);
         }
 
-        // 3. Mixed Both Campaign
+        // 3. Chiến dịch Hành Trình Đỏ — nhận cả tiền mặt lẫn điểm, tất cả gộp về một trục tiền.
         $campaign3 = DonationCampaign::create([
             'public_id' => (string) Str::uuid(),
             'title' => 'Chung Tay Chiến Dịch Hành Trình Đỏ 2026',
-            'description' => 'Hành trình đỏ kết nối dòng máu Việt đi qua 40 tỉnh thành. Quỹ tiếp nhận cả đóng góp tài chính (tổ chức ngày hội hiến máu) và điểm Hero (chuẩn bị suất ăn bồi dưỡng cho người hiến máu).',
+            'description' => 'Hành trình đỏ kết nối dòng máu Việt đi qua 40 tỉnh thành. Quỹ tiếp nhận đóng góp để tổ chức ngày hội hiến máu và chuẩn bị suất ăn bồi dưỡng cho người hiến máu. Bạn có thể góp bằng tiền mặt hoặc điểm Hero.',
             'image_url' => 'https://images.unsplash.com/photo-1615461066841-6116e61058f4?w=800&auto=format&fit=crop&q=60',
-            'type' => 'both',
             'target_amount' => 50000000.00,
             'current_amount' => 0.00,
-            'target_points' => 5000,
-            'current_points' => 0,
             'status' => 'active',
             'beneficiary_name' => 'Ngân hàng máu toàn quốc',
-            'beneficiary_story' => 'Mỗi mùa hè, lượng máu dự trữ tại các bệnh viện lại chạm đáy khi sinh viên - nguồn hiến máu chính - về quê nghỉ hè. Hành Trình Đỏ đi qua 40 tỉnh thành để giữ cho dòng máu cứu người không bao giờ cạn. Đóng góp tài chính giúp tổ chức một ngày hội hiến máu; điểm Hero của bạn thành suất ăn ấm nóng tiếp sức cho những người vừa rời ghế hiến máu. Mỗi giọt máu kịp thời là một gia đình được giữ lại người thân.',
+            'beneficiary_story' => 'Mỗi mùa hè, lượng máu dự trữ tại các bệnh viện lại chạm đáy khi sinh viên - nguồn hiến máu chính - về quê nghỉ hè. Hành Trình Đỏ đi qua 40 tỉnh thành để giữ cho dòng máu cứu người không bao giờ cạn. Đóng góp của bạn giúp tổ chức một ngày hội hiến máu và tiếp sức bằng những suất ăn ấm nóng cho những người vừa rời ghế hiến máu. Mỗi giọt máu kịp thời là một gia đình được giữ lại người thân.',
             'impact_unit' => 'suất ăn tiếp sức',
             'impact_per_unit_amount' => 35000,
-            'impact_per_unit_points' => 50,
             'urgency_level' => 'urgent',
             'expires_at' => now()->addDays(20),
         ]);
 
-        // Cash donations for Campaign 3
+        // Góp tiền mặt cho chiến dịch 3.
         $donations3_cash = [
             ['user' => $an, 'amount' => 3000000, 'name' => 'Nguyễn Hoài An', 'msg' => 'Đồng hành cùng Hành trình Đỏ.', 'anon' => false],
             ['user' => null, 'amount' => 5000000, 'name' => 'Ẩn danh', 'msg' => 'Chúc ngày hội hiến máu thành công rực rỡ.', 'anon' => true],
@@ -146,17 +145,18 @@ class DonationCampaignSeeder extends Seeder
             $campaign3->increment('current_amount', $d['amount']);
         }
 
-        // Points donations for Campaign 3
+        // Góp bằng điểm cho chiến dịch 3 — quy đổi ra tiền, gộp cùng trục.
         $donations3_pts = [
             ['user' => $quan, 'pts' => 200, 'name' => 'Trần Minh Quân', 'msg' => 'Ủng hộ sữa và suất ăn.', 'anon' => false],
             ['user' => $vy, 'pts' => 500, 'name' => 'Phạm Thanh Vy', 'msg' => 'Góp phần bồi dưỡng người hiến máu.', 'anon' => false],
         ];
 
         foreach ($donations3_pts as $d) {
+            $amount = $d['pts'] * $pointValue;
             CampaignDonation::create([
                 'donation_campaign_id' => $campaign3->id,
                 'user_id' => $d['user']?->id,
-                'amount' => 0,
+                'amount' => $amount,
                 'points' => $d['pts'],
                 'payment_method' => 'points',
                 'payment_status' => 'success',
@@ -166,7 +166,7 @@ class DonationCampaignSeeder extends Seeder
                 'is_anonymous' => $d['anon'],
                 'created_at' => now()->subDays(rand(1, 3)),
             ]);
-            $campaign3->increment('current_points', $d['pts']);
+            $campaign3->increment('current_amount', $amount);
         }
     }
 }

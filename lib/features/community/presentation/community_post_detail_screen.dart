@@ -78,7 +78,7 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                 post.title,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      color: PulseLinkTheme.textColor(context),
                     ),
               ),
               const SizedBox(height: 8),
@@ -86,14 +86,14 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
                 post.publishedAt == null
                     ? 'Vừa cập nhật'
                     : 'Đăng ngày ${DateFormat('dd/MM/yyyy - HH:mm').format(post.publishedAt!)}',
-                style: const TextStyle(color: PulseLinkTheme.mutedText),
+                style: TextStyle(color: PulseLinkTheme.mutedColor(context)),
               ),
               if (post.excerpt != null && post.excerpt!.isNotEmpty) ...[
                 const SizedBox(height: 18),
                 Text(
                   post.excerpt!,
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: PulseLinkTheme.textColor(context),
                     height: 1.45,
                     fontWeight: FontWeight.w700,
                   ),
@@ -103,8 +103,8 @@ class _CommunityPostDetailScreenState extends State<CommunityPostDetailScreen> {
               for (final paragraph in paragraphs) ...[
                 Text(
                   paragraph,
-                  style: const TextStyle(
-                    color: Colors.white70,
+                  style: TextStyle(
+                    color: PulseLinkTheme.textColor(context),
                     height: 1.55,
                     fontSize: 15,
                   ),

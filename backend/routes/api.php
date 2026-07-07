@@ -21,10 +21,13 @@ use App\Http\Controllers\Api\Mobile\ChatController as MobileChatController;
 use App\Http\Controllers\Api\Admin\SettingsController as AdminSettingsController;
 use App\Http\Controllers\Api\Mobile\DonationController as MobileDonationFundController;
 use App\Http\Controllers\Api\Admin\CampaignManagerController;
+use App\Http\Controllers\Api\Admin\IdVerificationController;
 use App\Http\Controllers\Api\Mobile\MockPaymentController;
+use App\Http\Controllers\Api\Mobile\MobileUploadController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('auth/login', [AuthController::class, 'login']);
+Route::post('auth/register', [AuthController::class, 'register']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
@@ -42,6 +45,7 @@ Route::get('blood-journeys/{publicId}', [BloodJourneyController::class, 'show'])
 Route::prefix('mobile')->middleware(['role:donor'])->group(function () {
     Route::get('me/hero-pass', [MobileProfileController::class, 'heroPass']);
     Route::post('me/hero-pass', [MobileProfileController::class, 'updateHeroPass']);
+    Route::post('uploads', [MobileUploadController::class, 'store']);
     Route::get('me/donations', [MobileDonationController::class, 'history']);
     Route::get('me/notifications', [MobileNotificationController::class, 'index']);
     Route::post('me/notifications/{notification}/read', [MobileNotificationController::class, 'markRead']);
@@ -109,6 +113,24 @@ Route::prefix('admin')->middleware(['role:admin'])->group(function () {
     // Donation Campaigns Manager
     Route::apiResource('campaigns', CampaignManagerController::class)->except(['show']);
     Route::get('campaigns/{campaign}/transactions', [CampaignManagerController::class, 'transactions']);
+
+    // Xác thực căn cước người hiến máu
+    Route::get('id-verifications', [IdVerificationController::class, 'index']);
+    Route::post('id-verifications/{user}/approve', [IdVerificationController::class, 'approve']);
+    Route::post('id-verifications/{user}/reject', [IdVerificationController::class, 'reject']);
+
+    // Blood Stock & AI Forecasting
+    Route::get('blood-stocks', [\App\Http\Controllers\Api\Admin\BloodStockController::class, 'index']);
+    Route::post('blood-stocks', [\App\Http\Controllers\Api\Admin\BloodStockController::class, 'store']);
+    Route::put('blood-stocks/{id}/status', [\App\Http\Controllers\Api\Admin\BloodStockController::class, 'updateStatus']);
+    Route::get('blood-stocks/forecast', [\App\Http\Controllers\Api\Admin\BloodStockController::class, 'getForecast']);
+    Route::post('blood-stocks/forecast', [\App\Http\Controllers\Api\Admin\BloodStockController::class, 'getForecast']);
+    Route::post('blood-stocks/forecast/generate', [\App\Http\Controllers\Api\Admin\BloodStockController::class, 'getForecast']);
+    Route::get('blood-stocks/thresholds', [\App\Http\Controllers\Api\Admin\BloodStockController::class, 'getThresholds']);
+    Route::put('blood-stocks/thresholds', [\App\Http\Controllers\Api\Admin\BloodStockController::class, 'updateThresholds']);
+    Route::get('blood-stocks/alerts', [\App\Http\Controllers\Api\Admin\BloodStockController::class, 'getAlerts']);
+    Route::post('blood-stocks/alerts/{id}/mobilize', [\App\Http\Controllers\Api\Admin\BloodStockController::class, 'mobilizeAlert']);
+    Route::get('blood-stocks/reports', [\App\Http\Controllers\Api\Admin\BloodStockController::class, 'getReports']);
 });
 
 // Mock Payment Simulator & Webhook (Public Routes)

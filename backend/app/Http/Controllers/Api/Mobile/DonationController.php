@@ -141,7 +141,11 @@ class DonationController extends Controller
             ]);
         }
 
-        $donation = DB::transaction(function () use ($campaign, $user, $points, $payload) {
+        // Điểm Hero quy đổi thẳng ra tiền (1 điểm = 250đ) và gộp vào cùng trục
+        // tiền của chiến dịch. Vẫn lưu số điểm gốc để ghi nhận đóng góp.
+        $amountFromPoints = $points * DonationCampaign::POINT_VALUE_VND;
+
+        $donation = DB::transaction(function () use ($campaign, $user, $points, $amountFromPoints, $payload) {
             // Deduct user points
             $user->decrement('points', $points);
 
@@ -149,7 +153,7 @@ class DonationController extends Controller
             $donation = CampaignDonation::create([
                 'donation_campaign_id' => $campaign->id,
                 'user_id' => $user->id,
-                'amount' => 0,
+                'amount' => $amountFromPoints,
                 'points' => $points,
                 'payment_method' => 'points',
                 'payment_status' => 'success',
@@ -159,8 +163,8 @@ class DonationController extends Controller
                 'is_anonymous' => $payload['is_anonymous'] ?? false,
             ]);
 
-            // Increment campaign points
-            $campaign->increment('current_points', $points);
+            // Gộp giá trị quy đổi vào tiến độ tiền của chiến dịch.
+            $campaign->increment('current_amount', $amountFromPoints);
 
             return $donation;
         });
@@ -236,11 +240,9 @@ class DonationController extends Controller
             'title' => $campaign->title,
             'description' => $campaign->description,
             'image_url' => $campaign->image_url,
-            'type' => $campaign->type,
             'target_amount' => (float) $campaign->target_amount,
             'current_amount' => (float) $campaign->current_amount,
-            'target_points' => (int) $campaign->target_points,
-            'current_points' => (int) $campaign->current_points,
+            'point_value_vnd' => DonationCampaign::POINT_VALUE_VND,
             'status' => $campaign->status,
             'beneficiary_name' => $campaign->beneficiary_name,
             'beneficiary_story' => $campaign->beneficiary_story,

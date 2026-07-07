@@ -146,19 +146,14 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
   }
 
   Widget _buildCampaignCard(DonationCampaign campaign, bool isDark) {
-    // Thanh tiến độ chính: ưu tiên mục tiêu tài chính nếu có, không thì mục tiêu điểm.
-    // (Mọi chiến dịch đều nhận cả hai; đây chỉ là chỉ số hiển thị nổi bật nhất.)
-    final showFinancial = campaign.hasFinancialGoal;
-    final progress = showFinancial ? campaign.financialProgress : campaign.pointsProgress;
+    // Thanh tiến độ theo mục tiêu tiền. Mọi khoản góp (tiền mặt lẫn điểm Hero)
+    // đều gộp về cùng trục tiền này.
+    final progress = campaign.progress;
     final progressPercent = (progress * 100).round();
 
     // Framing tích cực, hướng hành động: nêu phần còn thiếu thay vì chỉ "tiến độ".
-    final remaining = showFinancial
-        ? campaign.targetAmount - campaign.currentAmount
-        : (campaign.targetPoints - campaign.currentPoints).toDouble();
-    final remainingText = showFinancial
-        ? '${_formatCurrency(remaining < 0 ? 0 : remaining)}đ'
-        : '${remaining < 0 ? 0 : remaining.toInt()} điểm';
+    final remaining = campaign.targetAmount - campaign.currentAmount;
+    final remainingText = '${_formatCurrency(remaining < 0 ? 0 : remaining)}đ';
 
     final urgency = DonationPalette.urgency(campaign.urgencyLevel);
     final daysLeft = campaign.daysLeft;

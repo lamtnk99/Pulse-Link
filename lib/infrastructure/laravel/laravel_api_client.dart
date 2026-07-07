@@ -41,6 +41,28 @@ class LaravelApiClient {
     return _decodeObject(response);
   }
 
+  /// Tải một tệp lên qua multipart/form-data (ví dụ ảnh CCCD). Trả về JSON body.
+  Future<Map<String, dynamic>> uploadFile(
+    String path, {
+    required String filePath,
+    String fileField = 'file',
+    Map<String, String> fields = const {},
+  }) async {
+    final token = await tokenProvider();
+    final request = http.MultipartRequest('POST', _resolve(path))
+      ..headers['Accept'] = 'application/json'
+      ..fields.addAll(fields)
+      ..files.add(await http.MultipartFile.fromPath(fileField, filePath));
+
+    if (token != null && token.isNotEmpty) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+
+    final streamed = await _httpClient.send(request);
+    final response = await http.Response.fromStream(streamed);
+    return _decodeObject(response);
+  }
+
   Uri _resolve(String path) {
     final cleanBase = baseUrl.toString().replaceFirst(RegExp(r'/$'), '');
     final cleanPath = path.replaceFirst(RegExp(r'^/'), '');
