@@ -20,6 +20,7 @@ class DailyScenarioSeeder extends Seeder
         $events = [
             [
                 'hospital_id' => $choRay->id,
+                'drive_type' => 'mobile',
                 'title' => 'Chủ Nhật Đỏ - Đại học Bách Khoa TP.HCM',
                 'organizer' => 'Hội Chữ thập đỏ TP.HCM',
                 'description' => 'Điểm hiến máu lưu động dành cho sinh viên, giảng viên và cư dân khu vực Quận 10. Người tham gia nên ăn nhẹ, uống đủ nước và mang giấy tờ tùy thân.',
@@ -36,6 +37,7 @@ class DailyScenarioSeeder extends Seeder
             ],
             [
                 'hospital_id' => $choRay->id,
+                'drive_type' => 'mobile',
                 'title' => 'Giọt Hồng Nhân Ái - Công viên phần mềm Quang Trung',
                 'organizer' => 'Trung tâm Hiến máu Nhân đạo TP.HCM',
                 'description' => 'Ngày hội hiến máu thường quy cho khối văn phòng và cư dân phía Tây Bắc thành phố, có khu vực nghỉ sau hiến và tư vấn sức khỏe tại chỗ.',
@@ -52,6 +54,7 @@ class DailyScenarioSeeder extends Seeder
             ],
             [
                 'hospital_id' => $bachMai->id,
+                'drive_type' => 'mobile',
                 'title' => 'Ngày hội Hiến máu - Bạch Mai',
                 'organizer' => 'Viện Huyết học Truyền máu Trung ương',
                 'description' => 'Chương trình tiếp nhận máu tập trung tại Hà Nội, ưu tiên người đã có lịch hẹn để rút ngắn thời gian chờ và bảo đảm phân luồng an toàn.',
@@ -68,6 +71,7 @@ class DailyScenarioSeeder extends Seeder
             ],
             [
                 'hospital_id' => $daNang->id,
+                'drive_type' => 'mobile',
                 'title' => 'Trao Giọt Máu Đào - Đà Nẵng',
                 'organizer' => 'Thành đoàn Đà Nẵng',
                 'description' => 'Sự kiện cộng đồng tại trung tâm thành phố Đà Nẵng, phù hợp cho người hiến nhắc lại và tình nguyện viên mới đăng ký lần đầu.',
@@ -84,6 +88,7 @@ class DailyScenarioSeeder extends Seeder
             ],
             [
                 'hospital_id' => $canTho->id,
+                'drive_type' => 'mobile',
                 'title' => 'Sắc Đỏ Tây Đô - Cần Thơ',
                 'organizer' => 'Hội Chữ thập đỏ Cần Thơ',
                 'description' => 'Điểm hiến máu cuối tuần tại Cần Thơ, hỗ trợ người dân đặt lịch trước và nhận nhắc lịch qua ứng dụng Pulse Link.',

@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   Edit3,
   Eye,
+  ImagePlus,
   Loader2,
   MoreHorizontal,
   Plus,
@@ -22,6 +23,7 @@ import type {
   PaginatedResponse,
   PaginationMeta,
   Province,
+  UploadResponse,
   Ward,
 } from '../types'
 
@@ -33,6 +35,7 @@ const provinces = ref<Province[]>([])
 const wards = ref<Ward[]>([])
 const isLoading = ref(false)
 const isSaving = ref(false)
+const isUploading = ref(false)
 const showModal = ref(false)
 const showCompleteModal = ref(false)
 const editingEvent = ref<DonationEvent | null>(null)
@@ -56,6 +59,7 @@ const filters = reactive({
 
 const form = reactive({
   hospitalId: null as number | null,
+  driveType: 'in_hospital' as 'in_hospital' | 'mobile',
   title: '',
   organizer: '',
   description: '',
@@ -210,6 +214,7 @@ function resetForm() {
   nextWeek.setDate(nextWeek.getDate() + 7)
 
   form.hospitalId = firstHospital?.id ?? null
+  form.driveType = 'in_hospital'
   form.title = ''
   form.organizer = firstHospital?.name ?? 'Đơn vị tiếp nhận máu'
   form.description = ''
@@ -306,6 +311,7 @@ function openEditModal(event: DonationEvent) {
   editingEvent.value = event
   errorMessage.value = ''
   form.hospitalId = event.hospital?.id ?? null
+  form.driveType = event.drive_type ?? 'in_hospital'
   form.title = event.title
   form.organizer = event.organizer
   form.description = event.description ?? ''
@@ -325,9 +331,38 @@ function openEditModal(event: DonationEvent) {
   void loadWards(form.provinceCode)
 }
 
+async function uploadImage(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  isUploading.value = true
+  errorMessage.value = ''
+  try {
+    const body = new FormData()
+    body.append('file', file)
+
+    const response = await fetch(`${apiBaseUrl}/api/admin/uploads`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      body,
+    })
+    if (!response.ok) await throwApiError(response)
+
+    const payload = (await response.json()) as UploadResponse
+    form.imageUrl = payload.data.url
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'Không thể tải ảnh lên.'
+  } finally {
+    isUploading.value = false
+    input.value = ''
+  }
+}
+
 function buildPayload() {
   const payload: Record<string, unknown> = {
     hospital_id: form.hospitalId,
+    drive_type: form.driveType,
     title: form.title,
     organizer: form.organizer,
     description: form.description,
@@ -531,6 +566,23 @@ watch(
   () => form.provinceCode,
   (provinceCode) => {
     void loadWards(provinceCode)
+  },
+)
+
+watch(
+  [() => form.driveType, () => form.hospitalId],
+  ([driveType, hospitalId]) => {
+    if (driveType === 'in_hospital' && hospitalId) {
+      const hospital = hospitals.value.find((h) => h.id === hospitalId)
+      if (hospital) {
+        form.organizer = hospital.name
+        form.locationName = hospital.address
+        form.provinceCode = hospital.province_code
+        form.wardCode = hospital.ward_code || ''
+        form.latitude = hospital.latitude
+        form.longitude = hospital.longitude
+      }
+    }
   },
 )
 
@@ -819,18 +871,36 @@ onMounted(async () => {
         </div>
         <div class="grid max-h-[72vh] gap-4 overflow-y-auto p-4 md:grid-cols-2">
           <label class="space-y-1 md:col-span-2"><span class="text-xs font-black uppercase text-slate-500">Tiêu đề</span><input v-model="form.title" required class="h-10 w-full rounded-md border border-slate-200 px-3 outline-none focus:border-[#E31837]" /></label>
+          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Loại hình đợt hiến</span><select v-model="form.driveType" :disabled="hasBookings" class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50"><option value="in_hospital">Tổ chức tại bệnh viện</option><option value="mobile">Ủy quyền / Hợp tác lưu động</option></select></label>
           <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Bệnh viện</span><select v-model="form.hospitalId" :disabled="hasBookings" class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50"><option v-for="hospital in hospitals" :key="hospital.id" :value="hospital.id">{{ hospital.name }}</option></select></label>
-          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Đơn vị tổ chức</span><input v-model="form.organizer" required class="h-10 w-full rounded-md border border-slate-200 px-3 outline-none focus:border-[#E31837]" /></label>
+          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Đơn vị tổ chức</span><input v-model="form.organizer" :disabled="form.driveType === 'in_hospital' || hasBookings" required class="h-10 w-full rounded-md border border-slate-200 px-3 outline-none focus:border-[#E31837] disabled:bg-slate-50" /></label>
           <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Ngày</span><input v-model="form.date" :disabled="hasBookings" type="date" required class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50" /></label>
           <div class="grid grid-cols-2 gap-3"><label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Bắt đầu</span><input v-model="form.startTime" :disabled="hasBookings" type="time" required class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50" /></label><label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Kết thúc</span><input v-model="form.endTime" :disabled="hasBookings" type="time" required class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50" /></label></div>
-          <label class="space-y-1 md:col-span-2"><span class="text-xs font-black uppercase text-slate-500">Địa điểm</span><input v-model="form.locationName" :disabled="hasBookings" required class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50" /></label>
-          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Tỉnh/thành</span><select v-model="form.provinceCode" :disabled="hasBookings" class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50"><option v-for="province in provinces" :key="province.code" :value="province.code">{{ province.full_name }}</option></select></label>
-          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Xã/phường</span><select v-model="form.wardCode" :disabled="hasBookings" class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50"><option v-for="ward in wards" :key="ward.code" :value="ward.code">{{ ward.full_name }}</option></select></label>
-          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Vĩ độ</span><input v-model.number="form.latitude" :disabled="hasBookings" type="number" step="0.000001" class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50" /></label>
-          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Kinh độ</span><input v-model.number="form.longitude" :disabled="hasBookings" type="number" step="0.000001" class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50" /></label>
+          <label class="space-y-1 md:col-span-2"><span class="text-xs font-black uppercase text-slate-500">Địa điểm</span><input v-model="form.locationName" :disabled="form.driveType === 'in_hospital' || hasBookings" required class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50" /></label>
+          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Tỉnh/thành</span><select v-model="form.provinceCode" :disabled="form.driveType === 'in_hospital' || hasBookings" class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50"><option v-for="province in provinces" :key="province.code" :value="province.code">{{ province.full_name }}</option></select></label>
+          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Xã/phường</span><select v-model="form.wardCode" :disabled="form.driveType === 'in_hospital' || hasBookings" class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50"><option v-for="ward in wards" :key="ward.code" :value="ward.code">{{ ward.full_name }}</option></select></label>
+          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Vĩ độ</span><input v-model.number="form.latitude" :disabled="form.driveType === 'in_hospital' || hasBookings" type="number" step="0.000001" class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50" /></label>
+          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Kinh độ</span><input v-model.number="form.longitude" :disabled="form.driveType === 'in_hospital' || hasBookings" type="number" step="0.000001" class="h-10 w-full rounded-md border border-slate-200 px-3 disabled:bg-slate-50" /></label>
           <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Chỉ tiêu</span><input v-model.number="form.capacity" min="1" type="number" class="h-10 w-full rounded-md border border-slate-200 px-3" /></label>
           <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Ưu tiên</span><select v-model="form.urgency" class="h-10 w-full rounded-md border border-slate-200 px-3"><option value="normal">Bình thường</option><option value="high">Cao</option></select></label>
-          <label class="space-y-1 md:col-span-2"><span class="text-xs font-black uppercase text-slate-500">Ảnh</span><input v-model="form.imageUrl" class="h-10 w-full rounded-md border border-slate-200 px-3" /></label>
+          <div class="space-y-1 md:col-span-2">
+            <span class="text-xs font-black uppercase text-slate-500">Ảnh</span>
+            <div class="grid gap-3 md:grid-cols-[220px_1fr]">
+              <div class="overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+                <img v-if="form.imageUrl" :src="form.imageUrl" alt="Ảnh đợt hiến" class="h-32 w-full object-cover" />
+                <div v-else class="grid h-32 place-items-center text-sm font-bold text-slate-400">Chưa có ảnh</div>
+              </div>
+              <div class="grid content-start gap-2">
+                <label class="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 bg-slate-50 text-sm font-black text-slate-600 hover:bg-slate-100">
+                  <Loader2 v-if="isUploading" class="h-4 w-4 animate-spin" />
+                  <ImagePlus v-else class="h-4 w-4" />
+                  {{ isUploading ? 'Đang tải ảnh...' : 'Tải ảnh từ máy (jpg, png, webp)' }}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" class="hidden" :disabled="isUploading" @change="uploadImage" />
+                </label>
+                <input v-model="form.imageUrl" class="h-10 w-full rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]" placeholder="Hoặc nhập URL ảnh thủ công https://..." />
+              </div>
+            </div>
+          </div>
           <label class="space-y-1 md:col-span-2"><span class="text-xs font-black uppercase text-slate-500">Mô tả</span><textarea v-model="form.description" rows="3" class="w-full rounded-md border border-slate-200 px-3 py-2"></textarea></label>
           <label class="flex items-center gap-2 text-sm font-bold text-slate-600"><input v-model="form.isPublished" type="checkbox" /> Xuất bản cho mobile</label>
           <p v-if="errorMessage" class="md:col-span-2 rounded-md bg-red-50 p-3 text-sm font-bold text-[#E31837]">{{ errorMessage }}</p>

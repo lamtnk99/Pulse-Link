@@ -187,6 +187,7 @@ export interface SosPayload {
 
 export interface DonationEvent {
   id: string
+  drive_type?: 'in_hospital' | 'mobile'
   title: string
   organizer: string
   description: string | null
@@ -271,3 +272,49 @@ export interface CommunityPost {
   views_count: number
   shares_count: number
 }
+
+export interface BloodStock {
+  id: number
+  hospital_id: number
+  blood_type: string
+  volume_ml: number
+  received_date: string
+  expiry_date: string
+  status: 'available' | 'used' | 'expired' | 'allocated'
+  donation_history_id?: number | null
+  donation_history?: {
+    id: number
+    certificate_id: string
+    user?: {
+      id: number
+      name: string
+    } | null
+  } | null
+  notes?: string | null
+}
+
+export interface BloodSafetyThreshold {
+  id: number
+  hospital_id: number
+  blood_type: string
+  min_units: number
+}
+
+export interface BloodDemandForecast {
+  blood_type: string
+  predicted_volume_ml: number
+  confidence_score: number
+  explanation: string
+}
+
+export interface SmartAlert {
+  id: number
+  hospital_id: number
+  blood_type: string
+  current_units: number
+  threshold_units: number
+  status: 'active' | 'resolved' | 'mobilized'
+  triggered_at: string
+  resolved_at?: string | null
+}
+

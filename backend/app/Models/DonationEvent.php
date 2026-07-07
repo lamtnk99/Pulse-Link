@@ -11,6 +11,7 @@ class DonationEvent extends Model
 
     protected $fillable = [
         'hospital_id',
+        'drive_type',
         'title',
         'organizer',
         'description',

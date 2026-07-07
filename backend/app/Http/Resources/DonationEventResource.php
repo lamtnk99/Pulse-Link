@@ -25,6 +25,7 @@ class DonationEventResource extends JsonResource
 
         return [
             'id' => (string) $this->id,
+            'drive_type' => $this->drive_type ?? 'in_hospital',
             'title' => $this->title,
             'organizer' => $this->organizer,
             'description' => $this->description,

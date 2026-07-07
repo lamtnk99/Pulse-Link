@@ -105,6 +105,8 @@ class ReverbRealtimeClient {
       WebSocketChannel? channel;
       try {
         channel = WebSocketChannel.connect(config.websocketUri);
+        // Hứng lỗi kết nối bất đồng bộ (ví dụ: Connection Refused) trong khối try-catch này
+        await channel.ready;
         attempt = 0;
 
         await for (final rawMessage in channel.stream) {

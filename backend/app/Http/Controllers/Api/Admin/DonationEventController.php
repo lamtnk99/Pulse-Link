@@ -283,7 +283,7 @@ class DonationEventController extends Controller
                     : $appointment->result_published_at,
             ]);
 
-            DonationHistory::query()->updateOrCreate(
+            $history = DonationHistory::query()->updateOrCreate(
                 ['donation_appointment_id' => $appointment->id],
                 $this->recognitionService->prepareCertificateAttributes([
                     'user_id' => $appointment->user_id,
@@ -298,6 +298,20 @@ class DonationEventController extends Controller
                     'status' => 'verified',
                     'notes' => $payload['result_summary'] ?? $payload['screening_notes'] ?? 'Ghi nhận từ lịch hiến máu '.$event->title,
                 ]),
+            );
+
+            // Tự động đồng bộ sang kho máu (BloodStock)
+            \App\Models\BloodStock::updateOrCreate(
+                ['donation_history_id' => $history->id],
+                [
+                    'hospital_id' => $event->hospital_id,
+                    'blood_type' => $appointment->user->blood_type,
+                    'volume_ml' => $payload['volume_ml'],
+                    'received_date' => $history->donated_at,
+                    'expiry_date' => \Illuminate\Support\Carbon::parse($history->donated_at)->addDays(35)->toDateString(),
+                    'status' => 'available',
+                    'notes' => 'Hiến máu tình nguyện từ sự kiện: ' . $event->title,
+                ]
             );
 
             if (! $alreadyCompleted) {
@@ -340,6 +354,7 @@ class DonationEventController extends Controller
 
         return $request->validate([
             'hospital_id' => ['nullable', 'integer', 'exists:hospitals,id'],
+            'drive_type' => ['sometimes', 'in:in_hospital,mobile'],
             'title' => [$prefix, 'string', 'max:255'],
             'organizer' => [$prefix, 'string', 'max:255'],
             'description' => ['nullable', 'string'],

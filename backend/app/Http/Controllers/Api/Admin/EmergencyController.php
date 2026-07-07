@@ -272,6 +272,20 @@ class EmergencyController extends Controller
                 ]),
             );
 
+            // Tự động đồng bộ sang kho máu (BloodStock)
+            \App\Models\BloodStock::updateOrCreate(
+                ['donation_history_id' => $history->id],
+                [
+                    'hospital_id' => $alert->hospital_id,
+                    'blood_type' => $commitment->donor->blood_type,
+                    'volume_ml' => $volumeMl,
+                    'received_date' => $history->donated_at,
+                    'expiry_date' => \Illuminate\Support\Carbon::parse($history->donated_at)->addDays(35)->toDateString(),
+                    'status' => 'available',
+                    'notes' => 'Hiến máu khẩn cấp SOS từ ca cấp cứu: ' . $alert->public_id,
+                ]
+            );
+
             $commitment->update([
                 'status' => 'donated',
                 'donation_volume_ml' => $volumeMl,
