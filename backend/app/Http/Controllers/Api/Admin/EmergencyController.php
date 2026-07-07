@@ -140,10 +140,7 @@ class EmergencyController extends Controller
             ->latest()
             ->limit(20)
             ->get()
-            ->filter(fn (EmergencyAlert $alert): bool => $this->bloodCompatibility->canDonateTo(
-                $donor->blood_type,
-                $alert->required_blood_type,
-            ))
+            ->filter(fn (EmergencyAlert $alert): bool => $this->donorMatchesAlertBloodMode($donor, $alert))
             ->each(function (EmergencyAlert $alert): void {
                 $alert->setRelation('currentCommitment', $alert->commitments->first());
             })
@@ -357,7 +354,7 @@ class EmergencyController extends Controller
         $existingJourney = $commitment->bloodJourney;
         $destinationTypePre = $payload['destination_type']
             ?? $existingJourney?->destination_type
-            ?? ($alert->status === 'fulfilled' ? 'reserve' : 'patient');
+            ?? $this->defaultJourneyDestination($alert);
         $stepKeysPre = collect(BloodJourney::defaultSteps($destinationTypePre))->pluck('step_key');
         $requestedStep = $payload['current_step'] ?? $existingJourney?->current_step ?? 'received';
         
@@ -471,13 +468,22 @@ class EmergencyController extends Controller
             ->where('donor_id', $donor->id)
             ->first();
 
+        abort_unless($this->donorMatchesAlertBloodMode($donor, $alert), 403, 'Nhóm máu của bạn không phù hợp với ca SOS này.');
         abort_if($commitment?->status === 'donated', 409, 'Ca SOS này đã được bệnh viện ghi nhận hiến máu.');
 
         abort_if($alert->status === 'fulfilled', 409, 'Cảm ơn bạn, ca hiến máu này đã nhận đủ đơn vị máu cần thiết. Hệ thống đã lưu ghi nhận và xin hẹn bạn ở lượt tiếp theo nhé!');
         abort_if($alert->status !== 'active', 409, 'Ca SOS này hiện không còn nhận thêm cam kết.');
+        abort_if($alert->expires_at?->isPast(), 409, 'Ca SOS này đã hết thời gian nhận cam kết.');
+
+        $hasActiveCommitment = $commitment && in_array($commitment->status, ['committed', 'en_route'], true);
+        abort_if(
+            $alert->broadcast_stopped_at !== null && ! $hasActiveCommitment,
+            409,
+            'Cảm ơn bạn, ca SOS này đã nhận đủ số đơn vị máu cần thiết và đã ngừng nhận thêm cam kết mới.'
+        );
 
         $commitmentValues = [
-            'status' => 'committed',
+            'status' => $hasActiveCommitment ? $commitment->status : 'committed',
             'latitude' => $payload['latitude'] ?? $commitment?->latitude,
             'longitude' => $payload['longitude'] ?? $commitment?->longitude,
             'eta_minutes' => $payload['eta_minutes'] ?? $commitment?->eta_minutes,
@@ -599,7 +605,7 @@ class EmergencyController extends Controller
     private function evaluateAlertFulfillment(EmergencyAlert $alert): void
     {
         $alert->refresh();
-        if ($alert->status !== 'active') {
+        if ($alert->status !== 'active' || $alert->broadcast_stopped_at !== null) {
             return;
         }
 
@@ -609,7 +615,7 @@ class EmergencyController extends Controller
         }
 
         DB::transaction(function () use ($alert): void {
-            $alert->update(['status' => 'fulfilled']);
+            $alert->update(['broadcast_stopped_at' => now()]);
         });
 
         $alert->load('hospital.province', 'hospital.ward', 'recipients.donor.province', 'commitments.donor.province', 'commitments.bloodJourney.steps');
@@ -617,9 +623,26 @@ class EmergencyController extends Controller
         $this->broadcastAlert($alert);
     }
 
+    private function donorMatchesAlertBloodMode($donor, EmergencyAlert $alert): bool
+    {
+        if (($alert->compatibility_mode ?? EmergencyAlert::COMPATIBILITY_COMPATIBLE) === EmergencyAlert::COMPATIBILITY_EXACT) {
+            return $donor->blood_type === $alert->required_blood_type;
+        }
+
+        return $this->bloodCompatibility->canDonateTo(
+            $donor->blood_type,
+            $alert->required_blood_type,
+        );
+    }
+
+    private function defaultJourneyDestination(EmergencyAlert $alert): string
+    {
+        return ($alert->status === 'fulfilled' || $alert->broadcast_stopped_at !== null) ? 'reserve' : 'patient';
+    }
+
     private function ensureBloodJourney(EmergencyAlert $alert, EmergencyCommitment $commitment, DonationHistory $history, ?string $destinationType = null): BloodJourney
     {
-        $destinationType ??= $alert->status === 'fulfilled' ? 'reserve' : 'patient';
+        $destinationType ??= $this->defaultJourneyDestination($alert);
         $journey = BloodJourney::query()->firstOrCreate(
             ['emergency_commitment_id' => $commitment->id],
             [

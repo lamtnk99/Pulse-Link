@@ -17,6 +17,7 @@ class EmergencyAlert {
     required this.message,
     this.currentCommitment,
     this.active = true,
+    this.acceptingCommitments = true,
   });
 
   factory EmergencyAlert.fromJson(Map<String, dynamic> json) {
@@ -54,6 +55,9 @@ class EmergencyAlert {
       currentCommitment: commitment,
       active: json['active'] as bool? ??
           (json.containsKey('status') ? json['status'] == 'active' : true),
+      acceptingCommitments: (json['accepting_commitments'] as bool?) ??
+          (json['active'] as bool?) ??
+          true,
     );
   }
 
@@ -71,6 +75,7 @@ class EmergencyAlert {
   final String message;
   final EmergencyCommitment? currentCommitment;
   final bool active;
+  final bool acceptingCommitments;
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 }

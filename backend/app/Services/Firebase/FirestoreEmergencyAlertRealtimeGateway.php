@@ -51,9 +51,11 @@ class FirestoreEmergencyAlertRealtimeGateway implements EmergencyAlertRealtimeGa
         return [
             'id' => ['stringValue' => $alert->public_id],
             'active' => ['booleanValue' => $alert->status === 'active'],
+            'accepting_commitments' => ['booleanValue' => $alert->acceptsNewCommitments()],
+            'compatibility_mode' => ['stringValue' => $alert->compatibility_mode ?? EmergencyAlert::COMPATIBILITY_COMPATIBLE],
             'blood_types' => [
                 'arrayValue' => [
-                    'values' => collect($this->bloodCompatibility->compatibleDonorTypesForRecipient($alert->required_blood_type))
+                    'values' => collect($this->dispatchBloodTypes($alert))
                         ->map(fn (string $bloodType): array => ['stringValue' => $bloodType])
                         ->values()
                         ->all(),
@@ -75,8 +77,20 @@ class FirestoreEmergencyAlertRealtimeGateway implements EmergencyAlertRealtimeGa
             'units_needed' => ['integerValue' => $alert->units_needed],
             'created_at' => ['timestampValue' => $alert->created_at?->toIso8601String() ?? now()->toIso8601String()],
             'expires_at' => ['timestampValue' => $alert->expires_at->toIso8601String()],
+            'broadcast_stopped_at' => $alert->broadcast_stopped_at
+                ? ['timestampValue' => $alert->broadcast_stopped_at->toIso8601String()]
+                : ['nullValue' => null],
             'message' => ['stringValue' => $alert->message],
         ];
+    }
+
+    private function dispatchBloodTypes(EmergencyAlert $alert): array
+    {
+        if (($alert->compatibility_mode ?? EmergencyAlert::COMPATIBILITY_COMPATIBLE) === EmergencyAlert::COMPATIBILITY_EXACT) {
+            return [$alert->required_blood_type];
+        }
+
+        return $this->bloodCompatibility->compatibleDonorTypesForRecipient($alert->required_blood_type);
     }
 
     private function resolveAccessToken(): ?string

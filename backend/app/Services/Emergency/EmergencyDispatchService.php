@@ -31,8 +31,10 @@ class EmergencyDispatchService
 
     public function activate(Hospital $hospital, array $payload): EmergencyAlert
     {
-        $compatibleTypes = $this->bloodCompatibility
-            ->compatibleDonorTypesForRecipient($payload['required_blood_type']);
+        $compatibilityMode = $payload['compatibility_mode'] ?? EmergencyAlert::COMPATIBILITY_COMPATIBLE;
+        $compatibleTypes = $compatibilityMode === EmergencyAlert::COMPATIBILITY_EXACT
+            ? [$payload['required_blood_type']]
+            : $this->bloodCompatibility->compatibleDonorTypesForRecipient($payload['required_blood_type']);
 
         $candidateDonors = $this->donors->compatibleActiveDonors($compatibleTypes);
         $dispatch = $this->dispatchWavePolicy->selectRecipients(

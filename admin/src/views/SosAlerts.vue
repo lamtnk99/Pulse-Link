@@ -169,6 +169,14 @@ function donatedCount(alert: EmergencyAlert) {
   return alert.commitments?.filter((commitment) => commitment.status === 'donated').length ?? 0
 }
 
+function compatibilityModeLabel(alert: EmergencyAlert) {
+  return alert.compatibility_mode === 'exact' ? 'Đúng nhóm' : 'Mở rộng tương thích'
+}
+
+function broadcastStopped(alert: EmergencyAlert) {
+  return alert.status === 'active' && alert.accepting_commitments === false
+}
+
 function openJourney(commitment: EmergencyCommitment) {
   editingJourneyCommitment.value = commitment
   journeyForm.destination_type = commitment.blood_journey?.destination_type ?? 'patient'
@@ -283,6 +291,12 @@ function saveJourney() {
             </span>
             <span v-if="alert.status === 'fulfilled'" class="rounded bg-emerald-50 px-2 py-1 text-[11px] font-black uppercase text-emerald-700">
               Đã đủ máu
+            </span>
+            <span v-else-if="broadcastStopped(alert)" class="rounded bg-amber-50 px-2 py-1 text-[11px] font-black uppercase text-amber-700">
+              Đã đủ · Ngừng phát
+            </span>
+            <span class="rounded bg-blue-50 px-2 py-1 text-[11px] font-bold text-blue-700">
+              {{ compatibilityModeLabel(alert) }}
             </span>
           </div>
         </article>

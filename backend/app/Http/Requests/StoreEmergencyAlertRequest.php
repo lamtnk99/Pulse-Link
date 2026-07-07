@@ -16,6 +16,7 @@ class StoreEmergencyAlertRequest extends FormRequest
         return [
             'hospital_id' => ['required', 'integer', 'exists:hospitals,id'],
             'required_blood_type' => ['required', 'in:O-,O+,A-,A+,B-,B+,AB-,AB+'],
+            'compatibility_mode' => ['nullable', 'in:exact,compatible'],
             'level' => ['required', 'in:level1,level2,level3'],
             'units_needed' => ['required', 'integer', 'min:1', 'max:99'],
             'message' => ['required', 'string', 'max:1000'],

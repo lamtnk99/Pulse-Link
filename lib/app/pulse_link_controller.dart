@@ -477,6 +477,11 @@ class PulseLinkController extends ChangeNotifier {
     }
 
     final alertCommitment = _restorableAlertCommitment(alert);
+    if (!alert.acceptingCommitments && alertCommitment == null) {
+      await _removeEmergencyAlert(alert.id);
+      return;
+    }
+
     if (alert.currentCommitment != null && alertCommitment == null) {
       await _removeEmergencyAlert(alert.id);
       if (alert.currentCommitment?.status ==

@@ -166,9 +166,12 @@ export interface EmergencyAlert {
   id: string
   database_id: number
   required_blood_type: string
+  compatibility_mode?: 'compatible' | 'exact'
   level: 'level1' | 'level2' | 'level3'
   units_needed: number
   status: string
+  accepting_commitments?: boolean
+  broadcast_stopped_at?: string | null
   message: string
   expires_at: string
   dispatch_summary: Record<string, number>
@@ -181,6 +184,7 @@ export interface EmergencyAlert {
 export interface SosPayload {
   hospital_id: number
   required_blood_type: string
+  compatibility_mode: 'compatible' | 'exact'
   level: 'level1' | 'level2' | 'level3'
   units_needed: number
   message: string

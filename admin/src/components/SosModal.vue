@@ -36,6 +36,7 @@ const dispatchLevels: Record<SosPayload['level'], { title: string; radius: strin
 const form = reactive<SosPayload>({
   hospital_id: props.defaultHospitalId ?? props.hospitals[0]?.id ?? 0,
   required_blood_type: 'O+',
+  compatibility_mode: 'compatible',
   level: 'level1',
   units_needed: 4,
   message: 'Báo động đỏ thiếu máu cho ca cấp cứu. Vui lòng phản hồi nếu bạn có thể đến hiến máu.',
@@ -123,6 +124,21 @@ watch(
               <input v-model.number="form.units_needed" min="1" max="99" type="number" class="h-11 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]" />
             </label>
           </div>
+
+          <label class="grid gap-1 text-sm font-bold text-slate-700">
+            Phạm vi nhóm máu nhận SOS
+            <select v-model="form.compatibility_mode" class="h-11 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]">
+              <option value="compatible">Mở rộng tương thích</option>
+              <option value="exact">Chỉ đúng nhóm máu đã chọn</option>
+            </select>
+            <span class="text-xs font-semibold leading-5 text-slate-500">
+              {{
+                form.compatibility_mode === 'compatible'
+                  ? 'Ưu tiên tốc độ: gửi tới các nhóm máu có thể truyền cho nhóm đang cần.'
+                  : 'Chỉ gửi tới người hiến có cùng nhóm máu với nhóm đang cần.'
+              }}
+            </span>
+          </label>
 
           <label class="grid gap-1 text-sm font-bold text-slate-700">
             Cấp điều phối

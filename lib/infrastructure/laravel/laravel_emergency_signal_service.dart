@@ -274,6 +274,7 @@ class LaravelBackedEmergencySignalService implements EmergencySignalService {
   ) sync* {
     for (final alert in alerts) {
       final signature = '${alert.active}:${alert.expiresAt.toIso8601String()}:'
+          '${alert.acceptingCommitments}:'
           '${alert.currentCommitment?.id ?? ''}:'
           '${alert.currentCommitment?.status.apiName ?? ''}:'
           '${alert.currentCommitment?.lastLocationAt?.toIso8601String() ?? ''}:'

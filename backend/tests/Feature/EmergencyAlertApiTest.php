@@ -46,12 +46,67 @@ class EmergencyAlertApiTest extends TestCase
         $response
             ->assertCreated()
             ->assertJsonPath('data.required_blood_type', 'O+')
+            ->assertJsonPath('data.compatibility_mode', 'compatible')
             ->assertJsonPath('data.status', 'active');
 
         $this->assertDatabaseHas('emergency_alert_recipients', [
             'wave' => 'local5km',
         ]);
         $this->assertSame(1, $fakeRealtimeGateway->published);
+    }
+
+    public function test_exact_blood_type_sos_dispatches_only_exact_donors(): void
+    {
+        Event::fake();
+        $fakeRealtimeGateway = new class implements EmergencyAlertRealtimeGateway
+        {
+            public function publish(EmergencyAlert $alert): void
+            {
+                //
+            }
+        };
+        $this->app->instance(EmergencyAlertRealtimeGateway::class, $fakeRealtimeGateway);
+
+        $this->seed();
+
+        $staff = User::query()->where('email', 'admin@pulselink.test')->firstOrFail();
+        $hospital = Hospital::query()->where('code', 'CR-79')->firstOrFail();
+        $exactDonor = User::factory()->create([
+            'role' => 'donor',
+            'blood_type' => 'A+',
+            'latitude' => $hospital->latitude,
+            'longitude' => $hospital->longitude,
+            'province_code' => $hospital->province_code,
+        ]);
+        $compatibleButNotExactDonor = User::factory()->create([
+            'role' => 'donor',
+            'blood_type' => 'O+',
+            'latitude' => $hospital->latitude,
+            'longitude' => $hospital->longitude,
+            'province_code' => $hospital->province_code,
+        ]);
+
+        $alertId = $this->postJson("/api/admin/emergency-alerts?admin_user_id={$staff->id}", [
+            'hospital_id' => $hospital->id,
+            'required_blood_type' => 'A+',
+            'compatibility_mode' => 'exact',
+            'level' => 'level1',
+            'units_needed' => 2,
+            'message' => 'Chi can dung nhom mau A+ cho ca cap cuu.',
+            'expires_at' => now()->addMinutes(45)->toIso8601String(),
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.compatibility_mode', 'exact')
+            ->json('data.id');
+
+        $alert = EmergencyAlert::query()
+            ->where('public_id', $alertId)
+            ->with('recipients.donor')
+            ->firstOrFail();
+
+        $this->assertTrue($alert->recipients->contains(fn ($recipient): bool => (int) $recipient->user_id === (int) $exactDonor->id));
+        $this->assertFalse($alert->recipients->contains(fn ($recipient): bool => (int) $recipient->user_id === (int) $compatibleButNotExactDonor->id));
+        $this->assertTrue($alert->recipients->every(fn ($recipient): bool => $recipient->donor->blood_type === 'A+'));
     }
 
     public function test_hospital_can_run_multiple_active_sos_alerts(): void
@@ -235,10 +290,22 @@ class EmergencyAlertApiTest extends TestCase
             'public_id' => (string) Str::uuid(),
             'hospital_id' => $hospital->id,
             'required_blood_type' => 'A+',
+            'compatibility_mode' => 'compatible',
             'level' => 'level1',
             'units_needed' => 4,
             'status' => 'active',
             'message' => 'Can ho tro mau A+ tai Viet Tiep.',
+            'expires_at' => now()->addMinutes(45),
+        ]);
+        $exactAlert = EmergencyAlert::query()->create([
+            'public_id' => (string) Str::uuid(),
+            'hospital_id' => $hospital->id,
+            'required_blood_type' => 'A+',
+            'compatibility_mode' => 'exact',
+            'level' => 'level1',
+            'units_needed' => 4,
+            'status' => 'active',
+            'message' => 'Chi can dung nhom mau A+ tai Viet Tiep.',
             'expires_at' => now()->addMinutes(45),
         ]);
         $incompatibleAlert = EmergencyAlert::query()->create([
@@ -261,10 +328,13 @@ class EmergencyAlertApiTest extends TestCase
             ])
             ->assertJsonMissing([
                 'id' => $incompatibleAlert->public_id,
+            ])
+            ->assertJsonMissing([
+                'id' => $exactAlert->public_id,
             ]);
     }
 
-    public function test_sos_is_fulfilled_only_after_required_donations_and_late_commit_is_soft_blocked(): void
+    public function test_sos_stops_broadcast_after_required_donations_and_late_commit_is_soft_blocked(): void
     {
         Event::fake();
         $fakeRealtimeGateway = new class implements EmergencyAlertRealtimeGateway
@@ -313,14 +383,19 @@ class EmergencyAlertApiTest extends TestCase
             'volume_ml' => 350,
         ])->assertOk();
 
-        $this->assertDatabaseHas('emergency_alerts', [
-            'public_id' => $alertId,
-            'status' => 'fulfilled',
-        ]);
+        $alert = EmergencyAlert::query()->where('public_id', $alertId)->firstOrFail();
+        $this->assertSame('active', $alert->status);
+        $this->assertNotNull($alert->broadcast_stopped_at);
         $this->assertDatabaseHas('emergency_commitments', [
             'donor_id' => $donors[1]->id,
             'status' => 'committed',
         ]);
+
+        $this->postJson("/api/mobile/sos-alerts/{$alertId}/commit", [
+            'donor_id' => $donors[2]->id,
+            'eta_minutes' => 20,
+        ])->assertStatus(409)
+            ->assertJsonPath('message', 'Cảm ơn bạn, ca SOS này đã nhận đủ số đơn vị máu cần thiết và đã ngừng nhận thêm cam kết mới.');
 
         $this->postJson("/api/admin/emergency-alerts/{$alertId}/complete?admin_user_id={$staff->id}")->assertOk();
 
@@ -332,12 +407,6 @@ class EmergencyAlertApiTest extends TestCase
             'user_id' => $donors[1]->id,
             'type' => 'sos_fulfilled',
         ]);
-
-        $this->postJson("/api/mobile/sos-alerts/{$alertId}/commit", [
-            'donor_id' => $donors[2]->id,
-            'eta_minutes' => 20,
-        ])->assertStatus(409)
-            ->assertJsonPath('message', 'Cảm ơn bạn, ca hiến máu này đã nhận đủ đơn vị máu cần thiết. Hệ thống đã lưu ghi nhận và xin hẹn bạn ở lượt tiếp theo nhé!');
     }
 
     public function test_admin_can_publish_blood_journey_for_sos_donation(): void

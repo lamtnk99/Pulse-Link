@@ -16,6 +16,7 @@ class EloquentEmergencyAlertRepository implements EmergencyAlertRepository
             'hospital_id' => $hospital->id,
             'created_by' => $payload['created_by'] ?? null,
             'required_blood_type' => $payload['required_blood_type'],
+            'compatibility_mode' => $payload['compatibility_mode'] ?? EmergencyAlert::COMPATIBILITY_COMPATIBLE,
             'level' => $payload['level'],
             'units_needed' => $payload['units_needed'],
             'status' => 'active',
