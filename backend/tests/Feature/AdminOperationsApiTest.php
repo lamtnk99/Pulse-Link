@@ -3,10 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\CommunityPost;
+use App\Models\ChatConversation;
 use App\Models\DonationAppointment;
 use App\Models\DonationEvent;
 use App\Models\DonationHistory;
 use App\Models\Hospital;
+use App\Models\MobileNotification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -154,6 +156,7 @@ class AdminOperationsApiTest extends TestCase
 
         $this->postJson("/api/admin/donation-events/{$event->id}/appointments/{$appointment->id}/complete?admin_user_id={$staff->id}", [
             'volume_ml' => 450,
+            'blood_type' => $donor->blood_type,
             'screening_status' => 'eligible',
             'screening_notes' => 'Đủ điều kiện sau khám sàng lọc.',
             'result_summary' => 'Kết quả xét nghiệm tổng quát ổn định.',
@@ -170,6 +173,25 @@ class AdminOperationsApiTest extends TestCase
             'volume_ml' => 450,
             'certificate_id' => 'PL-EVENT-'.$event->id.'-'.$appointment->id,
         ]);
+        $history = DonationHistory::query()
+            ->where('donation_appointment_id', $appointment->id)
+            ->firstOrFail();
+        $this->assertDatabaseHas('chat_conversations', [
+            'user_id' => $donor->id,
+            'context_type' => ChatConversation::CONTEXT_POST_DONATION_CHECKUP,
+        ]);
+        $this->assertDatabaseHas('mobile_notifications', [
+            'user_id' => $donor->id,
+            'type' => 'post_donation_checkup',
+            'title' => 'Hiến máu thành công',
+        ]);
+        $this->assertTrue(
+            MobileNotification::query()
+                ->where('user_id', $donor->id)
+                ->where('type', 'post_donation_checkup')
+                ->get()
+                ->contains(fn (MobileNotification $notification): bool => (int) ($notification->payload['donation_history_id'] ?? 0) === (int) $history->id)
+        );
         $donor->refresh();
         $this->assertSame($initialDonations + 1, $donor->total_donations);
         $this->assertSame($initialPoints + 450, $donor->points);
@@ -218,6 +240,7 @@ class AdminOperationsApiTest extends TestCase
 
         $this->postJson("/api/admin/donation-events/{$event->id}/appointments/{$flexibleAppointment->id}/complete?admin_user_id={$staff->id}", [
             'volume_ml' => 350,
+            'blood_type' => $secondDonor->blood_type,
             'screening_status' => 'eligible',
         ])
             ->assertOk()

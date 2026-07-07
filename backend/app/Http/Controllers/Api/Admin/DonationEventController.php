@@ -11,6 +11,7 @@ use App\Models\DonationHistory;
 use App\Models\Hospital;
 use App\Services\Admin\AdminUserResolver;
 use App\Services\Donations\DonationRecognitionService;
+use App\Services\Donations\PostDonationCareService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,7 @@ class DonationEventController extends Controller
     public function __construct(
         private readonly AdminUserResolver $adminUserResolver,
         private readonly DonationRecognitionService $recognitionService,
+        private readonly PostDonationCareService $postDonationCareService,
     ) {}
 
     public function index(Request $request)
@@ -331,6 +333,7 @@ class DonationEventController extends Controller
                     'regular',
                     $appointment->completed_at ?? now(),
                 );
+                $this->postDonationCareService->createForDonation($history);
             }
 
             $event->refreshBookedCount();
