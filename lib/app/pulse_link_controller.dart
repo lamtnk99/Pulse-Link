@@ -274,6 +274,16 @@ class PulseLinkController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<DonorProfile?> refreshProfile() async {
+    final epoch = _sessionEpoch;
+    final profile = await _donorRepository.getCurrentProfile();
+    if (epoch != _sessionEpoch) return null;
+
+    _state = _state.copyWith(profile: profile);
+    notifyListeners();
+    return profile;
+  }
+
   /// Tải ảnh CCCD lên (từ bytes) và trả về URL công khai để đính vào hồ sơ.
   Future<String> uploadIdImage(List<int> bytes, String filename) {
     return _donorRepository.uploadIdImage(bytes, filename);

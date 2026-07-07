@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../app/pulse_link_controller.dart';
 import '../../../core/theme/pulse_link_theme.dart';
 import '../../shared/location_picker.dart';
+import '../domain/donor_profile.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key, required this.controller});
@@ -35,6 +37,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Uint8List? _idBackBytes;
 
   bool _saving = false;
+  bool _syncingProfile = true;
   bool _uploadingFront = false;
   bool _uploadingBack = false;
   String? _errorMessage;
@@ -53,17 +56,43 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     super.initState();
     final p = widget.controller.state.profile;
     if (p != null) {
-      _nameController.text = p.name;
-      _phoneController.text = p.phone ?? '';
-      _addressController.text = p.address ?? '';
-      _nationalIdController.text = p.nationalId ?? '';
-      _bloodType = p.bloodType.isEmpty ? null : p.bloodType;
-      _gender = p.gender;
-      _dateOfBirth = p.dateOfBirth;
-      _provinceCode = p.provinceCode.isEmpty ? null : p.provinceCode;
-      _wardCode = p.wardCode;
-      _idFrontUrl = p.idCardFrontUrl;
-      _idBackUrl = p.idCardBackUrl;
+      _applyProfile(p);
+    }
+    unawaited(_syncLatestProfile());
+  }
+
+  void _applyProfile(DonorProfile profile) {
+    _nameController.text = profile.name;
+    _phoneController.text = profile.phone ?? '';
+    _addressController.text = profile.address ?? '';
+    _nationalIdController.text = profile.nationalId ?? '';
+    _bloodType = profile.bloodType.isEmpty ? null : profile.bloodType;
+    _gender = profile.gender;
+    _dateOfBirth = profile.dateOfBirth;
+    _provinceCode = profile.provinceCode.isEmpty ? null : profile.provinceCode;
+    _wardCode = profile.wardCode;
+    _idFrontUrl = profile.idCardFrontUrl;
+    _idBackUrl = profile.idCardBackUrl;
+  }
+
+  void _applyBloodType(DonorProfile profile) {
+    _bloodType = profile.bloodType.isEmpty ? null : profile.bloodType;
+  }
+
+  Future<void> _syncLatestProfile() async {
+    if (!_syncingProfile && mounted) {
+      setState(() => _syncingProfile = true);
+    }
+
+    try {
+      final latestProfile = await widget.controller.refreshProfile();
+      if (!mounted) return;
+      setState(() {
+        if (latestProfile != null) _applyProfile(latestProfile);
+        _syncingProfile = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _syncingProfile = false);
     }
   }
 
@@ -128,9 +157,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Future<void> _save() async {
+    if (_syncingProfile) return;
     if (!_formKey.currentState!.validate()) return;
-    final profile = widget.controller.state.profile;
-    final bloodTypeLocked = profile?.bloodTypeVerificationStatus == 'verified';
 
     setState(() {
       _saving = true;
@@ -138,6 +166,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     });
 
     try {
+      final latestProfile = await widget.controller.refreshProfile();
+      final bloodTypeLocked =
+          latestProfile?.bloodTypeVerificationStatus == 'verified';
+      if (latestProfile != null && bloodTypeLocked) {
+        setState(() => _applyBloodType(latestProfile));
+      }
+
       await widget.controller.updateProfile({
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
@@ -175,7 +210,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final profile = widget.controller.state.profile;
-    final bloodTypeLocked = profile?.bloodTypeVerificationStatus == 'verified';
+    final bloodTypeLocked =
+        _syncingProfile || profile?.bloodTypeVerificationStatus == 'verified';
 
     return Scaffold(
       appBar: AppBar(
@@ -225,6 +261,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
+              key: ValueKey('blood-type-${_bloodType ?? 'empty'}-$bloodTypeLocked'),
               initialValue: _bloodType,
               decoration: _dec('Nhóm máu', Icons.bloodtype_outlined),
               items: _bloodTypes
@@ -234,9 +271,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
             if (bloodTypeLocked) ...[
               const SizedBox(height: 8),
-              const Text(
-                'Nhóm máu đã được bệnh viện xác minh sau lần hiến máu và không thể tự chỉnh sửa.',
-                style: TextStyle(fontSize: 12, color: PulseLinkTheme.successGreen),
+              Text(
+                _syncingProfile
+                    ? 'Đang đồng bộ trạng thái nhóm máu với bệnh viện...'
+                    : 'Nhóm máu đã được bệnh viện xác minh sau lần hiến máu và không thể tự chỉnh sửa.',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: PulseLinkTheme.successGreen,
+                ),
               ),
             ],
             const SizedBox(height: 16),
@@ -332,13 +374,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             SizedBox(
               height: 52,
               child: FilledButton.icon(
-                onPressed: _saving ? null : _save,
+                onPressed: (_saving || _syncingProfile) ? null : _save,
                 style: FilledButton.styleFrom(
                   backgroundColor: PulseLinkTheme.primaryRed,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16)),
                 ),
-                icon: _saving
+                icon: (_saving || _syncingProfile)
                     ? const SizedBox(
                         height: 20,
                         width: 20,
@@ -346,7 +388,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                             strokeWidth: 2.2, color: Colors.white),
                       )
                     : const Icon(Icons.save_rounded),
-                label: Text(_saving ? 'Đang lưu...' : 'LƯU HỒ SƠ',
+                label: Text(_syncingProfile
+                    ? 'ĐANG ĐỒNG BỘ...'
+                    : _saving
+                        ? 'ĐANG LƯU...'
+                        : 'LƯU HỒ SƠ',
                     style: const TextStyle(
                         fontWeight: FontWeight.w900, letterSpacing: 1)),
               ),
