@@ -65,6 +65,7 @@ class AuthController extends Controller
             'phone' => $payload['phone'] ?? null,
             'role' => 'donor',
             'blood_type' => $payload['blood_type'] ?? null,
+            'blood_type_verification_status' => isset($payload['blood_type']) ? 'self_reported' : 'unreported',
             'hero_level' => 'Bronze Badge',
             'badge_title' => 'Hiệp Sĩ Đồng',
             'total_donations' => 0,

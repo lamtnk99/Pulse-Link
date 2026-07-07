@@ -70,6 +70,8 @@ class IdVerificationController extends Controller
             'email' => $user->email,
             'phone' => $user->phone,
             'blood_type' => $user->blood_type,
+            'blood_type_verification_status' => $user->blood_type_verification_status ?? ($user->blood_type ? 'self_reported' : 'unreported'),
+            'blood_type_verified_at' => $user->blood_type_verified_at?->toIso8601String(),
             'date_of_birth' => $user->date_of_birth?->toDateString(),
             'gender' => $user->gender,
             'address' => $user->address,

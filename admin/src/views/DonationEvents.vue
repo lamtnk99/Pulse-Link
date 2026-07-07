@@ -79,6 +79,7 @@ const form = reactive({
 
 const completeForm = reactive({
   volumeMl: 350,
+  bloodType: 'O+',
   screeningStatus: 'eligible' as 'pending' | 'eligible' | 'ineligible',
   screeningNotes: '',
   resultSummary: '',
@@ -95,6 +96,7 @@ const statusFilters = [
   { value: 'draft', label: 'Nháp' },
 ]
 const volumeOptions = [250, 350, 450]
+const bloodTypeOptions = ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']
 const appointmentStatusLabels: Record<DonationAppointmentStatus, string> = {
   booked: 'Đã đặt',
   checked_in: 'Đã check-in',
@@ -507,6 +509,7 @@ function toggleAppointmentActions(appointment: DonationAppointment) {
 function openCompleteModal(appointment: DonationAppointment) {
   completingAppointment.value = appointment
   completeForm.volumeMl = volumeForAppointment(appointment)
+  completeForm.bloodType = appointment.user?.blood_type || 'O+'
   completeForm.screeningStatus = appointment.screening_status ?? 'eligible'
   completeForm.screeningNotes = appointment.screening_notes ?? ''
   completeForm.resultSummary = appointment.result_summary ?? ''
@@ -532,6 +535,7 @@ async function submitCompletion() {
     },
     body: JSON.stringify({
       volume_ml: completeForm.volumeMl,
+      blood_type: completeForm.bloodType,
       screening_status: completeForm.screeningStatus,
       screening_notes: completeForm.screeningNotes,
       result_summary: completeForm.resultSummary,
@@ -924,6 +928,7 @@ onMounted(async () => {
         <div class="space-y-4 p-4">
           <p class="rounded-md bg-slate-50 p-3 text-sm font-bold text-slate-600">{{ completingAppointment.user?.name }} · {{ completingAppointment.user?.blood_type }}</p>
           <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Lượng máu</span><select v-model.number="completeForm.volumeMl" class="h-10 w-full rounded-md border border-slate-200 px-3"><option v-for="volume in volumeOptions" :key="volume" :value="volume">{{ volume }} ml</option></select></label>
+          <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Nhóm máu xác nhận tại bệnh viện</span><select v-model="completeForm.bloodType" class="h-10 w-full rounded-md border border-slate-200 px-3"><option v-for="bloodType in bloodTypeOptions" :key="bloodType" :value="bloodType">{{ bloodType }}</option></select></label>
           <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Kết quả khám sàng lọc</span><select v-model="completeForm.screeningStatus" class="h-10 w-full rounded-md border border-slate-200 px-3"><option value="eligible">Đủ điều kiện</option><option value="pending">Chờ bổ sung</option><option value="ineligible">Không đủ điều kiện</option></select></label>
           <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Ghi chú khám/xét nghiệm</span><textarea v-model="completeForm.screeningNotes" rows="3" class="w-full rounded-md border border-slate-200 px-3 py-2"></textarea></label>
           <label class="space-y-1"><span class="text-xs font-black uppercase text-slate-500">Tóm tắt kết quả cho mobile</span><textarea v-model="completeForm.resultSummary" rows="3" class="w-full rounded-md border border-slate-200 px-3 py-2"></textarea></label>

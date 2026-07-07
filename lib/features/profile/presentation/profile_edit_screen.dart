@@ -6,7 +6,6 @@ import 'package:image_picker/image_picker.dart';
 import '../../../app/pulse_link_controller.dart';
 import '../../../core/theme/pulse_link_theme.dart';
 import '../../shared/location_picker.dart';
-import '../domain/donor_profile.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key, required this.controller});
@@ -130,6 +129,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+    final profile = widget.controller.state.profile;
+    final bloodTypeLocked = profile?.bloodTypeVerificationStatus == 'verified';
 
     setState(() {
       _saving = true;
@@ -140,7 +141,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       await widget.controller.updateProfile({
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
-        'blood_type': _bloodType,
+        if (!bloodTypeLocked) 'blood_type': _bloodType,
         'gender': _gender,
         'date_of_birth': _dateOfBirth,
         'address': _addressController.text.trim(),
@@ -174,6 +175,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final profile = widget.controller.state.profile;
+    final bloodTypeLocked = profile?.bloodTypeVerificationStatus == 'verified';
 
     return Scaffold(
       appBar: AppBar(
@@ -188,7 +190,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: PulseLinkTheme.primaryRed.withOpacity(0.1),
+                  color: PulseLinkTheme.primaryRed.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -223,16 +225,23 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _bloodType,
+              initialValue: _bloodType,
               decoration: _dec('Nhóm máu', Icons.bloodtype_outlined),
               items: _bloodTypes
                   .map((t) => DropdownMenuItem(value: t, child: Text(t)))
                   .toList(),
-              onChanged: (v) => setState(() => _bloodType = v),
+              onChanged: bloodTypeLocked ? null : (v) => setState(() => _bloodType = v),
             ),
+            if (bloodTypeLocked) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Nhóm máu đã được bệnh viện xác minh sau lần hiến máu và không thể tự chỉnh sửa.',
+                style: TextStyle(fontSize: 12, color: PulseLinkTheme.successGreen),
+              ),
+            ],
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
-              value: _gender,
+              initialValue: _gender,
               decoration: _dec('Giới tính', Icons.wc_outlined),
               items: const [
                 DropdownMenuItem(value: 'male', child: Text('Nam')),
@@ -416,7 +425,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -457,7 +466,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           color: isDark ? const Color(0xFF0B2747) : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.1),
+            color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
           ),
           image: uploading ? null : bgImage,
         ),

@@ -12,6 +12,8 @@ interface IdVerification {
   email: string
   phone: string | null
   blood_type: string | null
+  blood_type_verification_status: 'unreported' | 'self_reported' | 'verified'
+  blood_type_verified_at: string | null
   date_of_birth: string | null
   gender: string | null
   address: string | null
@@ -45,6 +47,12 @@ const statusMeta = computed(() => ({
   verified: { label: 'Đã xác thực', class: 'bg-emerald-50 text-emerald-700' },
   rejected: { label: 'Bị từ chối', class: 'bg-red-50 text-red-700' },
   unverified: { label: 'Chưa nộp', class: 'bg-slate-100 text-slate-600' },
+}))
+
+const bloodTypeStatusMeta = computed(() => ({
+  unreported: { label: 'Chưa khai', class: 'bg-slate-100 text-slate-600' },
+  self_reported: { label: 'Tự khai', class: 'bg-amber-50 text-amber-700' },
+  verified: { label: 'Đã chốt', class: 'bg-emerald-50 text-emerald-700' },
 }))
 
 async function fetchItems() {
@@ -176,6 +184,10 @@ onMounted(fetchItems)
             <div class="text-xs text-slate-500">
               CCCD: <span class="font-bold text-slate-700">{{ u.national_id ?? '-' }}</span>
               · Nhóm máu: <span class="font-bold text-slate-700">{{ u.blood_type ?? '-' }}</span>
+              <span class="ml-1 rounded px-2 py-0.5 text-[11px] font-bold" :class="bloodTypeStatusMeta[u.blood_type_verification_status ?? 'unreported'].class">
+                {{ bloodTypeStatusMeta[u.blood_type_verification_status ?? 'unreported'].label }}
+              </span>
+              <span v-if="u.blood_type_verified_at" class="ml-1 text-slate-400">({{ formatDate(u.blood_type_verified_at) }})</span>
             </div>
             <div class="text-xs text-slate-500">
               Ngày sinh: {{ formatDate(u.date_of_birth) }} · Giới tính: {{ genderLabel(u.gender) }}

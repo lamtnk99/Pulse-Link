@@ -357,6 +357,7 @@ onBeforeUnmount(() => {
           :commitments="commitments"
           :is-loading="isLoading"
           @open-sos="openSosModal"
+          @open-sos-view="switchView('sos')"
         />
         <SosAlerts
           v-else-if="currentView === 'sos'"
@@ -380,7 +381,12 @@ onBeforeUnmount(() => {
         <IdVerifications v-else-if="currentView === 'id-verifications'" :api-base-url="apiBaseUrl" />
         <CommunityPosts v-else-if="currentView === 'community'" />
         <RbacManagement v-else-if="currentView === 'rbac'" />
-        <BloodInventoryAi v-else-if="currentView === 'inventory'" :api-base-url="apiBaseUrl" :selected-hospital-id="selectedHospitalId" />
+        <BloodInventoryAi
+          v-else-if="currentView === 'inventory'"
+          :api-base-url="apiBaseUrl"
+          :selected-hospital-id="selectedHospitalId"
+          @open-sos-view="switchView('sos')"
+        />
         <SettingsView v-else :api-base-url="apiBaseUrl" />
       </main>
     </div>

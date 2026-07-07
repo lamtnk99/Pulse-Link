@@ -105,6 +105,8 @@ export interface Donor {
   name: string
   phone?: string | null
   blood_type: string
+  blood_type_verification_status?: 'unreported' | 'self_reported' | 'verified'
+  blood_type_verified_at?: string | null
   hero_level: string
   province_code?: string | null
   province?: Province | null
@@ -317,4 +319,3 @@ export interface SmartAlert {
   triggered_at: string
   resolved_at?: string | null
 }
-

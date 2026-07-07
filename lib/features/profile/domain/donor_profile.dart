@@ -5,6 +5,8 @@ class DonorProfile {
     required this.id,
     required this.name,
     required this.bloodType,
+    this.bloodTypeVerificationStatus = 'self_reported',
+    this.bloodTypeVerifiedAt,
     required this.heroLevel,
     required this.badgeTitle,
     required this.totalDonations,
@@ -31,6 +33,8 @@ class DonorProfile {
       id: json['id'] as String,
       name: json['name'] as String,
       bloodType: json['blood_type'] as String? ?? '',
+      bloodTypeVerificationStatus: json['blood_type_verification_status'] as String? ?? 'self_reported',
+      bloodTypeVerifiedAt: json['blood_type_verified_at'] as String?,
       heroLevel: json['hero_level'] as String? ?? 'Bronze Badge',
       badgeTitle: json['badge_title'] as String? ?? 'Hiệp Sĩ Đồng',
       totalDonations: json['total_donations'] as int? ?? 0,
@@ -60,6 +64,8 @@ class DonorProfile {
   final String id;
   final String name;
   final String bloodType;
+  final String bloodTypeVerificationStatus;
+  final String? bloodTypeVerifiedAt;
   final String heroLevel;
   final String badgeTitle;
   final int totalDonations;
@@ -100,6 +106,8 @@ class DonorProfile {
       'id': id,
       'name': name,
       'blood_type': bloodType,
+      'blood_type_verification_status': bloodTypeVerificationStatus,
+      'blood_type_verified_at': bloodTypeVerifiedAt,
       'hero_level': heroLevel,
       'badge_title': badgeTitle,
       'total_donations': totalDonations,
@@ -126,6 +134,8 @@ class DonorProfile {
     String? id,
     String? name,
     String? bloodType,
+    String? bloodTypeVerificationStatus,
+    String? bloodTypeVerifiedAt,
     String? heroLevel,
     String? badgeTitle,
     int? totalDonations,
@@ -150,6 +160,9 @@ class DonorProfile {
       id: id ?? this.id,
       name: name ?? this.name,
       bloodType: bloodType ?? this.bloodType,
+      bloodTypeVerificationStatus:
+          bloodTypeVerificationStatus ?? this.bloodTypeVerificationStatus,
+      bloodTypeVerifiedAt: bloodTypeVerifiedAt ?? this.bloodTypeVerifiedAt,
       heroLevel: heroLevel ?? this.heroLevel,
       badgeTitle: badgeTitle ?? this.badgeTitle,
       totalDonations: totalDonations ?? this.totalDonations,

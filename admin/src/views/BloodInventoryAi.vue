@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import {
   Activity,
   AlertTriangle,
@@ -19,13 +19,20 @@ import {
 } from '@lucide/vue'
 import type { BloodStock, BloodSafetyThreshold, BloodDemandForecast, SmartAlert } from '../types'
 
+type InventoryTab = 'inventory' | 'forecast' | 'alerts' | 'reports'
+
 const props = defineProps<{
   apiBaseUrl?: string
   selectedHospitalId?: number | null
 }>()
 
+const emit = defineEmits<{
+  openSosView: []
+}>()
+
 const apiBase = props.apiBaseUrl ?? ''
-const currentTab = ref<'inventory' | 'forecast' | 'alerts' | 'reports'>('inventory')
+const currentTab = ref<InventoryTab>('inventory')
+const tabNavigationRef = ref<HTMLElement | null>(null)
 
 // State variables
 const inventoryData = ref<BloodStock[]>([])
@@ -573,6 +580,16 @@ function formatVolume(ml: number) {
   return `${new Intl.NumberFormat('vi-VN').format(ml)} ml`
 }
 
+async function openInventoryTab(tab: InventoryTab) {
+  currentTab.value = tab
+  await nextTick()
+  tabNavigationRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function openSosView() {
+  emit('openSosView')
+}
+
 // SVG Charts Helper
 const maxForecastVal = computed(() => {
   if (forecasts.value.length === 0) return 3000
@@ -618,7 +635,11 @@ onMounted(async () => {
 
     <!-- Thống kê nhanh / Card indicators -->
     <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <button
+        type="button"
+        class="w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-100"
+        @click="openInventoryTab('inventory')"
+      >
         <div class="flex items-center justify-between">
           <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Tồn kho hiện tại</span>
           <div class="grid h-8 w-8 place-items-center rounded bg-slate-100 text-slate-600">
@@ -629,9 +650,13 @@ onMounted(async () => {
           <strong class="text-3xl font-black text-slate-950">{{ stats.total_units ?? 0 }}</strong>
           <span class="text-xs font-bold text-slate-500">túi máu</span>
         </div>
-      </article>
+      </button>
 
-      <article class="rounded-xl border border-red-100 bg-white p-5 shadow-sm">
+      <button
+        type="button"
+        class="w-full rounded-xl border border-red-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-100"
+        @click="openInventoryTab('inventory')"
+      >
         <div class="flex items-center justify-between">
           <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Sắp hết hạn (&lt;7 ngày)</span>
           <div class="grid h-8 w-8 place-items-center rounded bg-amber-50 text-amber-500">
@@ -642,9 +667,13 @@ onMounted(async () => {
           <strong class="text-3xl font-black text-amber-600">{{ stats.expiring_units ?? 0 }}</strong>
           <span class="text-xs font-bold text-slate-500">túi cần lưu ý</span>
         </div>
-      </article>
+      </button>
 
-      <article class="rounded-xl border border-red-100 bg-white p-5 shadow-sm">
+      <button
+        type="button"
+        class="w-full rounded-xl border border-red-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-red-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-100"
+        @click="openInventoryTab('alerts')"
+      >
         <div class="flex items-center justify-between">
           <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Cảnh báo thiếu hụt</span>
           <div class="grid h-8 w-8 place-items-center rounded bg-red-50 text-[#E31837]">
@@ -655,9 +684,13 @@ onMounted(async () => {
           <strong class="text-3xl font-black text-[#E31837]">{{ stats.scarcity_alerts_count ?? 0 }}</strong>
           <span class="text-xs font-bold text-slate-500">nhóm máu dưới ngưỡng</span>
         </div>
-      </article>
+      </button>
 
-      <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <button
+        type="button"
+        class="w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-emerald-100"
+        @click="openSosView"
+      >
         <div class="flex items-center justify-between">
           <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">SOS đang điều phối</span>
           <div class="grid h-8 w-8 place-items-center rounded bg-emerald-50 text-emerald-600">
@@ -668,11 +701,11 @@ onMounted(async () => {
           <strong class="text-3xl font-black text-emerald-600">{{ stats.active_sos_requests ?? 0 }}</strong>
           <span class="text-xs font-bold text-slate-500">ca hoạt động</span>
         </div>
-      </article>
+      </button>
     </section>
 
     <!-- Tab navigation -->
-    <div class="border-b border-slate-200 bg-white rounded-t-xl px-4 pt-2 shadow-sm flex flex-wrap gap-2">
+    <div ref="tabNavigationRef" class="border-b border-slate-200 bg-white rounded-t-xl px-4 pt-2 shadow-sm flex flex-wrap gap-2">
       <button
         @click="currentTab = 'inventory'"
         class="border-b-2 px-4 py-3 text-sm font-black transition cursor-pointer"

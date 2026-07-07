@@ -12,6 +12,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   openSos: []
+  openSosView: []
 }>()
 
 const enRouteCommitments = computed(() =>
@@ -50,7 +51,11 @@ function formatVolume(value: number | undefined) {
     </section>
 
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-      <article class="rounded-lg border border-red-100 bg-white p-5 shadow-sm">
+      <button
+        type="button"
+        class="rounded-lg border border-red-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-red-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-100"
+        @click="emit('openSosView')"
+      >
         <div class="flex items-center justify-between">
           <div class="grid h-11 w-11 place-items-center rounded-md bg-red-50 text-[#E31837]">
             <AlertTriangle class="h-5 w-5" />
@@ -64,7 +69,7 @@ function formatVolume(value: number | undefined) {
           <strong class="text-3xl font-black text-slate-950">{{ activeAlerts.length }}</strong>
           <span class="pb-1 text-xs font-bold text-red-600">ca báo động đỏ</span>
         </div>
-      </article>
+      </button>
 
       <article class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div class="grid h-11 w-11 place-items-center rounded-md bg-blue-50 text-blue-600">

@@ -15,6 +15,8 @@ class UserDonorResource extends JsonResource
             'email' => $this->email,
             'phone' => $this->phone,
             'blood_type' => $this->blood_type,
+            'blood_type_verification_status' => $this->blood_type_verification_status ?? ($this->blood_type ? 'self_reported' : 'unreported'),
+            'blood_type_verified_at' => $this->blood_type_verified_at?->toIso8601String(),
             'hero_level' => $this->hero_level,
             'badge_title' => $this->badge_title,
             'total_donations' => $this->total_donations,

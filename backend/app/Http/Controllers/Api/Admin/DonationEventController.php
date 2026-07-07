@@ -256,19 +256,21 @@ class DonationEventController extends Controller
 
         $payload = $request->validate([
             'volume_ml' => ['required', 'integer', Rule::in([250, 350, 450])],
+            'blood_type' => ['required', Rule::in(['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'])],
             'screening_status' => ['nullable', Rule::in(['pending', 'eligible', 'ineligible'])],
             'screening_notes' => ['nullable', 'string', 'max:1000'],
             'result_summary' => ['nullable', 'string', 'max:2000'],
             'publish_result' => ['sometimes', 'boolean'],
         ]);
 
+        $admin = $this->adminUserResolver->resolve($request);
         $appointment->load('event.hospital', 'user');
         $alreadyCompleted = $appointment->status === 'completed'
             || DonationHistory::query()->where('donation_appointment_id', $appointment->id)->exists();
         $hasPublishResult = array_key_exists('publish_result', $payload);
         $publishResult = (bool) ($payload['publish_result'] ?? false);
 
-        DB::transaction(function () use ($appointment, $event, $payload, $alreadyCompleted, $hasPublishResult, $publishResult): void {
+        DB::transaction(function () use ($appointment, $event, $payload, $alreadyCompleted, $hasPublishResult, $publishResult, $admin): void {
             $appointment->update([
                 'status' => 'completed',
                 'checked_in_at' => $appointment->checked_in_at ?? now(),
@@ -292,7 +294,7 @@ class DonationEventController extends Controller
                     'donated_at' => ($appointment->completed_at ?? now())->toDateString(),
                     'location_name' => $event->location_name,
                     'volume_ml' => $payload['volume_ml'],
-                    'blood_type' => $appointment->user->blood_type,
+                    'blood_type' => $payload['blood_type'],
                     'certificate_id' => 'PL-EVENT-'.$event->id.'-'.$appointment->id,
                     'certificate_title' => 'Chứng nhận hiến máu tại '.$event->title,
                     'status' => 'verified',
@@ -305,7 +307,7 @@ class DonationEventController extends Controller
                 ['donation_history_id' => $history->id],
                 [
                     'hospital_id' => $event->hospital_id,
-                    'blood_type' => $appointment->user->blood_type,
+                    'blood_type' => $payload['blood_type'],
                     'volume_ml' => $payload['volume_ml'],
                     'received_date' => $history->donated_at,
                     'expiry_date' => \Illuminate\Support\Carbon::parse($history->donated_at)->addDays(35)->toDateString(),
@@ -313,6 +315,15 @@ class DonationEventController extends Controller
                     'notes' => 'Hiến máu tình nguyện từ sự kiện: ' . $event->title,
                 ]
             );
+
+            $appointment->user->update([
+                'blood_type' => $payload['blood_type'],
+                'blood_type_verification_status' => 'verified',
+                'blood_type_verified_at' => now(),
+                'blood_type_verified_by' => $admin->id,
+                'blood_type_verified_hospital_id' => $event->hospital_id,
+                'blood_type_verified_donation_history_id' => $history->id,
+            ]);
 
             if (! $alreadyCompleted) {
                 $this->recognitionService->awardNewDonation(

@@ -238,6 +238,7 @@ class EmergencyController extends Controller
 
         $payload = $request->validate([
             'volume_ml' => ['required', 'integer', Rule::in([250, 350, 450])],
+            'blood_type' => ['nullable', Rule::in(['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'])],
             'donated_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
@@ -247,8 +248,9 @@ class EmergencyController extends Controller
             ? Carbon::parse($payload['donated_at'])
             : now();
         $volumeMl = $payload['volume_ml'];
+        $confirmedBloodType = $payload['blood_type'] ?? $commitment->donor->blood_type;
 
-        $commitment = DB::transaction(function () use ($alert, $admin, $commitment, $donatedAt, $volumeMl, $payload): EmergencyCommitment {
+        $commitment = DB::transaction(function () use ($alert, $admin, $commitment, $donatedAt, $volumeMl, $confirmedBloodType, $payload): EmergencyCommitment {
             // Chống double-submit: khóa hàng commitment và đọc lại trạng thái NGAY TRONG
             // transaction. Nếu admin bấm xác nhận nhiều lần, chỉ lần đầu tiên mới tính là
             // "mới hiến" — tránh cộng điểm và tạo thông báo cảm ơn trùng lặp.
@@ -265,7 +267,7 @@ class EmergencyController extends Controller
                     'donated_at' => $donatedAt->toDateString(),
                     'location_name' => $alert->hospital->name,
                     'volume_ml' => $volumeMl,
-                    'blood_type' => $commitment->donor->blood_type,
+                    'blood_type' => $confirmedBloodType,
                     'certificate_title' => 'Chứng nhận hiến máu khẩn cấp '.$alert->public_id,
                     'status' => 'verified',
                     'notes' => $payload['notes'] ?? 'Xác nhận hiến máu từ ca SOS '.$alert->public_id,
@@ -277,7 +279,7 @@ class EmergencyController extends Controller
                 ['donation_history_id' => $history->id],
                 [
                     'hospital_id' => $alert->hospital_id,
-                    'blood_type' => $commitment->donor->blood_type,
+                    'blood_type' => $confirmedBloodType,
                     'volume_ml' => $volumeMl,
                     'received_date' => $history->donated_at,
                     'expiry_date' => \Illuminate\Support\Carbon::parse($history->donated_at)->addDays(35)->toDateString(),
@@ -285,6 +287,15 @@ class EmergencyController extends Controller
                     'notes' => 'Hiến máu khẩn cấp SOS từ ca cấp cứu: ' . $alert->public_id,
                 ]
             );
+
+            $commitment->donor->update([
+                'blood_type' => $confirmedBloodType,
+                'blood_type_verification_status' => 'verified',
+                'blood_type_verified_at' => now(),
+                'blood_type_verified_by' => $admin->id,
+                'blood_type_verified_hospital_id' => $alert->hospital_id,
+                'blood_type_verified_donation_history_id' => $history->id,
+            ]);
 
             $commitment->update([
                 'status' => 'donated',

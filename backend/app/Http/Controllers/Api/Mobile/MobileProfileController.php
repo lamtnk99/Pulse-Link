@@ -7,6 +7,7 @@ use App\Services\Donations\DonationRecognitionService;
 use App\Services\Mobile\MobileUserResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class MobileProfileController extends Controller
 {
@@ -26,6 +27,8 @@ class MobileProfileController extends Controller
                 'id' => (string) $user->id,
                 'name' => $user->name,
                 'blood_type' => $user->blood_type,
+                'blood_type_verification_status' => $user->blood_type_verification_status ?? ($user->blood_type ? 'self_reported' : 'unreported'),
+                'blood_type_verified_at' => $user->blood_type_verified_at?->toIso8601String(),
                 'hero_level' => $user->hero_level,
                 'badge_title' => $user->badge_title,
                 'total_donations' => $user->total_donations,
@@ -85,6 +88,26 @@ class MobileProfileController extends Controller
         ];
 
         // Nộp đủ số CCCD + 2 ảnh → chuyển sang chờ admin duyệt căn cước.
+        if (array_key_exists('blood_type', $payload)) {
+            $newBloodType = $payload['blood_type'];
+            $hasVerifiedBloodType = ($user->blood_type_verification_status ?? null) === 'verified';
+            if ($hasVerifiedBloodType && $newBloodType !== null && $newBloodType !== $user->blood_type) {
+                throw ValidationException::withMessages([
+                    'blood_type' => ['Nhóm máu đã được bệnh viện xác minh và không thể tự chỉnh sửa.'],
+                ]);
+            }
+
+            if ($hasVerifiedBloodType || $newBloodType === null) {
+                unset($updates['blood_type']);
+            } else {
+                $updates['blood_type_verification_status'] = 'self_reported';
+                $updates['blood_type_verified_at'] = null;
+                $updates['blood_type_verified_by'] = null;
+                $updates['blood_type_verified_hospital_id'] = null;
+                $updates['blood_type_verified_donation_history_id'] = null;
+            }
+        }
+
         $hasFullIdSubmission = filled($payload['national_id'] ?? null)
             && filled($payload['id_card_front_url'] ?? null)
             && filled($payload['id_card_back_url'] ?? null);
