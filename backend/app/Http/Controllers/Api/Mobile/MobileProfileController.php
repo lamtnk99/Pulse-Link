@@ -7,6 +7,7 @@ use App\Services\Donations\DonationRecognitionService;
 use App\Services\Mobile\MobileUserResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class MobileProfileController extends Controller
@@ -57,7 +58,7 @@ class MobileProfileController extends Controller
                 'id_card_back_url' => $user->id_card_back_url,
                 'id_verification_status' => $user->id_verification_status ?? 'unverified',
                 'id_rejection_reason' => $user->id_rejection_reason,
-                'hero_pass_code' => 'PL-'.$user->id.'-'.strtoupper(str_replace(' ', '', $user->name)),
+                'hero_pass_code' => $this->heroPassCode($user->id, $user->name),
             ],
         ]);
     }
@@ -121,5 +122,17 @@ class MobileProfileController extends Controller
         $user->update($updates);
 
         return $this->heroPass($request);
+    }
+
+    private function heroPassCode(int $userId, string $name): string
+    {
+        $nameCode = Str::of($name)
+            ->ascii()
+            ->upper()
+            ->replaceMatches('/[^A-Z0-9]+/', '-')
+            ->trim('-')
+            ->value();
+
+        return 'PL-'.$userId.'-'.($nameCode !== '' ? $nameCode : 'HERO');
     }
 }
