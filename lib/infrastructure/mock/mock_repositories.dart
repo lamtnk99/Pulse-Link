@@ -63,10 +63,9 @@ class MockDonorRepository implements DonorRepository {
   }
 
   @override
-  Future<String> uploadIdImage(String filePath) async {
+  Future<String> uploadIdImage(List<int> bytes, String filename) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
-    final fileName = filePath.split(RegExp(r'[\\/]')).last;
-    return 'https://mock.pulselink.test/id-cards/${Uri.encodeComponent(fileName)}';
+    return 'https://mock.pulselink.test/id-cards/${Uri.encodeComponent(filename)}';
   }
 }
 

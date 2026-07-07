@@ -50,10 +50,11 @@ class LaravelDonorRepository implements DonorRepository {
   }
 
   @override
-  Future<String> uploadIdImage(String filePath) async {
+  Future<String> uploadIdImage(List<int> bytes, String filename) async {
     final json = await _client.uploadFile(
       '/api/mobile/uploads',
-      filePath: filePath,
+      bytes: bytes,
+      filename: filename,
     );
     return _unwrapData(json)['url'] as String;
   }

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Mobile;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class MobileUploadController extends Controller
 {
@@ -16,14 +15,16 @@ class MobileUploadController extends Controller
         ]);
 
         $path = $payload['file']->store('pulse-link/id-cards', 'public');
-        $publicUrl = Storage::disk('public')->url($path);
+
+        // Dựng URL theo đúng host của request thay vì APP_URL, để ảnh luôn truy
+        // cập được từ chính địa chỉ mà client (mobile/web) đang gọi tới —
+        // APP_URL mặc định (http://localhost) thường thiếu port và sai host.
+        $publicUrl = $request->getSchemeAndHttpHost().'/storage/'.$path;
 
         return response()->json([
             'data' => [
                 'path' => $path,
-                'url' => str_starts_with($publicUrl, 'http')
-                    ? $publicUrl
-                    : $request->getSchemeAndHttpHost().$publicUrl,
+                'url' => $publicUrl,
             ],
         ], 201);
     }

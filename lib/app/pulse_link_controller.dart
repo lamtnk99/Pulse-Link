@@ -195,17 +195,10 @@ class PulseLinkController extends ChangeNotifier {
   Future<void> logout() async {
     // Vô hiệu hoá mọi tác vụ nạp hồ sơ đang chạy dở của phiên hiện tại.
     _sessionEpoch++;
-    _stopEmergencyLocationSync();
-    await _alertSubscription?.cancel();
-    await _commitmentSubscription?.cancel();
-    await _notificationSubscription?.cancel();
-    _alertSubscription = null;
-    _commitmentSubscription = null;
-    _notificationSubscription = null;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('auth_token');
-
+    // Xoá state + báo UI NGAY LẬP TỨC để chuyển về màn đăng nhập, không chờ
+    // các thao tác dọn dẹp bất đồng bộ (huỷ stream, xoá prefs) — nếu một await
+    // nào bị treo thì màn hình vẫn phải thoát được.
     _state = _state.copyWith(
       clearProfile: true,
       events: const [],
@@ -222,6 +215,22 @@ class PulseLinkController extends ChangeNotifier {
       clearRoutePlan: true,
     );
     notifyListeners();
+
+    // Dọn dẹp nền — lỗi ở đây không được chặn việc đăng xuất.
+    _stopEmergencyLocationSync();
+    unawaited(_alertSubscription?.cancel());
+    unawaited(_commitmentSubscription?.cancel());
+    unawaited(_notificationSubscription?.cancel());
+    _alertSubscription = null;
+    _commitmentSubscription = null;
+    _notificationSubscription = null;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('auth_token');
+    } catch (_) {
+      // Bỏ qua: state đã xoá, phiên coi như kết thúc.
+    }
   }
 
   Future<void> setThemePreference(AppThemePreference preference) async {
@@ -265,9 +274,9 @@ class PulseLinkController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Tải ảnh CCCD lên và trả về URL công khai để đính vào hồ sơ.
-  Future<String> uploadIdImage(String filePath) {
-    return _donorRepository.uploadIdImage(filePath);
+  /// Tải ảnh CCCD lên (từ bytes) và trả về URL công khai để đính vào hồ sơ.
+  Future<String> uploadIdImage(List<int> bytes, String filename) {
+    return _donorRepository.uploadIdImage(bytes, filename);
   }
 
   Future<void> handleAppResumed() async {

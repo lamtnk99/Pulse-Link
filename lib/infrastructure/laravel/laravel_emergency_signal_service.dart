@@ -162,7 +162,9 @@ class LaravelBackedEmergencySignalService implements EmergencySignalService {
       body: {
         'donor_id': int.tryParse(donorId) ?? donorId,
         ...location.toJson(),
-        if (etaMinutes != null) 'eta_minutes': etaMinutes,
+        // Backend yêu cầu eta_minutes trong [1, 240]; ETA có thể = 0 (đã sát nơi)
+        // hoặc rất lớn (quá xa) nên phải kẹp lại để không bị 422.
+        if (etaMinutes != null) 'eta_minutes': etaMinutes.clamp(1, 240),
         'status': status.apiName,
       },
     );

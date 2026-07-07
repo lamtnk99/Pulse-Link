@@ -42,9 +42,13 @@ class LaravelApiClient {
   }
 
   /// Tải một tệp lên qua multipart/form-data (ví dụ ảnh CCCD). Trả về JSON body.
+  ///
+  /// Dùng bytes thay vì đường dẫn file để chạy được cả trên web (nơi không có
+  /// hệ thống tệp) lẫn mobile.
   Future<Map<String, dynamic>> uploadFile(
     String path, {
-    required String filePath,
+    required List<int> bytes,
+    required String filename,
     String fileField = 'file',
     Map<String, String> fields = const {},
   }) async {
@@ -52,7 +56,11 @@ class LaravelApiClient {
     final request = http.MultipartRequest('POST', _resolve(path))
       ..headers['Accept'] = 'application/json'
       ..fields.addAll(fields)
-      ..files.add(await http.MultipartFile.fromPath(fileField, filePath));
+      ..files.add(http.MultipartFile.fromBytes(
+        fileField,
+        bytes,
+        filename: filename,
+      ));
 
     if (token != null && token.isNotEmpty) {
       request.headers['Authorization'] = 'Bearer $token';

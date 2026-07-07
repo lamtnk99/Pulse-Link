@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -29,6 +31,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   String? _wardCode;
   String? _idFrontUrl;
   String? _idBackUrl;
+  // Bytes vừa chọn để hiển thị preview ngay, không cần chờ tải lên mạng.
+  Uint8List? _idFrontBytes;
+  Uint8List? _idBackBytes;
 
   bool _saving = false;
   bool _uploadingFront = false;
@@ -81,17 +86,21 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     );
     if (file == null) return;
 
+    // Đọc bytes để chạy được cả web lẫn mobile, đồng thời hiện preview ngay.
+    final bytes = await file.readAsBytes();
     setState(() {
       if (isFront) {
+        _idFrontBytes = bytes;
         _uploadingFront = true;
       } else {
+        _idBackBytes = bytes;
         _uploadingBack = true;
       }
       _errorMessage = null;
     });
 
     try {
-      final url = await widget.controller.uploadIdImage(file.path);
+      final url = await widget.controller.uploadIdImage(bytes, file.name);
       setState(() {
         if (isFront) {
           _idFrontUrl = url;
@@ -100,7 +109,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         }
       });
     } catch (_) {
-      setState(() => _errorMessage = 'Không thể tải ảnh lên. Vui lòng thử lại.');
+      setState(() {
+        _errorMessage = 'Không thể tải ảnh lên. Vui lòng thử lại.';
+        // Xoá preview cục bộ nếu upload thất bại để không gây hiểu nhầm đã lưu.
+        if (isFront) {
+          _idFrontBytes = null;
+        } else {
+          _idBackBytes = null;
+        }
+      });
     } finally {
       if (mounted) {
         setState(() {
@@ -283,6 +300,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   child: _idImageSlot(
                     label: 'Mặt trước',
                     url: _idFrontUrl,
+                    previewBytes: _idFrontBytes,
                     uploading: _uploadingFront,
                     onTap: () => _pickAndUpload(isFront: true),
                     isDark: isDark,
@@ -293,6 +311,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   child: _idImageSlot(
                     label: 'Mặt sau',
                     url: _idBackUrl,
+                    previewBytes: _idBackBytes,
                     uploading: _uploadingBack,
                     onTap: () => _pickAndUpload(isFront: false),
                     isDark: isDark,
@@ -416,10 +435,19 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget _idImageSlot({
     required String label,
     required String? url,
+    required Uint8List? previewBytes,
     required bool uploading,
     required VoidCallback onTap,
     required bool isDark,
   }) {
+    // Ưu tiên bytes vừa chọn (hiển thị tức thì), sau đó tới ảnh đã lưu trên server.
+    final DecorationImage? bgImage = previewBytes != null
+        ? DecorationImage(image: MemoryImage(previewBytes), fit: BoxFit.cover)
+        : (url != null
+            ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
+            : null);
+    final hasImage = previewBytes != null || url != null;
+
     return InkWell(
       onTap: uploading ? null : onTap,
       borderRadius: BorderRadius.circular(14),
@@ -431,13 +459,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           border: Border.all(
             color: (isDark ? Colors.white : Colors.black).withOpacity(0.1),
           ),
-          image: url != null && !uploading
-              ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
-              : null,
+          image: uploading ? null : bgImage,
         ),
         child: uploading
             ? const Center(child: CircularProgressIndicator(strokeWidth: 2.4))
-            : (url == null
+            : (!hasImage
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
