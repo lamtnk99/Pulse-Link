@@ -9,17 +9,12 @@ import {
   Droplet,
   FileText,
   ImagePlus,
-  Info,
   Loader2,
   Plus,
   RefreshCw,
   Search,
   Sliders,
   Sparkles,
-  TrendingUp,
-  Trash2,
-  Heart,
-  Check,
   Calendar
 } from '@lucide/vue'
 import type { BloodStock, BloodSafetyThreshold, BloodDemandForecast, SmartAlert } from '../types'
