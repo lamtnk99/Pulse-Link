@@ -21,6 +21,7 @@ use App\Services\Admin\AdminUserResolver;
 use App\Services\Contracts\EmergencyAlertRealtimeGateway;
 use App\Services\Donations\DonationRecognitionService;
 use App\Services\Emergency\EmergencyDispatchService;
+use App\Services\Gratitude\GratitudeCardService;
 use App\Services\Mobile\MobileUserResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -42,6 +43,7 @@ class EmergencyController extends Controller
         private readonly DonationRecognitionService $recognitionService,
         private readonly BloodCompatibility $bloodCompatibility,
         private readonly \App\Services\Gratitude\GratitudeMessageService $gratitudeService,
+        private readonly GratitudeCardService $gratitudeCardService,
     ) {}
 
     public function store(StoreEmergencyAlertRequest $request)
@@ -320,7 +322,13 @@ class EmergencyController extends Controller
                     'donation_verified',
                     'Cảm ơn bạn đã hiến máu cứu người',
                     "Chứng nhận hiến máu SOS của bạn đã được ghi nhận. Cảm ơn nghĩa cử cao đẹp của bạn!",
-                    ['blood_journey_id' => $journey->public_id, 'destination_type' => $journey->destination_type]
+                    [
+                        'blood_journey_id' => $journey->public_id,
+                        'destination_type' => $journey->destination_type,
+                        'blood_type' => $history->blood_type,
+                        'volume_ml' => $history->volume_ml,
+                        'gratitude_card' => $this->gratitudeCardService->sosDonationPayload($journey->refresh()),
+                    ]
                 );
             }
 
@@ -412,10 +420,18 @@ class EmergencyController extends Controller
             // Ưu tiên lời cảm ơn AI vừa sinh; nếu không có, giữ nội dung đã lưu; cuối cùng rơi về mẫu tĩnh.
             $finalMessage = $aiFinalMessage
                 ?? ($isOldOrEmpty ? BloodJourney::finalMessageFor($journey->destination_type, $commitment->id) : $journey->final_message);
+            $pulseLinkMessage = $journey->pulse_link_message
+                ?: $this->gratitudeCardService->pulseLinkMessageForJourney($journey);
+            $gratitudeStyle = $journey->gratitude_style
+                ?: ($journey->destination_type === 'reserve'
+                    ? GratitudeCardService::STYLE_BOTANICAL
+                    : GratitudeCardService::STYLE_HERO_NIGHT);
             $journey->update([
                 'current_step' => $stepKey,
                 'location_label' => $payload['location_label'] ?? $journey->location_label,
                 'final_message' => $finalMessage,
+                'pulse_link_message' => $pulseLinkMessage,
+                'gratitude_style' => $gratitudeStyle,
                 'completed_at' => $isFinalStep ? ($journey->completed_at ?? now()) : null,
                 'published_at' => ($payload['publish'] ?? false) ? now() : $journey->published_at,
             ]);
@@ -427,9 +443,13 @@ class EmergencyController extends Controller
                 $this->createMobileNotification(
                     $journey->donor_id,
                     'blood_journey_completed',
-                    'Lời cảm ơn từ hành trình giọt máu',
+                    'Thư cảm ơn từ hành trình giọt máu',
                     $journey->final_message ?? BloodJourney::finalMessageFor($journey->destination_type, $commitment->id),
-                    ['blood_journey_id' => $journey->public_id, 'destination_type' => $journey->destination_type],
+                    [
+                        'blood_journey_id' => $journey->public_id,
+                        'destination_type' => $journey->destination_type,
+                        'gratitude_card' => $this->gratitudeCardService->journeyPayload($journey->refresh()),
+                    ],
                 );
             }
 
@@ -655,8 +675,17 @@ class EmergencyController extends Controller
                 'current_step' => 'received',
                 'location_label' => $alert->hospital?->name,
                 'final_message' => BloodJourney::finalMessageFor($destinationType, $commitment->id),
+                'gratitude_style' => $destinationType === 'reserve'
+                    ? GratitudeCardService::STYLE_BOTANICAL
+                    : GratitudeCardService::STYLE_HERO_NIGHT,
             ],
         );
+
+        if (! $journey->pulse_link_message) {
+            $journey->forceFill([
+                'pulse_link_message' => $this->gratitudeCardService->pulseLinkMessageForJourney($journey),
+            ])->save();
+        }
 
         if ($journey->wasRecentlyCreated) {
             $this->seedJourneySteps($journey);
@@ -673,7 +702,14 @@ class EmergencyController extends Controller
             'completed_at' => null,
             'published_at' => null,
             'final_message' => BloodJourney::finalMessageFor($destinationType, $journey->emergency_commitment_id),
+            'pulse_link_message' => null,
+            'gratitude_style' => $destinationType === 'reserve'
+                ? GratitudeCardService::STYLE_BOTANICAL
+                : GratitudeCardService::STYLE_HERO_NIGHT,
         ]);
+        $journey->forceFill([
+            'pulse_link_message' => $this->gratitudeCardService->pulseLinkMessageForJourney($journey->refresh()),
+        ])->save();
         $journey->steps()->delete();
         $this->seedJourneySteps($journey);
 

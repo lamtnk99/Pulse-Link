@@ -14,6 +14,9 @@ class PastDonation {
     this.certificateIssuedAt,
     this.certificateVerifyUrl,
     this.notes,
+    this.gratitudeMessage,
+    this.gratitudeStyle,
+    this.gratitudeCreatedAt,
     this.resultSummary,
     this.resultPublishedAt,
     this.bloodJourney,
@@ -36,6 +39,11 @@ class PastDonation {
           : DateTime.parse(json['certificate_issued_at'] as String),
       certificateVerifyUrl: json['certificate_verify_url'] as String?,
       notes: json['notes'] as String?,
+      gratitudeMessage: json['gratitude_message'] as String?,
+      gratitudeStyle: json['gratitude_style'] as String?,
+      gratitudeCreatedAt: json['gratitude_created_at'] == null
+          ? null
+          : DateTime.tryParse(json['gratitude_created_at'] as String),
       resultSummary: json['result_summary'] as String?,
       resultPublishedAt: json['result_published_at'] == null
           ? null
@@ -58,6 +66,9 @@ class PastDonation {
   final DateTime? certificateIssuedAt;
   final String? certificateVerifyUrl;
   final String? notes;
+  final String? gratitudeMessage;
+  final String? gratitudeStyle;
+  final DateTime? gratitudeCreatedAt;
   final String? resultSummary;
   final DateTime? resultPublishedAt;
   final BloodJourney? bloodJourney;
@@ -76,6 +87,9 @@ class PastDonation {
       'certificate_issued_at': certificateIssuedAt?.toIso8601String(),
       'certificate_verify_url': certificateVerifyUrl,
       'notes': notes,
+      'gratitude_message': gratitudeMessage,
+      'gratitude_style': gratitudeStyle,
+      'gratitude_created_at': gratitudeCreatedAt?.toIso8601String(),
       'result_summary': resultSummary,
       'result_published_at': resultPublishedAt?.toIso8601String(),
       'blood_journey': bloodJourney,

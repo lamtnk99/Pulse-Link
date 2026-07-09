@@ -161,7 +161,7 @@ class MobileDonationController extends Controller
 
         return response()->json([
             'data' => DonationHistory::query()
-                ->with('appointment', 'bloodJourney.hospital', 'bloodJourney.steps')
+                ->with('appointment', 'hospital', 'bloodJourney.hospital', 'bloodJourney.steps')
                 ->where('user_id', $userId)
                 ->latest('donated_at')
                 ->get()
@@ -246,6 +246,9 @@ class MobileDonationController extends Controller
                 : null,
             'status' => $history->status,
             'notes' => $history->notes,
+            'gratitude_message' => $history->gratitude_message,
+            'gratitude_style' => $history->gratitude_style,
+            'gratitude_created_at' => $history->gratitude_created_at?->toIso8601String(),
             'result_summary' => $history->appointment?->result_published_at ? $history->appointment->result_summary : null,
             'result_published_at' => $history->appointment?->result_published_at?->toIso8601String(),
         ];

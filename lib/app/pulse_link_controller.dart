@@ -17,6 +17,7 @@ import '../features/emergency/domain/emergency_alert.dart';
 import '../features/emergency/domain/emergency_commitment.dart';
 import '../features/emergency/domain/emergency_mission_resume.dart';
 import '../features/emergency/domain/route_plan.dart';
+import '../features/gratitude/domain/gratitude_letter.dart';
 import '../features/notifications/domain/mobile_notification.dart';
 import '../features/profile/domain/donor_profile.dart';
 import '../infrastructure/laravel/laravel_api_client.dart';
@@ -92,7 +93,7 @@ class PulseLinkController extends ChangeNotifier {
 
   bool _isChatOpen = false;
   bool get isChatOpen => _isChatOpen;
-  
+
   String? _activeChatConversationId;
   String? get activeChatConversationId => _activeChatConversationId;
 
@@ -213,6 +214,10 @@ class PulseLinkController extends ChangeNotifier {
       clearActiveEmergencyCommitment: true,
       clearEmergencyLocation: true,
       clearRoutePlan: true,
+      clearActiveGratitudeLetter: true,
+      clearActiveLiveBloodJourney: true,
+      clearActiveLiveBloodJourneyHospitalName: true,
+      clearActiveLiveBloodJourneyBloodType: true,
     );
     notifyListeners();
 
@@ -400,7 +405,8 @@ class PulseLinkController extends ChangeNotifier {
     _state = _state.copyWith(
       profile: updatedProfile,
       donationHistory: [donation, ..._state.donationHistory],
-      pendingLevelUp: _detectLevelUp(profile.heroLevel, updatedProfile.heroLevel),
+      pendingLevelUp:
+          _detectLevelUp(profile.heroLevel, updatedProfile.heroLevel),
     );
     notifyListeners();
   }
@@ -457,12 +463,46 @@ class PulseLinkController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void showDonationGratitude(PastDonation donation) {
+    _state = _state.copyWith(
+      activeGratitudeLetter: GratitudeLetter.fromDonation(
+        donation,
+        profile: _state.profile,
+      ),
+    );
+    notifyListeners();
+  }
+
+  bool showGratitudeFromNotification(MobileNotification notification) {
+    final gratitude = GratitudeLetter.maybeFromNotification(
+      notification,
+      profile: _state.profile,
+    );
+    if (gratitude == null) return false;
+
+    _state = _state.copyWith(activeGratitudeLetter: gratitude);
+    notifyListeners();
+    return true;
+  }
+
+  void clearActiveGratitudeLetter() {
+    _state = _state.copyWith(clearActiveGratitudeLetter: true);
+    notifyListeners();
+  }
+
   void _handleMobileNotification(MobileNotification notification) {
     final notifications = [
       notification,
       ..._state.notifications.where((item) => item.id != notification.id),
     ];
-    _state = _state.copyWith(notifications: notifications);
+    final gratitude = GratitudeLetter.maybeFromNotification(
+      notification,
+      profile: _state.profile,
+    );
+    _state = _state.copyWith(
+      notifications: notifications,
+      activeGratitudeLetter: gratitude,
+    );
     notifyListeners();
   }
 
@@ -486,13 +526,7 @@ class PulseLinkController extends ChangeNotifier {
       await _removeEmergencyAlert(alert.id);
       if (alert.currentCommitment?.status ==
           EmergencyCommitmentStatus.donated) {
-        final commitment = alert.currentCommitment!;
-        _state = _state.copyWith(
-          activeLiveBloodJourney: commitment.bloodJourney,
-          activeLiveBloodJourneyHospitalName: alert.hospitalName,
-          activeLiveBloodJourneyBloodType: alert.requiredBloodType,
-        );
-        unawaited(refreshDailyData());
+        _showSosDonationGratitude(alert.currentCommitment!, alert: alert);
       }
       return;
     }
@@ -930,7 +964,8 @@ class PulseLinkController extends ChangeNotifier {
         destination: alert.hospitalLocation,
         preferredDistanceKm: distanceKm,
       );
-      if (_locationSyncTimer == null || !_state.committedAlertIds.contains(alert.id)) {
+      if (_locationSyncTimer == null ||
+          !_state.committedAlertIds.contains(alert.id)) {
         _isSyncingEmergencyLocation = false;
         return;
       }
@@ -997,22 +1032,15 @@ class PulseLinkController extends ChangeNotifier {
   }
 
   void _handleEmergencyCommitmentUpdate(EmergencyCommitment commitment) {
-    if (commitment.status == EmergencyCommitmentStatus.donated && commitment.bloodJourney != null) {
-      _stopEmergencyLocationSync();
-      _state = _state.copyWith(
-        activeLiveBloodJourney: commitment.bloodJourney,
-        activeLiveBloodJourneyHospitalName: _state.activeAlert?.hospitalName ?? 'Bệnh viện',
-        activeLiveBloodJourneyBloodType: _state.activeAlert?.requiredBloodType ?? 'O',
-      );
-      unawaited(refreshDailyData());
-      notifyListeners();
-    } else if (commitment.status == EmergencyCommitmentStatus.donated) {
-      _stopEmergencyLocationSync();
-      unawaited(refreshDailyData());
-    } else if (commitment.status == EmergencyCommitmentStatus.cancelled || commitment.status == EmergencyCommitmentStatus.notNeeded) {
+    if (commitment.status == EmergencyCommitmentStatus.donated) {
+      _showSosDonationGratitude(commitment);
+    } else if (commitment.status == EmergencyCommitmentStatus.cancelled ||
+        commitment.status == EmergencyCommitmentStatus.notNeeded) {
       _stopEmergencyLocationSync();
       unawaited(_removeEmergencyAlert(commitment.alertId));
-    } else if (_state.activeLiveBloodJourney != null && commitment.bloodJourney != null && commitment.bloodJourney!.id == _state.activeLiveBloodJourney!.id) {
+    } else if (_state.activeLiveBloodJourney != null &&
+        commitment.bloodJourney != null &&
+        commitment.bloodJourney!.id == _state.activeLiveBloodJourney!.id) {
       _state = _state.copyWith(
         activeLiveBloodJourney: commitment.bloodJourney,
       );
@@ -1020,7 +1048,47 @@ class PulseLinkController extends ChangeNotifier {
     }
   }
 
-  void showLiveBloodJourney(BloodJourney journey, String hospitalName, String bloodType) {
+  void _showSosDonationGratitude(
+    EmergencyCommitment commitment, {
+    EmergencyAlert? alert,
+  }) {
+    _stopEmergencyLocationSync();
+
+    final sourceAlert = alert ?? _state.activeAlert;
+    final committedAlertIds = {..._state.committedAlertIds}
+      ..remove(commitment.alertId);
+
+    _state = _state.copyWith(
+      activeMode: AppMode.daily,
+      activeAlerts: _state.activeAlerts
+          .where((candidate) => candidate.id != commitment.alertId)
+          .toList(growable: false),
+      committedAlertIds: committedAlertIds,
+      activeGratitudeLetter: GratitudeLetter.fromSosDonation(
+        commitment,
+        profile: _state.profile,
+        hospitalName: sourceAlert?.hospitalName,
+        bloodType: sourceAlert?.requiredBloodType,
+      ),
+      sosMissionPhase: SosMissionPhase.alertPreview,
+      sosIntensity: 0,
+      emergencyCommitted: false,
+      clearActiveAlert: true,
+      clearActiveEmergencyCommitment: true,
+      clearEmergencyLocation: true,
+      clearLocationSyncError: true,
+      clearDispatchMatch: true,
+      clearRoutePlan: true,
+      clearActiveLiveBloodJourney: true,
+      clearActiveLiveBloodJourneyHospitalName: true,
+      clearActiveLiveBloodJourneyBloodType: true,
+    );
+    unawaited(refreshDailyData());
+    notifyListeners();
+  }
+
+  void showLiveBloodJourney(
+      BloodJourney journey, String hospitalName, String bloodType) {
     _state = _state.copyWith(
       activeLiveBloodJourney: journey,
       activeLiveBloodJourneyHospitalName: hospitalName,
@@ -1036,7 +1104,8 @@ class PulseLinkController extends ChangeNotifier {
       final journey = latest.bloodJourney;
       if (journey != null) {
         final prefs = await SharedPreferences.getInstance();
-        final acknowledged = prefs.getStringList(_acknowledgedJourneysKey) ?? [];
+        final acknowledged =
+            prefs.getStringList(_acknowledgedJourneysKey) ?? [];
         if (!acknowledged.contains(journey.id)) {
           _state = _state.copyWith(
             activeLiveBloodJourney: journey,
@@ -1078,15 +1147,18 @@ class PulseLinkController extends ChangeNotifier {
     if (currentJourney != null) {
       try {
         final prefs = await SharedPreferences.getInstance();
-        final acknowledged = prefs.getStringList(_acknowledgedJourneysKey) ?? [];
+        final acknowledged =
+            prefs.getStringList(_acknowledgedJourneysKey) ?? [];
         if (!acknowledged.contains(currentJourney.id)) {
           final newList = [...acknowledged, currentJourney.id];
           await prefs.setStringList(_acknowledgedJourneysKey, newList);
           newSet = newList.toSet();
-          debugPrint('PulseLinkController: Acknowledged journey ${currentJourney.id}. Saved list: $newList');
+          debugPrint(
+              'PulseLinkController: Acknowledged journey ${currentJourney.id}. Saved list: $newList');
         }
       } catch (e) {
-        debugPrint('PulseLinkController: Error saving acknowledged journey: $e');
+        debugPrint(
+            'PulseLinkController: Error saving acknowledged journey: $e');
       }
     }
 

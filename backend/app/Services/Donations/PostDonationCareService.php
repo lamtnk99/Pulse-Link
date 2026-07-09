@@ -7,11 +7,16 @@ use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\DonationHistory;
 use App\Models\MobileNotification;
+use App\Services\Gratitude\GratitudeCardService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
 class PostDonationCareService
 {
+    public function __construct(
+        private readonly GratitudeCardService $gratitudeCardService,
+    ) {}
+
     public function createForDonation(DonationHistory $donation): ?MobileNotification
     {
         $donation->loadMissing('user', 'hospital');
@@ -19,6 +24,9 @@ class PostDonationCareService
         if (! $donation->user) {
             return null;
         }
+
+        $hospitalName = $donation->hospital?->name ?? $donation->location_name;
+        $this->ensureGratitudeCard($donation, $hospitalName);
 
         $exists = ChatConversation::query()
             ->where('user_id', $donation->user_id)
@@ -35,7 +43,6 @@ class PostDonationCareService
             return null;
         }
 
-        $hospitalName = $donation->hospital?->name ?? $donation->location_name;
         $donatedDate = Carbon::parse($donation->donated_at);
         $chat = ChatConversation::query()->create([
             'user_id' => $donation->user_id,
@@ -65,11 +72,12 @@ class PostDonationCareService
             'user_id' => $donation->user_id,
             'type' => 'post_donation_checkup',
             'title' => 'Hiến máu thành công',
-            'body' => "Cảm ơn bạn đã hiến {$donation->volume_ml}ml máu nhóm {$donation->blood_type} tại {$hospitalName}. Pulse Link đã mở phần chăm sóc sau hiến cho bạn.",
+            'body' => "Cảm ơn bạn đã hiến {$donation->volume_ml}ml máu nhóm {$donation->blood_type} tại {$hospitalName}. PulseLink đã gửi một thiệp cảm ơn và mở phần chăm sóc sau hiến cho bạn.",
             'payload' => [
                 'conversation_id' => $chat->id,
                 'donation_history_id' => $donation->id,
                 'certificate_id' => $donation->certificate_id,
+                'gratitude_card' => $this->gratitudeCardService->donationPayload($donation->refresh(), $chat->id),
             ],
         ]);
 
@@ -85,9 +93,24 @@ class PostDonationCareService
         return $notification;
     }
 
+    private function ensureGratitudeCard(DonationHistory $donation, string $hospitalName): void
+    {
+        if ($donation->gratitude_message && $donation->gratitude_style) {
+            return;
+        }
+
+        $donation->forceFill([
+            'gratitude_message' => $donation->gratitude_message
+                ?: $this->gratitudeCardService->regularMessage($donation, $hospitalName),
+            'gratitude_style' => $donation->gratitude_style
+                ?: GratitudeCardService::STYLE_CLASSIC,
+            'gratitude_created_at' => $donation->gratitude_created_at ?: now(),
+        ])->save();
+    }
+
     private function careMessage(DonationHistory $donation, string $hospitalName): string
     {
         return "Chào {$donation->user->name}! Bệnh viện đã ghi nhận ca hiến {$donation->volume_ml}ml máu nhóm {$donation->blood_type} của bạn tại {$hospitalName}.\n\n"
-            . "Trong vài giờ tới, hãy nghỉ ngơi, uống thêm nước, ăn nhẹ và tránh vận động mạnh. Nếu bạn thấy chóng mặt, mệt bất thường, đau nhiều hoặc bầm tím lan rộng ở vị trí kim, cứ nhắn cho mình ngay để mình hướng dẫn cách chăm sóc phù hợp nhé.";
+            .'Trong vài giờ tới, hãy nghỉ ngơi, uống thêm nước, ăn nhẹ và tránh vận động mạnh. Nếu bạn thấy chóng mặt, mệt bất thường, đau nhiều hoặc bầm tím lan rộng ở vị trí kim, cứ nhắn cho mình ngay để mình hướng dẫn cách chăm sóc phù hợp nhé.';
     }
 }

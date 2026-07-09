@@ -10,6 +10,7 @@ import '../features/emergency/domain/dispatch_wave.dart';
 import '../features/emergency/domain/emergency_alert.dart';
 import '../features/emergency/domain/emergency_commitment.dart';
 import '../features/emergency/domain/route_plan.dart';
+import '../features/gratitude/domain/gratitude_letter.dart';
 import '../features/notifications/domain/mobile_notification.dart';
 import '../features/profile/domain/donor_profile.dart';
 
@@ -39,6 +40,7 @@ class PulseLinkState {
     this.activeLiveBloodJourney,
     this.activeLiveBloodJourneyHospitalName,
     this.activeLiveBloodJourneyBloodType,
+    this.activeGratitudeLetter,
     this.pendingLevelUp,
     this.acknowledgedJourneyIds = const {},
   });
@@ -77,6 +79,7 @@ class PulseLinkState {
   final BloodJourney? activeLiveBloodJourney;
   final String? activeLiveBloodJourneyHospitalName;
   final String? activeLiveBloodJourneyBloodType;
+  final GratitudeLetter? activeGratitudeLetter;
 
   /// Cấp Hero vừa đạt (giá trị gốc như 'Gold Badge') chờ được ăn mừng toàn màn hình.
   /// Null khi không có gì để celebrate.
@@ -84,7 +87,8 @@ class PulseLinkState {
 
   final Set<String> acknowledgedJourneyIds;
 
-  bool get hasActiveSosAlert => activeAlerts.any((alert) => alert.active && !alert.isExpired);
+  bool get hasActiveSosAlert =>
+      activeAlerts.any((alert) => alert.active && !alert.isExpired);
 
   int get totalDonationsCount => donationHistory.length;
 
@@ -131,6 +135,8 @@ class PulseLinkState {
     bool clearActiveLiveBloodJourneyHospitalName = false,
     String? activeLiveBloodJourneyBloodType,
     bool clearActiveLiveBloodJourneyBloodType = false,
+    GratitudeLetter? activeGratitudeLetter,
+    bool clearActiveGratitudeLetter = false,
     String? pendingLevelUp,
     bool clearPendingLevelUp = false,
     Set<String>? acknowledgedJourneyIds,
@@ -169,16 +175,22 @@ class PulseLinkState {
       activeLiveBloodJourney: clearActiveLiveBloodJourney
           ? null
           : activeLiveBloodJourney ?? this.activeLiveBloodJourney,
-      activeLiveBloodJourneyHospitalName: clearActiveLiveBloodJourneyHospitalName
-          ? null
-          : activeLiveBloodJourneyHospitalName ?? this.activeLiveBloodJourneyHospitalName,
+      activeLiveBloodJourneyHospitalName:
+          clearActiveLiveBloodJourneyHospitalName
+              ? null
+              : activeLiveBloodJourneyHospitalName ??
+                  this.activeLiveBloodJourneyHospitalName,
       activeLiveBloodJourneyBloodType: clearActiveLiveBloodJourneyBloodType
           ? null
-          : activeLiveBloodJourneyBloodType ?? this.activeLiveBloodJourneyBloodType,
-      pendingLevelUp: clearPendingLevelUp
+          : activeLiveBloodJourneyBloodType ??
+              this.activeLiveBloodJourneyBloodType,
+      activeGratitudeLetter: clearActiveGratitudeLetter
           ? null
-          : pendingLevelUp ?? this.pendingLevelUp,
-      acknowledgedJourneyIds: acknowledgedJourneyIds ?? this.acknowledgedJourneyIds,
+          : activeGratitudeLetter ?? this.activeGratitudeLetter,
+      pendingLevelUp:
+          clearPendingLevelUp ? null : pendingLevelUp ?? this.pendingLevelUp,
+      acknowledgedJourneyIds:
+          acknowledgedJourneyIds ?? this.acknowledgedJourneyIds,
     );
   }
 }

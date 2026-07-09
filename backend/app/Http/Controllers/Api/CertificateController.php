@@ -48,6 +48,9 @@ class CertificateController extends Controller
             'hospital_name' => $history->hospital?->name,
             'issued_at' => $history->certificate_issued_at?->toIso8601String(),
             'verified' => $history->status === 'verified',
+            'gratitude_message' => $history->gratitude_message,
+            'gratitude_style' => $history->gratitude_style,
+            'gratitude_created_at' => $history->gratitude_created_at?->toIso8601String(),
             'blood_journey' => $history->bloodJourney
                 ? BloodJourneyResource::make($history->bloodJourney)->resolve()
                 : null,

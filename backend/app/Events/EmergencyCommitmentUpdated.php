@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use App\Models\EmergencyCommitment;
+use App\Services\Gratitude\GratitudeCardService;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -58,6 +59,9 @@ class EmergencyCommitmentUpdated implements ShouldBroadcastNow
                     'location_label' => $journey->location_label,
                     'destination_type' => $journey->destination_type,
                     'final_message' => $journey->final_message,
+                    'pulse_link_message' => $journey->pulse_link_message,
+                    'gratitude_style' => $journey->gratitude_style,
+                    'gratitude_card' => app(GratitudeCardService::class)->journeyPayload($journey),
                     'completed_at' => $journey->completed_at?->toIso8601String(),
                     'published_at' => $journey->published_at?->toIso8601String(),
                     'steps' => $journey->steps->map(fn ($step) => [

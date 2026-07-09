@@ -25,6 +25,9 @@ class DonationHistory extends Model
         'certificate_verify_token',
         'status',
         'notes',
+        'gratitude_message',
+        'gratitude_style',
+        'gratitude_created_at',
     ];
 
     protected function casts(): array
@@ -32,6 +35,7 @@ class DonationHistory extends Model
         return [
             'donated_at' => 'date',
             'certificate_issued_at' => 'datetime',
+            'gratitude_created_at' => 'datetime',
         ];
     }
 

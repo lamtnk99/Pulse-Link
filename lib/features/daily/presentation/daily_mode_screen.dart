@@ -2074,6 +2074,10 @@ class _DailyHeader extends StatelessWidget {
                           ),
                           onTap: () {
                             controller.markNotificationRead(notification.id);
+                            if (controller.showGratitudeFromNotification(notification)) {
+                              Navigator.pop(context);
+                              return;
+                            }
                             final conversationId = notification.payload['conversation_id']?.toString();
                             if (conversationId != null) {
                               Navigator.pop(context); // Close notification bottom sheet
@@ -3060,4 +3064,3 @@ class _PromoTag extends StatelessWidget {
     );
   }
 }
-

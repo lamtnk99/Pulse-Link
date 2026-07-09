@@ -6,6 +6,10 @@ class BloodJourney {
     required this.steps,
     this.locationLabel,
     this.finalMessage,
+    this.pulseLinkMessage,
+    this.gratitudeStyle,
+    this.gratitudeCard,
+    this.hospitalName,
     this.publishedAt,
     this.completedAt,
     this.verifyUrl,
@@ -18,6 +22,14 @@ class BloodJourney {
       currentStep: json['current_step'] as String? ?? 'received',
       locationLabel: json['location_label'] as String?,
       finalMessage: json['final_message'] as String?,
+      pulseLinkMessage: json['pulse_link_message'] as String?,
+      gratitudeStyle: json['gratitude_style'] as String?,
+      gratitudeCard: json['gratitude_card'] is Map<String, dynamic>
+          ? json['gratitude_card'] as Map<String, dynamic>
+          : null,
+      hospitalName: json['hospital'] is Map<String, dynamic>
+          ? (json['hospital'] as Map<String, dynamic>)['name'] as String?
+          : null,
       publishedAt: _parseDate(json['published_at']),
       completedAt: _parseDate(json['completed_at']),
       verifyUrl: json['verify_url'] as String?,
@@ -33,6 +45,10 @@ class BloodJourney {
   final String currentStep;
   final String? locationLabel;
   final String? finalMessage;
+  final String? pulseLinkMessage;
+  final String? gratitudeStyle;
+  final Map<String, dynamic>? gratitudeCard;
+  final String? hospitalName;
   final DateTime? publishedAt;
   final DateTime? completedAt;
   final String? verifyUrl;

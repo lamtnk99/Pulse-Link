@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/pulse_link_theme.dart';
 import '../../../core/utils/vietnamese_labels.dart';
+import '../../gratitude/domain/gratitude_letter.dart';
+import '../../gratitude/presentation/gratitude_letter_screen.dart';
 import '../domain/past_donation.dart';
 
 class DonationCertificateScreen extends StatelessWidget {
@@ -329,6 +331,17 @@ class _BloodJourneyPanel extends StatelessWidget {
 
   final PastDonation donation;
 
+  void _openGratitudeLetter(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => GratitudeLetterScreen(
+          letter: GratitudeLetter.fromDonation(donation),
+          onClose: () => Navigator.of(context).maybePop(),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final journey = donation.bloodJourney!;
@@ -395,6 +408,25 @@ class _BloodJourneyPanel extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
+          if (journey.publishedAt != null &&
+              (journey.finalMessage ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _openGratitudeLetter(context),
+                icon: const Icon(Icons.mark_email_read_rounded, size: 18),
+                label: const Text('Mở thư cảm ơn'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: PulseLinkTheme.primaryRed,
+                  side: BorderSide(
+                      color: PulseLinkTheme.primaryRed.withOpacity(0.36)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

@@ -99,6 +99,8 @@ class BloodJourney extends Model
         'current_step',
         'location_label',
         'final_message',
+        'pulse_link_message',
+        'gratitude_style',
         'published_at',
         'completed_at',
     ];

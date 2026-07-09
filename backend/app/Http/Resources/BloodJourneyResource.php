@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\Gratitude\GratitudeCardService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -15,6 +16,9 @@ class BloodJourneyResource extends JsonResource
             'current_step' => $this->current_step,
             'location_label' => $this->location_label,
             'final_message' => $this->final_message,
+            'pulse_link_message' => $this->pulse_link_message,
+            'gratitude_style' => $this->gratitude_style,
+            'gratitude_card' => app(GratitudeCardService::class)->journeyPayload($this->resource),
             'published_at' => $this->published_at?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'verify_url' => $request->getSchemeAndHttpHost().'/journeys/'.$this->public_id,
