@@ -58,6 +58,20 @@ class LaravelDonorRepository implements DonorRepository {
     );
     return _unwrapData(json)['url'] as String;
   }
+
+  @override
+  Future<void> deleteAccount({
+    required String confirmation,
+    String? reason,
+  }) async {
+    await _client.deleteJson(
+      '/api/mobile/me/account',
+      body: {
+        'confirmation': confirmation,
+        if (reason != null && reason.trim().isNotEmpty) 'reason': reason.trim(),
+      },
+    );
+  }
 }
 
 class LaravelDonationEventRepository implements DonationEventRepository {

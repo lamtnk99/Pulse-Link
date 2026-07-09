@@ -2,6 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\AccountDeletionLog;
+use App\Models\CampaignDonation;
+use App\Models\ChatConversation;
+use App\Models\ChatMessage;
+use App\Models\DonationCampaign;
+use App\Models\DonationHistory;
+use App\Models\MobileNotification;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -238,5 +245,101 @@ class AuthApiTest extends TestCase
             'id' => $donor->id,
             'id_verification_status' => 'verified',
         ]);
+    }
+
+    public function test_donor_can_delete_account_and_anonymize_retained_records()
+    {
+        $user = User::factory()->create([
+            'role' => 'donor',
+            'email' => 'delete-me@test.com',
+            'phone' => '0900111222',
+            'national_id' => '012345678901',
+            'id_card_front_url' => 'https://api.test/storage/pulse-link/id-cards/front.jpg',
+            'id_card_back_url' => 'https://api.test/storage/pulse-link/id-cards/back.jpg',
+            'latitude' => 10.77,
+            'longitude' => 106.66,
+            'fcm_token' => 'fcm-token',
+        ]);
+        $token = $user->createToken('delete-token')->plainTextToken;
+
+        $history = DonationHistory::query()->create([
+            'user_id' => $user->id,
+            'donated_at' => now()->toDateString(),
+            'location_name' => 'Bệnh viện kiểm thử',
+            'volume_ml' => 350,
+            'blood_type' => 'O+',
+            'certificate_id' => 'CERT-DELETE-001',
+            'status' => 'verified',
+            'notes' => 'Ghi chú cá nhân cần xóa',
+        ]);
+
+        $campaign = DonationCampaign::query()->create([
+            'title' => 'Chiến dịch kiểm thử',
+            'description' => 'Kiểm thử ẩn danh quyên góp.',
+            'target_amount' => 1000000,
+            'current_amount' => 100000,
+            'status' => 'active',
+        ]);
+
+        $donation = CampaignDonation::query()->create([
+            'donation_campaign_id' => $campaign->id,
+            'user_id' => $user->id,
+            'amount' => 100000,
+            'points' => 0,
+            'payment_method' => 'points',
+            'payment_status' => 'success',
+            'transaction_id' => 'DELETE-ACCOUNT-TXN',
+            'donor_name' => $user->name,
+            'message' => 'Tin nhắn giữ lại không định danh',
+            'is_anonymous' => false,
+        ]);
+
+        $chat = ChatConversation::query()->create([
+            'user_id' => $user->id,
+            'title' => 'Chat cần xóa',
+            'context_type' => ChatConversation::CONTEXT_GENERAL,
+            'is_active' => true,
+        ]);
+        ChatMessage::query()->create([
+            'chat_conversation_id' => $chat->id,
+            'role' => 'user',
+            'content' => 'Tôi cần tư vấn sức khỏe.',
+        ]);
+
+        MobileNotification::query()->create([
+            'user_id' => $user->id,
+            'type' => 'test',
+            'title' => 'Thông báo',
+            'body' => 'Thông báo cần xóa',
+        ]);
+
+        $this->deleteJson('/api/mobile/me/account', [
+            'confirmation' => 'XÓA TÀI KHOẢN',
+            'reason' => 'Không dùng nữa',
+        ], [
+            'Authorization' => 'Bearer '.$token,
+        ])->assertOk();
+
+        $this->assertDatabaseMissing('users', ['id' => $user->id]);
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+        $this->assertDatabaseMissing('chat_conversations', ['id' => $chat->id]);
+        $this->assertDatabaseMissing('mobile_notifications', ['user_id' => $user->id]);
+
+        $history->refresh();
+        $this->assertNull($history->user_id);
+        $this->assertNull($history->notes);
+
+        $donation->refresh();
+        $this->assertNull($donation->user_id);
+        $this->assertSame('Hiệp sĩ ẩn danh', $donation->donor_name);
+        $this->assertTrue($donation->is_anonymous);
+
+        $this->assertSame(1, AccountDeletionLog::query()->count());
+
+        auth()->forgetGuards();
+
+        $this->getJson('/api/auth/me', [
+            'Authorization' => 'Bearer '.$token,
+        ])->assertUnauthorized();
     }
 }

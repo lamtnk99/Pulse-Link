@@ -26,6 +26,7 @@ import '../../donation/domain/donation_campaign.dart';
 import '../../donation/presentation/donation_campaigns_screen.dart';
 import '../../donation/presentation/donation_detail_screen.dart';
 import '../../donation/presentation/donation_palette.dart';
+import '../../profile/presentation/account_privacy_screen.dart';
 
 class DailyModeScreen extends StatefulWidget {
   const DailyModeScreen({
@@ -483,7 +484,8 @@ class _HomeTab extends StatelessWidget {
       if (item.bloodJourney != null && item.bloodJourney!.completedAt == null) {
         final journeyId = item.bloodJourney!.id;
         final publishedAt = item.bloodJourney!.publishedAt;
-        final isExpired = publishedAt != null && DateTime.now().difference(publishedAt).inDays >= 3;
+        final isExpired = publishedAt != null &&
+            DateTime.now().difference(publishedAt).inDays >= 3;
         if (!state.acknowledgedJourneyIds.contains(journeyId) && !isExpired) {
           activeDonation = item;
           break;
@@ -580,14 +582,16 @@ class _HomeTab extends StatelessWidget {
                   child: Material(
                     color: Colors.transparent,
                     child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white70, size: 18),
+                      icon: const Icon(Icons.close,
+                          color: Colors.white70, size: 18),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(
                         minWidth: 32,
                         minHeight: 32,
                       ),
                       onPressed: () {
-                        controller.dismissLiveBloodJourney(activeDonation!.bloodJourney!.id);
+                        controller.dismissLiveBloodJourney(
+                            activeDonation!.bloodJourney!.id);
                       },
                     ),
                   ),
@@ -751,7 +755,8 @@ class _EventsTabState extends State<_EventsTab> {
       _campaignsError = null;
     });
     try {
-      final campaigns = await widget.controller.donationFundService.getCampaigns();
+      final campaigns =
+          await widget.controller.donationFundService.getCampaigns();
       if (!mounted) return;
       setState(() {
         _campaigns = campaigns;
@@ -760,7 +765,8 @@ class _EventsTabState extends State<_EventsTab> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _campaignsError = 'Không thể tải danh sách chiến dịch quyên góp. Vui lòng kéo xuống thử lại.';
+        _campaignsError =
+            'Không thể tải danh sách chiến dịch quyên góp. Vui lòng kéo xuống thử lại.';
         _isLoadingCampaigns = false;
       });
     }
@@ -775,7 +781,8 @@ class _EventsTabState extends State<_EventsTab> {
         return const _EmptyState(
           icon: Icons.event_busy_rounded,
           title: 'Chưa có sự kiện nào gần đây',
-          subtitle: 'Hãy quay lại sau hoặc chuyển sang quyên góp đồng hành nhé.',
+          subtitle:
+              'Hãy quay lại sau hoặc chuyển sang quyên góp đồng hành nhé.',
         );
       }
       return Column(
@@ -836,7 +843,8 @@ class _EventsTabState extends State<_EventsTab> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.error_outline_rounded, size: 48, color: DonationPalette.primary),
+                const Icon(Icons.error_outline_rounded,
+                    size: 48, color: DonationPalette.primary),
                 const SizedBox(height: 12),
                 Text(
                   _campaignsError!,
@@ -877,14 +885,16 @@ class _EventsTabState extends State<_EventsTab> {
             _CampaignEventCard(
               campaign: campaign,
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (context) => DonationDetailScreen(
-                      controller: widget.controller,
-                      campaignId: campaign.id,
-                    ),
-                  ),
-                ).then((_) => _loadCampaigns());
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute<void>(
+                        builder: (context) => DonationDetailScreen(
+                          controller: widget.controller,
+                          campaignId: campaign.id,
+                        ),
+                      ),
+                    )
+                    .then((_) => _loadCampaigns());
               },
             ),
             const SizedBox(height: 12),
@@ -914,7 +924,9 @@ class _EventsTabState extends State<_EventsTab> {
             trailing: _selectedTab == 0
                 ? IconButton.filledTonal(
                     onPressed: widget.onToggleMap,
-                    icon: Icon(widget.showMap ? Icons.view_agenda_outlined : Icons.map),
+                    icon: Icon(widget.showMap
+                        ? Icons.view_agenda_outlined
+                        : Icons.map),
                     tooltip: widget.showMap ? 'Hiện danh sách' : 'Hiện bản đồ',
                   )
                 : null,
@@ -975,7 +987,7 @@ class _CustomTabButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1054,17 +1066,20 @@ class _CampaignEventCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final progress = campaign.progress;
     final progressPercent = (progress * 100).round();
 
     final remaining = campaign.targetAmount - campaign.currentAmount;
 
-    final remainingText = '${NumberFormat.compact(locale: 'vi').format(remaining < 0 ? 0 : remaining)}đ';
+    final remainingText =
+        '${NumberFormat.compact(locale: 'vi').format(remaining < 0 ? 0 : remaining)}đ';
 
     final urgency = DonationPalette.urgency(campaign.urgencyLevel);
     final beneficiary = (campaign.beneficiaryName ?? '').trim();
-    final storyLine = campaign.hasStory ? campaign.beneficiaryStory!.trim() : campaign.description;
+    final storyLine = campaign.hasStory
+        ? campaign.beneficiaryStory!.trim()
+        : campaign.description;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1110,7 +1125,8 @@ class _CampaignEventCard extends StatelessWidget {
                       top: 10,
                       left: 10,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: urgency.color.withOpacity(0.9),
                           borderRadius: BorderRadius.circular(999),
@@ -1139,7 +1155,8 @@ class _CampaignEventCard extends StatelessWidget {
                       bottom: 10,
                       child: Row(
                         children: [
-                          const Icon(Icons.favorite_rounded, size: 14, color: Colors.white),
+                          const Icon(Icons.favorite_rounded,
+                              size: 14, color: Colors.white),
                           const SizedBox(width: 6),
                           Expanded(
                             child: Text(
@@ -1193,8 +1210,10 @@ class _CampaignEventCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                     child: LinearProgressIndicator(
                       value: progress,
-                      backgroundColor: DonationPalette.primary.withOpacity(0.08),
-                      valueColor: const AlwaysStoppedAnimation<Color>(DonationPalette.primary),
+                      backgroundColor:
+                          DonationPalette.primary.withOpacity(0.08),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          DonationPalette.primary),
                       minHeight: 6,
                     ),
                   ),
@@ -1262,7 +1281,8 @@ class _CampaignEventCard extends StatelessWidget {
     return Container(
       color: Colors.white10,
       alignment: Alignment.center,
-      child: const Icon(Icons.volunteer_activism_rounded, size: 36, color: Colors.white30),
+      child: const Icon(Icons.volunteer_activism_rounded,
+          size: 36, color: Colors.white30),
     );
   }
 }
@@ -1839,6 +1859,39 @@ class _ProfileTab extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           height: 48,
+          child: OutlinedButton.icon(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => AccountPrivacyScreen(controller: controller),
+                ),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: PulseLinkTheme.primaryRed,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              side: BorderSide(
+                color: PulseLinkTheme.subtleBorderColor(context),
+                width: 1.4,
+              ),
+            ),
+            icon: const Icon(Icons.privacy_tip_outlined),
+            label: const Text(
+              'TÀI KHOẢN & QUYỀN RIÊNG TƯ',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
           child: TextButton.icon(
             onPressed: () => controller.logout(),
             style: TextButton.styleFrom(
@@ -1950,7 +2003,6 @@ class _ThemePreferenceCard extends StatelessWidget {
   }
 }
 
-
 class _DailyHeader extends StatelessWidget {
   const _DailyHeader({
     required this.controller,
@@ -2006,6 +2058,7 @@ class _DailyHeader extends StatelessWidget {
       ],
     );
   }
+
   Future<void> _showNotifications(
     BuildContext context,
     PulseLinkController controller,
@@ -2074,14 +2127,19 @@ class _DailyHeader extends StatelessWidget {
                           ),
                           onTap: () {
                             controller.markNotificationRead(notification.id);
-                            if (controller.showGratitudeFromNotification(notification)) {
+                            if (controller
+                                .showGratitudeFromNotification(notification)) {
                               Navigator.pop(context);
                               return;
                             }
-                            final conversationId = notification.payload['conversation_id']?.toString();
+                            final conversationId = notification
+                                .payload['conversation_id']
+                                ?.toString();
                             if (conversationId != null) {
-                              Navigator.pop(context); // Close notification bottom sheet
-                              controller.openChat(conversationId: conversationId);
+                              Navigator.pop(
+                                  context); // Close notification bottom sheet
+                              controller.openChat(
+                                  conversationId: conversationId);
                             }
                           },
                         );
@@ -2607,7 +2665,8 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
 
   Future<void> _loadFeatured() async {
     try {
-      final campaigns = await widget.controller.donationFundService.getCampaigns();
+      final campaigns =
+          await widget.controller.donationFundService.getCampaigns();
       if (!mounted) return;
       DonationCampaign? pick;
       var rest = <DonationCampaign>[];
@@ -2635,7 +2694,8 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
   void _openCampaigns() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => DonationCampaignsScreen(controller: widget.controller),
+        builder: (context) =>
+            DonationCampaignsScreen(controller: widget.controller),
       ),
     );
   }
@@ -2706,7 +2766,8 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                       color: DonationPalette.primary,
                     ),
                   ),
-                  const Icon(Icons.chevron_right_rounded, size: 18, color: DonationPalette.primary),
+                  const Icon(Icons.chevron_right_rounded,
+                      size: 18, color: DonationPalette.primary),
                 ],
               ),
             ),
@@ -2721,7 +2782,8 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
             padding: EdgeInsets.zero,
             itemCount: _others.length,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) => _buildMiniCard(isDark, _others[index]),
+            itemBuilder: (context, index) =>
+                _buildMiniCard(isDark, _others[index]),
           ),
         ),
       ],
@@ -2768,7 +2830,10 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black.withOpacity(0.5)],
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.5)
+                        ],
                       ),
                     ),
                   ),
@@ -2777,7 +2842,10 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                   Positioned(
                     top: 8,
                     left: 8,
-                    child: _PromoTag(icon: urgency.icon, label: urgency.label, color: urgency.color),
+                    child: _PromoTag(
+                        icon: urgency.icon,
+                        label: urgency.label,
+                        color: urgency.color),
                   ),
               ],
             ),
@@ -2804,7 +2872,8 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                       value: progress == 0 ? null : progress,
                       minHeight: 5,
                       backgroundColor: DonationPalette.primary.withOpacity(0.1),
-                      valueColor: const AlwaysStoppedAnimation<Color>(DonationPalette.primary),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          DonationPalette.primary),
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -2834,7 +2903,8 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: DonationPalette.surface(isDark).withOpacity(isDark ? 0.6 : 1),
+            color:
+                DonationPalette.surface(isDark).withOpacity(isDark ? 0.6 : 1),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: DonationPalette.primary.withOpacity(0.3),
@@ -2850,7 +2920,8 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                   color: DonationPalette.primary.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.volunteer_activism_rounded, color: DonationPalette.primary, size: 24),
+                child: const Icon(Icons.volunteer_activism_rounded,
+                    color: DonationPalette.primary, size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -2859,17 +2930,24 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                   children: [
                     const Text(
                       'Đồng hành quyên góp',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: DonationPalette.primary),
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: DonationPalette.primary),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Chung tay cùng những hoàn cảnh đang cần bạn.',
-                      style: TextStyle(fontSize: 12.5, height: 1.4, color: DonationPalette.mutedText(isDark)),
+                      style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.4,
+                          color: DonationPalette.mutedText(isDark)),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: isDark ? Colors.white38 : Colors.black38),
+              Icon(Icons.chevron_right_rounded,
+                  color: isDark ? Colors.white38 : Colors.black38),
             ],
           ),
         ),
@@ -2893,10 +2971,12 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
           decoration: BoxDecoration(
             color: DonationPalette.surface(isDark),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: DonationPalette.primary.withOpacity(0.25), width: 1.2),
+            border: Border.all(
+                color: DonationPalette.primary.withOpacity(0.25), width: 1.2),
             boxShadow: [
               BoxShadow(
-                color: DonationPalette.primary.withOpacity(isDark ? 0.12 : 0.08),
+                color:
+                    DonationPalette.primary.withOpacity(isDark ? 0.12 : 0.08),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -2925,7 +3005,10 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black.withOpacity(0.55)],
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.55)
+                          ],
                         ),
                       ),
                     ),
@@ -2942,7 +3025,10 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                         ),
                         if (urgency != null) ...[
                           const SizedBox(width: 8),
-                          _PromoTag(icon: urgency.icon, label: urgency.label, color: urgency.color),
+                          _PromoTag(
+                              icon: urgency.icon,
+                              label: urgency.label,
+                              color: urgency.color),
                         ],
                       ],
                     ),
@@ -2960,7 +3046,9 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                           color: Colors.white,
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          shadows: [Shadow(blurRadius: 6, color: Colors.black54)],
+                          shadows: [
+                            Shadow(blurRadius: 6, color: Colors.black54)
+                          ],
                         ),
                       ),
                     ),
@@ -2989,8 +3077,10 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                       child: LinearProgressIndicator(
                         value: progress == 0 ? null : progress,
                         minHeight: 7,
-                        backgroundColor: DonationPalette.primary.withOpacity(0.1),
-                        valueColor: const AlwaysStoppedAnimation<Color>(DonationPalette.primary),
+                        backgroundColor:
+                            DonationPalette.primary.withOpacity(0.1),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            DonationPalette.primary),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -3006,11 +3096,14 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                         ),
                         const Spacer(),
                         if (c.donorCount > 0) ...[
-                          Icon(Icons.favorite_rounded, size: 13, color: DonationPalette.coral),
+                          Icon(Icons.favorite_rounded,
+                              size: 13, color: DonationPalette.coral),
                           const SizedBox(width: 4),
                           Text(
                             '${c.donorCount} người đồng hành',
-                            style: TextStyle(fontSize: 12, color: DonationPalette.mutedText(isDark)),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: DonationPalette.mutedText(isDark)),
                           ),
                         ],
                       ],
@@ -3036,7 +3129,8 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
 }
 
 class _PromoTag extends StatelessWidget {
-  const _PromoTag({required this.icon, required this.label, required this.color});
+  const _PromoTag(
+      {required this.icon, required this.label, required this.color});
 
   final IconData icon;
   final String label;
@@ -3057,7 +3151,10 @@ class _PromoTag extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white),
+            style: const TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                color: Colors.white),
           ),
         ],
       ),

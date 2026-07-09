@@ -36,7 +36,7 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadDetails(showLoading: true);
-    
+
     // Realtime Polling: updates details every 5 seconds to ensure real-time progress
     _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) {
@@ -60,11 +60,13 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
       });
     }
     try {
-      final detail = await widget.controller.donationFundService.getCampaignDetail(widget.campaignId);
+      final detail = await widget.controller.donationFundService
+          .getCampaignDetail(widget.campaignId);
       if (mounted) {
         setState(() {
           _campaign = detail['campaign'] as DonationCampaign;
-          _leaderboard = List<CampaignDonation>.from(detail['leaderboard'] as List);
+          _leaderboard =
+              List<CampaignDonation>.from(detail['leaderboard'] as List);
           _isLoading = false;
         });
       }
@@ -101,7 +103,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline, size: 64, color: DonationPalette.primary),
+                const Icon(Icons.error_outline,
+                    size: 64, color: DonationPalette.primary),
                 const SizedBox(height: 16),
                 Text(
                   _error ?? 'Không tìm thấy thông tin chiến dịch.',
@@ -137,7 +140,11 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.black54, Colors.transparent, Colors.black87],
+                          colors: [
+                            Colors.black54,
+                            Colors.transparent,
+                            Colors.black87
+                          ],
                         ),
                       ),
                     ),
@@ -157,7 +164,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
               labelColor: DonationPalette.primary,
               unselectedLabelColor: isDark ? Colors.white60 : Colors.black54,
               indicatorColor: DonationPalette.primary,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+              labelStyle:
+                  const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
               tabs: const [
                 Tab(text: 'Câu chuyện'),
                 Tab(text: 'Bảng vàng tri ân'),
@@ -190,7 +198,9 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+          color: isDark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.05),
         ),
         boxShadow: [
           BoxShadow(
@@ -232,18 +242,24 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
               ),
               child: Row(
                 children: [
-                  Icon(Icons.people_alt_rounded, size: 18, color: DonationPalette.coral),
+                  Icon(Icons.people_alt_rounded,
+                      size: 18, color: DonationPalette.coral),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text.rich(
                       TextSpan(
-                        style: TextStyle(fontSize: 13, color: DonationPalette.strongText(isDark)),
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: DonationPalette.strongText(isDark)),
                         children: [
                           TextSpan(
                             text: '${campaign.donorCount} hiệp sĩ',
-                            style: const TextStyle(fontWeight: FontWeight.w800, color: DonationPalette.primary),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: DonationPalette.primary),
                           ),
-                          const TextSpan(text: ' đã cùng bạn viết tiếp câu chuyện này.'),
+                          const TextSpan(
+                              text: ' đã cùng bạn viết tiếp câu chuyện này.'),
                         ],
                       ),
                     ),
@@ -267,8 +283,10 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final formatter = NumberFormat('#,###');
-    final currentText = isCash ? '${formatter.format(current)} VND' : '${current.toInt()} điểm';
-    final targetText = isCash ? '${formatter.format(target)} VND' : '${target.toInt()} điểm';
+    final currentText =
+        isCash ? '${formatter.format(current)} VND' : '${current.toInt()} điểm';
+    final targetText =
+        isCash ? '${formatter.format(target)} VND' : '${target.toInt()} điểm';
     final percent = (progress * 100).toInt();
 
     // Quy đổi phần đã góp sang tác động cụ thể để con số trở nên "chạm được".
@@ -278,7 +296,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
           ? campaign.impactUnitsForAmount(current)
           : campaign.impactUnitsForPoints(current.toInt());
       if (units > 0) {
-        impactLine = 'Tương đương $units ${campaign.impactUnit} đã được trao đi';
+        impactLine =
+            'Tương đương $units ${campaign.impactUnit} đã được trao đi';
       }
     }
 
@@ -298,7 +317,10 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
             ),
             Text(
               '$percent%',
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: DonationPalette.primary),
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: DonationPalette.primary),
             ),
           ],
         ),
@@ -308,7 +330,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
           child: LinearProgressIndicator(
             value: progress == 0 ? null : progress,
             backgroundColor: DonationPalette.primary.withOpacity(0.08),
-            valueColor: const AlwaysStoppedAnimation<Color>(DonationPalette.primary),
+            valueColor:
+                const AlwaysStoppedAnimation<Color>(DonationPalette.primary),
             minHeight: 8,
           ),
         ),
@@ -318,9 +341,14 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
           children: [
             Text(
               'Đã góp: $currentText',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: DonationPalette.strongText(isDark)),
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: DonationPalette.strongText(isDark)),
             ),
-            Text('Đích đến: $targetText', style: TextStyle(fontSize: 12, color: DonationPalette.mutedText(isDark))),
+            Text('Đích đến: $targetText',
+                style: TextStyle(
+                    fontSize: 12, color: DonationPalette.mutedText(isDark))),
           ],
         ),
         if (impactLine != null) ...[
@@ -368,7 +396,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
                   ],
                 ),
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: DonationPalette.primary.withOpacity(0.15)),
+                border: Border.all(
+                    color: DonationPalette.primary.withOpacity(0.15)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,7 +410,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
                           color: DonationPalette.primary.withOpacity(0.12),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.auto_stories_rounded, size: 18, color: DonationPalette.primary),
+                        child: const Icon(Icons.auto_stories_rounded,
+                            size: 18, color: DonationPalette.primary),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -416,7 +446,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
                     style: TextStyle(
                       fontSize: 14.5,
                       height: 1.7,
-                      color: DonationPalette.strongText(isDark).withOpacity(0.9),
+                      color:
+                          DonationPalette.strongText(isDark).withOpacity(0.9),
                     ),
                   ),
                 ],
@@ -455,12 +486,16 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.favorite_border_rounded, size: 48, color: DonationPalette.primary.withOpacity(0.6)),
+              Icon(Icons.favorite_border_rounded,
+                  size: 48, color: DonationPalette.primary.withOpacity(0.6)),
               const SizedBox(height: 12),
               Text(
                 'Chưa có ai đồng hành.\nHãy là người đầu tiên gieo hy vọng!',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: DonationPalette.mutedText(isDark), fontSize: 13.5, height: 1.5),
+                style: TextStyle(
+                    color: DonationPalette.mutedText(isDark),
+                    fontSize: 13.5,
+                    height: 1.5),
               ),
             ],
           ),
@@ -520,10 +555,11 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  gradient: donor.isAnonymous
-                      ? null
-                      : DonationPalette.warmGradient,
-                  color: donor.isAnonymous ? DonationPalette.primary.withOpacity(0.12) : null,
+                  gradient:
+                      donor.isAnonymous ? null : DonationPalette.warmGradient,
+                  color: donor.isAnonymous
+                      ? DonationPalette.primary.withOpacity(0.12)
+                      : null,
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -532,7 +568,9 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 16,
-                      color: donor.isAnonymous ? DonationPalette.primary : Colors.white,
+                      color: donor.isAnonymous
+                          ? DonationPalette.primary
+                          : Colors.white,
                     ),
                   ),
                 ),
@@ -565,7 +603,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
               if (donor.lastDonatedAt != null)
                 Text(
                   DateFormat('dd/MM').format(donor.lastDonatedAt!.toLocal()),
-                  style: TextStyle(fontSize: 11, color: DonationPalette.mutedText(isDark)),
+                  style: TextStyle(
+                      fontSize: 11, color: DonationPalette.mutedText(isDark)),
                 ),
             ],
           ),
@@ -586,7 +625,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.format_quote_rounded, size: 16, color: DonationPalette.amber),
+                  Icon(Icons.format_quote_rounded,
+                      size: 16, color: DonationPalette.amber),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
@@ -595,7 +635,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
                         fontSize: 13,
                         height: 1.45,
                         fontStyle: FontStyle.italic,
-                        color: DonationPalette.strongText(isDark).withOpacity(0.9),
+                        color:
+                            DonationPalette.strongText(isDark).withOpacity(0.9),
                       ),
                     ),
                   ),
@@ -614,7 +655,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         color: DonationPalette.surface(isDark),
-        border: Border(top: BorderSide(color: DonationPalette.subtleBorder(isDark))),
+        border: Border(
+            top: BorderSide(color: DonationPalette.subtleBorder(isDark))),
       ),
       child: SafeArea(
         top: false,
@@ -639,7 +681,8 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
               ),
               icon: const Icon(Icons.favorite_rounded, size: 20),
               label: const Text(
@@ -694,16 +737,22 @@ class _DonationFormBottomSheet extends StatefulWidget {
   final ValueChanged<DonationResult> onSuccess;
 
   @override
-  State<_DonationFormBottomSheet> createState() => _DonationFormBottomSheetState();
+  State<_DonationFormBottomSheet> createState() =>
+      _DonationFormBottomSheetState();
 }
 
 class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
+  static const bool _cashDonationEnabled = bool.fromEnvironment(
+    'APP_STORE_CASH_DONATION_ENABLED',
+    defaultValue: false,
+  );
+
   final _nameController = TextEditingController();
   final _messageController = TextEditingController();
-  
+
   // Tab type index: 0 = Cash, 1 = Points (Hero Points)
-  int _selectedTypeIndex = 0;
-  
+  int _selectedTypeIndex = _cashDonationEnabled ? 0 : 1;
+
   // Presets
   final List<double> _cashPresets = [50000, 100000, 200000, 500000];
   final List<int> _pointsPresets = [50, 100, 200, 500];
@@ -720,7 +769,7 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
     // Default form name is current user name
     final user = widget.controller.state.profile;
     _nameController.text = user?.name ?? '';
-    
+
     // Mọi chiến dịch đều nhận cả tiền mặt lẫn điểm Hero; mặc định mở tab Tiền mặt.
   }
 
@@ -747,6 +796,10 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
     setState(() => _submitting = true);
     try {
       if (_selectedTypeIndex == 0) {
+        if (!_cashDonationEnabled) {
+          throw 'Tính năng quyên góp tiền đang tạm tắt trên bản App Store.';
+        }
+
         // Cash donation
         final res = await widget.controller.donationFundService.donateCash(
           campaignId: widget.campaign.id,
@@ -852,7 +905,8 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
               const SizedBox(height: 4),
               Text(
                 'Mỗi đóng góp, dù nhỏ, đều tạo nên khác biệt.',
-                style: TextStyle(fontSize: 13, color: DonationPalette.mutedText(isDark)),
+                style: TextStyle(
+                    fontSize: 13, color: DonationPalette.mutedText(isDark)),
               ),
               const SizedBox(height: 16),
 
@@ -861,11 +915,13 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildTypeButton(0, 'Tiền mặt', Icons.favorite_rounded),
+                      child: _buildTypeButton(
+                          0, 'Tiền mặt', Icons.favorite_rounded),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: _buildTypeButton(1, 'Điểm Hero', Icons.stars_rounded),
+                      child:
+                          _buildTypeButton(1, 'Điểm Hero', Icons.stars_rounded),
                     ),
                   ],
                 ),
@@ -876,7 +932,10 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
               if (_selectedTypeIndex == 0) ...[
                 Text(
                   'Chọn số tiền ủng hộ',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: DonationPalette.strongText(isDark)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13.5,
+                      color: DonationPalette.strongText(isDark)),
                 ),
                 const SizedBox(height: 10),
                 Wrap(
@@ -896,7 +955,10 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                 const SizedBox(height: 20),
                 Text(
                   'Cổng thanh toán',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: DonationPalette.strongText(isDark)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13.5,
+                      color: DonationPalette.strongText(isDark)),
                 ),
                 const SizedBox(height: 8),
                 GridView.count(
@@ -919,11 +981,17 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                   children: [
                     Text(
                       'Chọn số điểm ủng hộ',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: DonationPalette.strongText(isDark)),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: DonationPalette.strongText(isDark)),
                     ),
                     Text(
                       'Số dư: $userPoints điểm',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: DonationPalette.mutedText(isDark)),
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: DonationPalette.mutedText(isDark)),
                     ),
                   ],
                 ),
@@ -936,60 +1004,72 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                     return _buildAmountChip(
                       selected: isSel,
                       label: '$points điểm',
-                      hint: _impactHint(isCash: false, value: points.toDouble()),
+                      hint:
+                          _impactHint(isCash: false, value: points.toDouble()),
                       isDark: isDark,
-                      onTap: () => setState(() => _selectedPointsAmount = points),
+                      onTap: () =>
+                          setState(() => _selectedPointsAmount = points),
                     );
                   }).toList(),
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(Icons.swap_horiz_rounded, size: 15, color: DonationPalette.mutedText(isDark)),
+                    Icon(Icons.swap_horiz_rounded,
+                        size: 15, color: DonationPalette.mutedText(isDark)),
                     const SizedBox(width: 6),
                     Text(
                       'Tương đương ${NumberFormat('#,###').format(widget.campaign.amountFromPoints(_selectedPointsAmount))}đ '
                       'góp vào quỹ (1 điểm = ${widget.campaign.pointValueVnd}đ)',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: DonationPalette.mutedText(isDark)),
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: DonationPalette.mutedText(isDark)),
                     ),
                   ],
                 ),
               ],
 
               const SizedBox(height: 20),
-              
+
               // Form details. Bọc trong Material trong suốt để ink splash của
               // CheckboxListTile không bị nền bo góc của bottom sheet che mất.
               Material(
                 type: MaterialType.transparency,
                 child: CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Quyên góp ẩn danh (Giấu tên trên bảng vàng)', style: TextStyle(fontSize: 13)),
+                  title: const Text(
+                      'Quyên góp ẩn danh (Giấu tên trên bảng vàng)',
+                      style: TextStyle(fontSize: 13)),
                   value: _isAnonymous,
                   activeColor: const Color(0xFFE31837),
-                  onChanged: (val) => setState(() => _isAnonymous = val ?? false),
+                  onChanged: (val) =>
+                      setState(() => _isAnonymous = val ?? false),
                 ),
               ),
-              
+
               if (!_isAnonymous) ...[
                 TextField(
                   controller: _nameController,
                   decoration: const InputDecoration(
                     labelText: 'Họ và tên hiệp sĩ',
                     border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
                 const SizedBox(height: 16),
               ],
-              
+
               TextField(
                 controller: _messageController,
                 maxLines: 2,
                 decoration: InputDecoration(
                   labelText: 'Gửi một lời chúc (không bắt buộc)',
-                  hintText: 'Lời nhắn của bạn sẽ xuất hiện trên bảng vàng tri ân',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  hintText:
+                      'Lời nhắn của bạn sẽ xuất hiện trên bảng vàng tri ân',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   contentPadding: const EdgeInsets.all(14),
                 ),
               ),
@@ -1012,7 +1092,8 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                       shadowColor: Colors.transparent,
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
                     ),
                     icon: _submitting
                         ? const SizedBox.shrink()
@@ -1021,11 +1102,15 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                         ? const SizedBox(
                             width: 22,
                             height: 22,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2.5),
                           )
                         : Text(
-                            _selectedTypeIndex == 0 ? 'Tiến hành gửi tặng' : 'Xác nhận tặng điểm',
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                            _selectedTypeIndex == 0
+                                ? 'Tiến hành gửi tặng'
+                                : 'Xác nhận tặng điểm',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800, fontSize: 15),
                           ),
                   ),
                 ),
@@ -1061,10 +1146,14 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? DonationPalette.primary.withOpacity(0.12) : Colors.transparent,
+          color: selected
+              ? DonationPalette.primary.withOpacity(0.12)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? DonationPalette.primary : DonationPalette.subtleBorder(isDark),
+            color: selected
+                ? DonationPalette.primary
+                : DonationPalette.subtleBorder(isDark),
             width: selected ? 1.6 : 1,
           ),
         ),
@@ -1077,7 +1166,9 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
               style: TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 14,
-                color: selected ? DonationPalette.primary : DonationPalette.strongText(isDark),
+                color: selected
+                    ? DonationPalette.primary
+                    : DonationPalette.strongText(isDark),
               ),
             ),
             if (hint != null) ...[
@@ -1086,7 +1177,9 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                 hint,
                 style: TextStyle(
                   fontSize: 11,
-                  color: selected ? DonationPalette.primary.withOpacity(0.8) : DonationPalette.mutedText(isDark),
+                  color: selected
+                      ? DonationPalette.primary.withOpacity(0.8)
+                      : DonationPalette.mutedText(isDark),
                 ),
               ),
             ],
@@ -1098,33 +1191,57 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
 
   Widget _buildTypeButton(int index, String label, IconData icon) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final disabled = index == 0 && !_cashDonationEnabled;
     final isSel = _selectedTypeIndex == index;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedTypeIndex = index),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSel ? DonationPalette.primary.withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSel ? DonationPalette.primary : DonationPalette.subtleBorder(isDark),
-            width: isSel ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18, color: isSel ? DonationPalette.primary : DonationPalette.mutedText(isDark)),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-                color: isSel ? DonationPalette.primary : DonationPalette.mutedText(isDark),
-              ),
+    return Tooltip(
+      message:
+          disabled ? 'Quyên góp tiền đang tạm tắt trên bản App Store' : label,
+      child: GestureDetector(
+        onTap:
+            disabled ? null : () => setState(() => _selectedTypeIndex = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSel
+                ? DonationPalette.primary.withOpacity(0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: disabled
+                  ? DonationPalette.subtleBorder(isDark).withOpacity(0.45)
+                  : isSel
+                      ? DonationPalette.primary
+                      : DonationPalette.subtleBorder(isDark),
+              width: isSel ? 1.5 : 1,
             ),
-          ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 18,
+                color: disabled
+                    ? DonationPalette.mutedText(isDark).withOpacity(0.45)
+                    : isSel
+                        ? DonationPalette.primary
+                        : DonationPalette.mutedText(isDark),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  color: disabled
+                      ? DonationPalette.mutedText(isDark).withOpacity(0.45)
+                      : isSel
+                          ? DonationPalette.primary
+                          : DonationPalette.mutedText(isDark),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1138,10 +1255,14 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: isSel ? DonationPalette.primary.withOpacity(0.1) : Colors.transparent,
+          color: isSel
+              ? DonationPalette.primary.withOpacity(0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSel ? DonationPalette.primary : DonationPalette.subtleBorder(isDark),
+            color: isSel
+                ? DonationPalette.primary
+                : DonationPalette.subtleBorder(isDark),
             width: isSel ? 1.5 : 1,
           ),
         ),
@@ -1151,7 +1272,9 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 13,
-              color: isSel ? DonationPalette.primary : DonationPalette.mutedText(isDark),
+              color: isSel
+                  ? DonationPalette.primary
+                  : DonationPalette.mutedText(isDark),
             ),
           ),
         ),
@@ -1199,7 +1322,8 @@ class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
       _error = null;
     });
     try {
-      final status = await widget.controller.donationFundService.checkTransactionStatus(widget.transactionId);
+      final status = await widget.controller.donationFundService
+          .checkTransactionStatus(widget.transactionId);
       if (!mounted) return;
       if (status == 'success') {
         _timer?.cancel();
@@ -1229,7 +1353,7 @@ class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     return Dialog(
       backgroundColor: isDark ? const Color(0xFF1E293B) : Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -1253,8 +1377,8 @@ class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
                   ),
                 ),
                 Icon(
-                  _error != null 
-                      ? Icons.error_outline_rounded 
+                  _error != null
+                      ? Icons.error_outline_rounded
                       : Icons.account_balance_wallet_outlined,
                   size: 32,
                   color: _error != null ? Colors.red : DonationPalette.primary,
@@ -1291,7 +1415,8 @@ class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
                       )
                     : const Icon(Icons.refresh_rounded, size: 18),
                 label: const Text('Kiểm tra trạng thái'),
@@ -1299,7 +1424,8 @@ class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
                   backgroundColor: DonationPalette.primary,
                   foregroundColor: Colors.white,
                   minimumSize: const Size.fromHeight(48),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                 ),
               ),

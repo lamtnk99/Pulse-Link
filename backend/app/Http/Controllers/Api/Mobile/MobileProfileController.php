@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Mobile;
 
 use App\Http\Controllers\Controller;
+use App\Services\Privacy\AccountDeletionService;
 use App\Services\Donations\DonationRecognitionService;
 use App\Services\Mobile\MobileUserResolver;
 use Illuminate\Http\JsonResponse;
@@ -15,6 +16,7 @@ class MobileProfileController extends Controller
     public function __construct(
         private readonly MobileUserResolver $mobileUserResolver,
         private readonly DonationRecognitionService $recognitionService,
+        private readonly AccountDeletionService $accountDeletionService,
     ) {}
 
     public function heroPass(Request $request): JsonResponse
@@ -130,6 +132,23 @@ class MobileProfileController extends Controller
         $user->update($updates);
 
         return $this->heroPass($request);
+    }
+
+    public function deleteAccount(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        abort_unless($user && $user->role === 'donor', 403, 'Endpoint này chỉ dành cho tài khoản người hiến.');
+
+        $payload = $request->validate([
+            'confirmation' => ['required', 'string', 'in:XÓA TÀI KHOẢN'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $this->accountDeletionService->deleteDonor($user, $payload['reason'] ?? null);
+
+        return response()->json([
+            'message' => 'Tài khoản và dữ liệu định danh đã được xóa. Các bản ghi cần đối soát được giữ ở dạng ẩn danh.',
+        ]);
     }
 
     private function heroPassCode(int $userId, string $name): string

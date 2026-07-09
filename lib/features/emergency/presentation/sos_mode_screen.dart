@@ -258,6 +258,8 @@ class _SosModeScreenState extends State<SosModeScreen>
                         intensity: state.sosIntensity,
                       ),
                       const SizedBox(height: 18),
+                      const _MedicalSafetyNotice(),
+                      const SizedBox(height: 14),
                       HoldToConfirmButton(
                         committed: state.emergencyCommitted,
                         onProgressChanged: widget.controller.updateSosIntensity,
@@ -275,6 +277,41 @@ class _SosModeScreenState extends State<SosModeScreen>
           },
         );
       },
+    );
+  }
+}
+
+class _MedicalSafetyNotice extends StatelessWidget {
+  const _MedicalSafetyNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.14)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.medical_information_outlined,
+              color: Colors.white, size: 20),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Nếu đây là tình huống nguy hiểm hoặc sức khỏe bạn không ổn, hãy gọi cấp cứu/bệnh viện trước. Pulse Link chỉ hỗ trợ điều phối, mọi quyết định truyền máu thuộc về nhân viên y tế.',
+              style: TextStyle(
+                color: Color(0xE6FFFFFF),
+                fontSize: 12.5,
+                height: 1.45,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -238,6 +238,18 @@ class PulseLinkController extends ChangeNotifier {
     }
   }
 
+  Future<void> deleteAccount({
+    required String confirmation,
+    String? reason,
+  }) async {
+    await _donorRepository.deleteAccount(
+      confirmation: confirmation,
+      reason: reason,
+    );
+    await _purgeLocalAccountData();
+    await logout();
+  }
+
   Future<void> setThemePreference(AppThemePreference preference) async {
     _state = _state.copyWith(themePreference: preference);
     notifyListeners();
@@ -1028,6 +1040,22 @@ class PulseLinkController extends ChangeNotifier {
       );
     } on Object {
       return AppThemePreference.light;
+    }
+  }
+
+  Future<void> _purgeLocalAccountData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys().where((key) {
+        return key == 'auth_token' ||
+            key == _acknowledgedJourneysKey ||
+            key.startsWith('gratitude_letter_read');
+      }).toList(growable: false);
+      for (final key in keys) {
+        await prefs.remove(key);
+      }
+    } on Object {
+      // Logout still clears in-memory state even if local storage cleanup fails.
     }
   }
 

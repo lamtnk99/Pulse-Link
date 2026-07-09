@@ -21,7 +21,8 @@ class ChatOverlayPanel extends StatefulWidget {
 }
 
 class _DailyQuota {
-  _DailyQuota({required this.used, required this.limit, required this.remaining});
+  _DailyQuota(
+      {required this.used, required this.limit, required this.remaining});
   final int used;
   final int limit;
   final int remaining;
@@ -35,14 +36,14 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
   List<ChatConversation> _conversations = [];
   ChatConversation? _currentChat;
   final List<ChatMessage> _messages = [];
-  
+
   bool _isLoadingChats = false;
   bool _isLoadingMessages = false;
   bool _isSending = false;
-  
+
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+
   _DailyQuota? _quota;
   String? _errorMessage;
 
@@ -56,7 +57,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
         'Món ăn bổ máu'
       ];
     }
-    
+
     if (chat.isPostDonationCheckup) {
       return [
         'Tôi thấy rất khỏe',
@@ -89,7 +90,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
         'Tư vấn nâng cao huyết sắc tố'
       ];
     }
-    
+
     return [
       'Chế độ ăn sau hiến',
       'Tôi bị chóng mặt',
@@ -158,7 +159,8 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
         );
         await _openConversation(existing);
       } else {
-        final activeCheckup = await widget.controller.chatService.getActiveCheckup();
+        final activeCheckup =
+            await widget.controller.chatService.getActiveCheckup();
         if (activeCheckup != null) {
           await _openConversation(activeCheckup);
         } else if (_conversations.isNotEmpty) {
@@ -171,7 +173,8 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Không tải được dữ liệu chatbot. Vui lòng kiểm tra kết nối API.';
+        _errorMessage =
+            'Không tải được dữ liệu chatbot. Vui lòng kiểm tra kết nối API.';
       });
     } finally {
       setState(() {
@@ -189,7 +192,8 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
     });
 
     try {
-      final fullChat = await widget.controller.chatService.getConversation(conversation.id);
+      final fullChat =
+          await widget.controller.chatService.getConversation(conversation.id);
       setState(() {
         _messages.addAll(fullChat.messages ?? []);
       });
@@ -219,7 +223,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
       setState(() {
         _currentChat = newChat;
       });
-      
+
       // AI greeting message placeholder or load
       await _openConversation(newChat);
     } catch (e) {
@@ -274,7 +278,8 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
       _scrollToBottom();
     } catch (e) {
       setState(() {
-        _errorMessage = 'Gửi thất bại hoặc vượt quá giới hạn tin nhắn hàng ngày.';
+        _errorMessage =
+            'Gửi thất bại hoặc vượt quá giới hạn tin nhắn hàng ngày.';
         // Remove optimistic user message to prevent UI confusion
         _messages.removeWhere((m) => m.id == tempUserMsg.id);
       });
@@ -345,6 +350,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                     children: [
                       _buildHeader(),
                       _buildQuotaBar(),
+                      _buildAiSafetyNotice(),
                       if (_errorMessage != null) _buildErrorBanner(),
                       Expanded(child: _buildChatBody()),
                       _buildQuickRepliesBar(),
@@ -363,7 +369,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
   Widget _buildHeader() {
     String title = 'Trợ lý Sức khỏe';
     String desc = 'Hỏi đáp sức khỏe & hiến máu';
-    
+
     final chat = _currentChat;
     if (chat != null) {
       if (chat.isPostDonationCheckup) {
@@ -413,7 +419,8 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                     ),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE31837),
                         borderRadius: BorderRadius.circular(6),
@@ -448,7 +455,8 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
             onPressed: _showConversationsList,
           ),
           IconButton(
-            icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.white70),
+            icon: const Icon(Icons.add_circle_outline_rounded,
+                color: Colors.white70),
             tooltip: 'Chat mới',
             onPressed: _startNewConversation,
           ),
@@ -475,14 +483,50 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
         children: [
           const Text(
             'Hạn mức tin nhắn AI trong ngày:',
-            style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: Colors.white38,
+                fontSize: 10,
+                fontWeight: FontWeight.bold),
           ),
           Text(
             'Còn lại ${_quota!.remaining}/${_quota!.limit}',
             style: TextStyle(
-              color: _quota!.remaining <= 3 ? const Color(0xFFE31837) : const Color(0xFF10B981),
+              color: _quota!.remaining <= 3
+                  ? const Color(0xFFE31837)
+                  : const Color(0xFF10B981),
               fontSize: 10,
               fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiSafetyNotice() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+      ),
+      child: const Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, size: 16, color: Colors.white54),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'AI chỉ hỗ trợ thông tin chung, không chẩn đoán hay thay thế bác sĩ. Nếu có dấu hiệu bất thường sau hiến máu, hãy liên hệ cơ sở y tế.',
+              style: TextStyle(
+                color: Colors.white60,
+                fontSize: 10.5,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -497,7 +541,10 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Text(
         _errorMessage!,
-        style: const TextStyle(color: Color(0xFFFF8A9A), fontSize: 11, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+            color: Color(0xFFFF8A9A),
+            fontSize: 11,
+            fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -658,7 +705,10 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
   }
 
   Widget _buildQuickRepliesBar() {
-    if (_isLoadingChats || _isLoadingMessages || _messages.isEmpty || _isSending) {
+    if (_isLoadingChats ||
+        _isLoadingMessages ||
+        _messages.isEmpty ||
+        _isSending) {
       return const SizedBox.shrink();
     }
 
@@ -725,7 +775,8 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                 ),
                 filled: true,
                 fillColor: PulseLinkTheme.cardBackground,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
                   borderSide: BorderSide.none,
@@ -802,7 +853,9 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                           chat.isPostDonationCheckup
                               ? Icons.favorite_rounded
                               : Icons.chat_rounded,
-                          color: isSelected ? const Color(0xFFE31837) : Colors.white54,
+                          color: isSelected
+                              ? const Color(0xFFE31837)
+                              : Colors.white54,
                           size: 20,
                         ),
                         title: Text(
@@ -810,7 +863,9 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: isSelected ? const Color(0xFFE31837) : Colors.white,
+                            color: isSelected
+                                ? const Color(0xFFE31837)
+                                : Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),
@@ -819,9 +874,11 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                           chat.contextType == 'post_donation_checkup'
                               ? 'Hỏi thăm sức khỏe'
                               : 'Trò chuyện chung',
-                          style: const TextStyle(color: Colors.white30, fontSize: 10),
+                          style: const TextStyle(
+                              color: Colors.white30, fontSize: 10),
                         ),
-                        trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white24),
+                        trailing: const Icon(Icons.chevron_right_rounded,
+                            color: Colors.white24),
                         onTap: () {
                           Navigator.pop(context);
                           _openConversation(chat);
@@ -932,7 +989,8 @@ class _RobotMedicalAvatarState extends State<RobotMedicalAvatar>
               ),
               gradient: const RadialGradient(
                 colors: [
-                  Color(0xFF334155), // Slate 700 (light reflection point at center-top)
+                  Color(
+                      0xFF334155), // Slate 700 (light reflection point at center-top)
                   Color(0xFF0F172A), // Slate 900 (shadow edge)
                 ],
                 center: Alignment(-0.15, -0.2),
@@ -1049,7 +1107,8 @@ class _RobotMedicalAvatarState extends State<RobotMedicalAvatar>
       height: size * 0.05,
       decoration: BoxDecoration(
         color: const Color(0xFFE31837).withOpacity(0.45),
-        borderRadius: BorderRadius.all(Radius.elliptical(size * 0.09, size * 0.05)),
+        borderRadius:
+            BorderRadius.all(Radius.elliptical(size * 0.09, size * 0.05)),
       ),
     );
   }
@@ -1132,4 +1191,3 @@ class _RobotMedicalAvatarState extends State<RobotMedicalAvatar>
     );
   }
 }
-

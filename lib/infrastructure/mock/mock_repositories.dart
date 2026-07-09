@@ -42,9 +42,11 @@ class MockDonorRepository implements DonorRepository {
   @override
   Future<DonorProfile> updateProfile(Map<String, dynamic> fields) async {
     await Future<void>.delayed(const Duration(milliseconds: 180));
-    final submittingId = (fields['national_id'] as String?)?.isNotEmpty ?? false;
-    final hasBothImages = (fields['id_card_front_url'] as String?)?.isNotEmpty == true &&
-        (fields['id_card_back_url'] as String?)?.isNotEmpty == true;
+    final submittingId =
+        (fields['national_id'] as String?)?.isNotEmpty ?? false;
+    final hasBothImages =
+        (fields['id_card_front_url'] as String?)?.isNotEmpty == true &&
+            (fields['id_card_back_url'] as String?)?.isNotEmpty == true;
     _profile = _profile.copyWith(
       name: fields['name'] as String?,
       phone: fields['phone'] as String?,
@@ -66,6 +68,17 @@ class MockDonorRepository implements DonorRepository {
   Future<String> uploadIdImage(List<int> bytes, String filename) async {
     await Future<void>.delayed(const Duration(milliseconds: 200));
     return 'https://mock.pulselink.test/id-cards/${Uri.encodeComponent(filename)}';
+  }
+
+  @override
+  Future<void> deleteAccount({
+    required String confirmation,
+    String? reason,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    if (confirmation != 'XÓA TÀI KHOẢN') {
+      throw StateError('Xác nhận xóa tài khoản không hợp lệ.');
+    }
   }
 }
 
@@ -258,11 +271,15 @@ class MockChatService implements ChatService {
 
     // AI reply
     await Future.delayed(const Duration(milliseconds: 600));
-    String replyContent = 'Chào bạn! Đây là câu trả lời thử nghiệm từ trợ lý sức khỏe Mock AI của Pulse Link. ';
-    if (content.toLowerCase().contains('chóng mặt') || content.toLowerCase().contains('mệt')) {
-      replyContent += 'Nếu bạn cảm thấy chóng mặt hoặc mệt mỏi sau khi hiến máu, hãy nằm nghỉ ngay lập tức, uống nhiều nước ấm và tránh vận động mạnh trong 24 giờ. Nếu triệu chứng không thuyên giảm, vui lòng liên hệ hotline 115.';
+    String replyContent =
+        'Chào bạn! Đây là câu trả lời thử nghiệm từ trợ lý sức khỏe Mock AI của Pulse Link. ';
+    if (content.toLowerCase().contains('chóng mặt') ||
+        content.toLowerCase().contains('mệt')) {
+      replyContent +=
+          'Nếu bạn cảm thấy chóng mặt hoặc mệt mỏi sau khi hiến máu, hãy nằm nghỉ ngay lập tức, uống nhiều nước ấm và tránh vận động mạnh trong 24 giờ. Nếu triệu chứng không thuyên giảm, vui lòng liên hệ hotline 115.';
     } else {
-      replyContent += 'Tôi có thể hỗ trợ giải đáp các thắc mắc về dinh dưỡng, tập luyện và hướng dẫn tự chăm sóc sức khỏe sau hiến máu.';
+      replyContent +=
+          'Tôi có thể hỗ trợ giải đáp các thắc mắc về dinh dưỡng, tập luyện và hướng dẫn tự chăm sóc sức khỏe sau hiến máu.';
     }
 
     final aiMsg = ChatMessage(
@@ -294,7 +311,8 @@ class MockChatService implements ChatService {
   @override
   Future<ChatConversation?> getActiveCheckup() async {
     await Future.delayed(const Duration(milliseconds: 150));
-    final idx = _conversations.indexWhere((c) => c.contextType == 'post_donation_checkup' && c.isActive);
+    final idx = _conversations.indexWhere(
+        (c) => c.contextType == 'post_donation_checkup' && c.isActive);
     if (idx == -1) return null;
     return _conversations[idx];
   }
@@ -314,7 +332,8 @@ class MockDonationFundService implements DonationFundService {
     DonationCampaign(
       id: 'mock-campaign-1',
       title: 'Quỹ Cấp Cứu SOS Bệnh Nhân Nghèo',
-      description: 'Hỗ trợ viện phí và chi phí truyền máu khẩn cấp cho các hoàn cảnh khó khăn tại bệnh viện Đa Khoa tỉnh.',
+      description:
+          'Hỗ trợ viện phí và chi phí truyền máu khẩn cấp cho các hoàn cảnh khó khăn tại bệnh viện Đa Khoa tỉnh.',
       imageUrl: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef',
       targetAmount: 50000000.0,
       currentAmount: 35000000.0,
@@ -332,7 +351,8 @@ class MockDonationFundService implements DonationFundService {
     DonationCampaign(
       id: 'mock-campaign-2',
       title: 'Hành Trình Đỏ 2026 - Bản Cao',
-      description: 'Chiến dịch mang các phần quà dinh dưỡng và trang bị y tế đến các điểm trường vùng sâu vùng xa.',
+      description:
+          'Chiến dịch mang các phần quà dinh dưỡng và trang bị y tế đến các điểm trường vùng sâu vùng xa.',
       imageUrl: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c',
       targetAmount: 30000000.0,
       currentAmount: 18000000.0,
@@ -351,14 +371,44 @@ class MockDonationFundService implements DonationFundService {
 
   final Map<String, List<CampaignDonation>> _leaderboards = {
     'mock-campaign-1': [
-      CampaignDonation(donorName: 'Nguyễn Văn An', amount: 5000000.0, points: 200, message: 'Chúc bé mau khỏe, cố lên con nhé!', lastDonatedAt: DateTime.now()),
-      CampaignDonation(donorName: 'Hiệp sĩ ẩn danh', amount: 2000000.0, points: 50, message: 'Mong ca điều trị thật thuận lợi.', isAnonymous: true, lastDonatedAt: DateTime.now()),
-      CampaignDonation(donorName: 'Trần Thị Bình', amount: 1500000.0, points: 100, lastDonatedAt: DateTime.now()),
+      CampaignDonation(
+          donorName: 'Nguyễn Văn An',
+          amount: 5000000.0,
+          points: 200,
+          message: 'Chúc bé mau khỏe, cố lên con nhé!',
+          lastDonatedAt: DateTime.now()),
+      CampaignDonation(
+          donorName: 'Hiệp sĩ ẩn danh',
+          amount: 2000000.0,
+          points: 50,
+          message: 'Mong ca điều trị thật thuận lợi.',
+          isAnonymous: true,
+          lastDonatedAt: DateTime.now()),
+      CampaignDonation(
+          donorName: 'Trần Thị Bình',
+          amount: 1500000.0,
+          points: 100,
+          lastDonatedAt: DateTime.now()),
     ],
     'mock-campaign-2': [
-      CampaignDonation(donorName: 'Lê Văn Cường', amount: 0, points: 1500, message: 'Gửi chút hơi ấm tới các em vùng cao.', lastDonatedAt: DateTime.now()),
-      CampaignDonation(donorName: 'Hiệp sĩ ẩn danh', amount: 0, points: 1000, isAnonymous: true, lastDonatedAt: DateTime.now()),
-      CampaignDonation(donorName: 'Nguyễn Thị Dung', amount: 0, points: 800, message: 'Lan tỏa yêu thương đến mọi người.', lastDonatedAt: DateTime.now()),
+      CampaignDonation(
+          donorName: 'Lê Văn Cường',
+          amount: 0,
+          points: 1500,
+          message: 'Gửi chút hơi ấm tới các em vùng cao.',
+          lastDonatedAt: DateTime.now()),
+      CampaignDonation(
+          donorName: 'Hiệp sĩ ẩn danh',
+          amount: 0,
+          points: 1000,
+          isAnonymous: true,
+          lastDonatedAt: DateTime.now()),
+      CampaignDonation(
+          donorName: 'Nguyễn Thị Dung',
+          amount: 0,
+          points: 800,
+          message: 'Lan tỏa yêu thương đến mọi người.',
+          lastDonatedAt: DateTime.now()),
     ],
   };
 
@@ -454,10 +504,20 @@ class MockCommunityImpactService implements CommunityImpactService {
       campaignDonationsCount: 156,
       totalDonatedAmount: 78000000.0,
       gratitudeWall: [
-        GratitudeNote(donorName: 'Nguyễn Hoài An', message: 'Cho đi một chút, nhận lại rất nhiều bình yên trong lòng.'),
-        GratitudeNote(donorName: 'Hiệp sĩ ẩn danh', message: 'Mong người bệnh mau khỏe, cố lên nhé!', isAnonymous: true),
-        GratitudeNote(donorName: 'Trần Minh Quân', message: 'Lần đầu hiến máu, hồi hộp mà vui lắm.'),
-        GratitudeNote(donorName: 'Phạm Thanh Vy', message: 'Hẹn gặp lại mọi người ở lần hiến sau nhé.'),
+        GratitudeNote(
+            donorName: 'Nguyễn Hoài An',
+            message:
+                'Cho đi một chút, nhận lại rất nhiều bình yên trong lòng.'),
+        GratitudeNote(
+            donorName: 'Hiệp sĩ ẩn danh',
+            message: 'Mong người bệnh mau khỏe, cố lên nhé!',
+            isAnonymous: true),
+        GratitudeNote(
+            donorName: 'Trần Minh Quân',
+            message: 'Lần đầu hiến máu, hồi hộp mà vui lắm.'),
+        GratitudeNote(
+            donorName: 'Phạm Thanh Vy',
+            message: 'Hẹn gặp lại mọi người ở lần hiến sau nhé.'),
       ],
     );
   }

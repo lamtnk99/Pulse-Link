@@ -39,4 +39,8 @@ return [
         'firestore_endpoint' => env('FIREBASE_FIRESTORE_ENDPOINT'),
     ],
 
+    'app_store' => [
+        'cash_donation_enabled' => env('APP_STORE_CASH_DONATION_ENABLED', false),
+    ],
+
 ];

@@ -45,6 +45,18 @@ class LaravelApiClient {
   ///
   /// Dùng bytes thay vì đường dẫn file để chạy được cả trên web (nơi không có
   /// hệ thống tệp) lẫn mobile.
+  Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
+    final response = await _httpClient.delete(
+      _resolve(path),
+      headers: await _headers(),
+      body: jsonEncode(body ?? const <String, dynamic>{}),
+    );
+    return _decodeObject(response);
+  }
+
   Future<Map<String, dynamic>> uploadFile(
     String path, {
     required List<int> bytes,

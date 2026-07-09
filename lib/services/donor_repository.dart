@@ -14,4 +14,9 @@ abstract interface class DonorRepository {
   /// Tải ảnh (CCCD) lên từ bytes, trả về URL công khai. Dùng bytes để chạy
   /// được cả trên web lẫn mobile.
   Future<String> uploadIdImage(List<int> bytes, String filename);
+
+  Future<void> deleteAccount({
+    required String confirmation,
+    String? reason,
+  });
 }

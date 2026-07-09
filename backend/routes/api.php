@@ -31,6 +31,7 @@ Route::post('auth/register', [AuthController::class, 'register']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
+    Route::delete('mobile/me/account', [MobileProfileController::class, 'deleteAccount']);
 });
 
 Route::prefix('locations')->group(function () {
@@ -137,4 +138,3 @@ Route::prefix('admin')->middleware(['role:admin'])->group(function () {
 Route::get('mock-payment/{transaction_id}', [MockPaymentController::class, 'show'])->name('mock-payment.show');
 Route::post('mock-payment/submit', [MockPaymentController::class, 'submit'])->name('mock-payment.submit');
 Route::post('payment/webhook', [MobileDonationFundController::class, 'paymentWebhook'])->name('payment.webhook');
-

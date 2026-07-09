@@ -69,6 +69,12 @@ class DonationController extends Controller
 
     public function donateCash(Request $request, $id): JsonResponse
     {
+        if (! config('services.app_store.cash_donation_enabled')) {
+            return response()->json([
+                'message' => 'Tính năng quyên góp tiền đang tạm tắt trên bản App Store. Bạn vẫn có thể đồng hành bằng điểm Hero.',
+            ], 403);
+        }
+
         $campaign = DonationCampaign::query()
             ->where('public_id', $id)
             ->where('status', 'active')
