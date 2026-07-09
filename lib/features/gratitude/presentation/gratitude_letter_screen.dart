@@ -1,15 +1,8 @@
-import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
-import '../../../core/theme/pulse_link_theme.dart';
 import '../../../core/utils/haptics.dart';
 import '../domain/gratitude_letter.dart';
 
@@ -29,28 +22,18 @@ class GratitudeLetterScreen extends StatefulWidget {
   State<GratitudeLetterScreen> createState() => _GratitudeLetterScreenState();
 }
 
+enum _LetterRevealPhase { closed, opening, opened }
+
 class _GratitudeLetterScreenState extends State<GratitudeLetterScreen>
     with TickerProviderStateMixin {
-  final GlobalKey _cardKey = GlobalKey();
   late final AnimationController _entryController;
   late final AnimationController _envelopeController;
   late final AnimationController _floatController;
-  late String _selectedStyle;
-  bool _opened = false;
-  bool _saving = false;
-
-  static const _styles = [
-    _LetterVisualStyle.classic(),
-    _LetterVisualStyle.heroNight(),
-    _LetterVisualStyle.botanical(),
-  ];
+  _LetterRevealPhase _revealPhase = _LetterRevealPhase.closed;
 
   @override
   void initState() {
     super.initState();
-    _selectedStyle = _styles.any((style) => style.id == widget.letter.style)
-        ? widget.letter.style
-        : _styles.first.id;
     _entryController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 650),
@@ -75,8 +58,8 @@ class _GratitudeLetterScreenState extends State<GratitudeLetterScreen>
 
   @override
   Widget build(BuildContext context) {
-    final visual = _visualStyle(_selectedStyle);
-    final letter = widget.letter.copyWithStyle(_selectedStyle);
+    const visual = _LetterVisualStyle.appreciation();
+    final letter = widget.letter;
     final fade =
         CurvedAnimation(parent: _entryController, curve: Curves.easeOut);
     final slide = Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
@@ -175,75 +158,78 @@ class _GratitudeLetterScreenState extends State<GratitudeLetterScreen>
                               ),
                             ),
                             const SizedBox(height: 28),
-                            GestureDetector(
-                              onTap: _opened ? null : _openEnvelope,
-                              child: _EnvelopeReveal(
-                                animation: _envelopeController,
-                                visual: visual,
-                                opened: _opened,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
                             AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 420),
+                              duration: const Duration(milliseconds: 520),
                               switchInCurve: Curves.easeOutCubic,
                               switchOutCurve: Curves.easeInCubic,
-                              child: _opened
+                              transitionBuilder: (child, animation) {
+                                final curved = CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeOutCubic,
+                                  reverseCurve: Curves.easeInCubic,
+                                );
+                                return FadeTransition(
+                                  opacity: curved,
+                                  child: SlideTransition(
+                                    position: Tween<Offset>(
+                                      begin: const Offset(0, 0.035),
+                                      end: Offset.zero,
+                                    ).animate(curved),
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: _revealPhase == _LetterRevealPhase.opened
                                   ? Column(
                                       key: const ValueKey('opened-letter'),
                                       children: [
-                                        AnimatedBuilder(
-                                          animation: _envelopeController,
-                                          builder: (context, child) {
-                                            final curved =
-                                                Curves.easeOutCubic.transform(
-                                              _envelopeController.value,
-                                            );
-                                            return Opacity(
-                                              opacity: curved,
-                                              child: Transform.translate(
-                                                offset: Offset(
-                                                    0, 26 * (1 - curved)),
-                                                child: child,
-                                              ),
-                                            );
-                                          },
-                                          child: RepaintBoundary(
-                                            key: _cardKey,
-                                            child: _ThankYouLetterCard(
-                                              letter: letter,
-                                              visual: visual,
-                                            ),
+                                        _ThankYouLetterCard(
+                                          letter: letter,
+                                          visual: visual,
+                                        ),
+                                        if (letter.hasCareConversation &&
+                                            widget.onOpenCare != null) ...[
+                                          const SizedBox(height: 18),
+                                          _CareActionButton(
+                                            onOpenCare: widget.onOpenCare!,
                                           ),
-                                        ),
-                                        const SizedBox(height: 18),
-                                        _StyleSelector(
-                                          styles: _styles,
-                                          selected: _selectedStyle,
-                                          onChanged: (value) {
-                                            Haptics.tap();
-                                            setState(
-                                                () => _selectedStyle = value);
-                                          },
-                                        ),
-                                        const SizedBox(height: 18),
-                                        _ActionBar(
-                                          saving: _saving,
-                                          hasCare: letter.hasCareConversation &&
-                                              widget.onOpenCare != null,
-                                          onSave: () =>
-                                              _captureCard(share: false),
-                                          onShare: () =>
-                                              _captureCard(share: true),
-                                          onOpenCare: widget.onOpenCare,
-                                        ),
+                                        ],
                                       ],
                                     )
-                                  : _ClosedEnvelopeCaption(
-                                      key: const ValueKey('closed-envelope'),
-                                      visual: visual,
-                                      letter: letter,
-                                      onOpen: _openEnvelope,
+                                  : Column(
+                                      key: const ValueKey('envelope-stage'),
+                                      children: [
+                                        GestureDetector(
+                                          onTap: _revealPhase ==
+                                                  _LetterRevealPhase.closed
+                                              ? _openEnvelope
+                                              : null,
+                                          child: _EnvelopeReveal(
+                                            animation: _envelopeController,
+                                            visual: visual,
+                                            phase: _revealPhase,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        AnimatedSwitcher(
+                                          duration:
+                                              const Duration(milliseconds: 220),
+                                          child: _revealPhase ==
+                                                  _LetterRevealPhase.opening
+                                              ? _OpeningEnvelopeCaption(
+                                                  key: const ValueKey(
+                                                      'opening-caption'),
+                                                  visual: visual,
+                                                )
+                                              : _ClosedEnvelopeCaption(
+                                                  key: const ValueKey(
+                                                      'closed-envelope'),
+                                                  visual: visual,
+                                                  letter: letter,
+                                                  onOpen: _openEnvelope,
+                                                ),
+                                        ),
+                                      ],
                                     ),
                             ),
                           ],
@@ -260,76 +246,13 @@ class _GratitudeLetterScreenState extends State<GratitudeLetterScreen>
     );
   }
 
-  void _openEnvelope() {
-    if (_opened) return;
+  Future<void> _openEnvelope() async {
+    if (_revealPhase != _LetterRevealPhase.closed) return;
     Haptics.success();
-    setState(() => _opened = true);
-    _envelopeController.forward(from: 0);
-  }
-
-  _LetterVisualStyle _visualStyle(String id) {
-    return _styles.firstWhere(
-      (style) => style.id == id,
-      orElse: () => _styles.first,
-    );
-  }
-
-  Future<void> _captureCard({required bool share}) async {
-    if (_saving) return;
-    setState(() => _saving = true);
-
-    try {
-      await Future<void>.delayed(const Duration(milliseconds: 40));
-      final boundary = _cardKey.currentContext?.findRenderObject();
-      if (boundary is! RenderRepaintBoundary) {
-        throw StateError('Card is not ready');
-      }
-
-      final image = await boundary.toImage(pixelRatio: 3);
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      final bytes = byteData?.buffer.asUint8List();
-      if (bytes == null || bytes.isEmpty) {
-        throw StateError('Could not render card image');
-      }
-
-      final file = await _writeImage(bytes);
-      if (share) {
-        await SharePlus.instance.share(
-          ShareParams(
-            files: [XFile(file.path, mimeType: 'image/png')],
-            text: 'Thiệp cảm ơn PulseLink',
-            fileNameOverrides: [file.uri.pathSegments.last],
-          ),
-        );
-      }
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            share ? 'Đã chuẩn bị thiệp để chia sẻ.' : 'Đã lưu thiệp cảm ơn.',
-          ),
-        ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Chưa lưu được thiệp. Thử lại sau vài giây nhé.'),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  Future<File> _writeImage(Uint8List bytes) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final stamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-    final file = File(
-      '${directory.path}${Platform.pathSeparator}pulselink_thiep_cam_on_$stamp.png',
-    );
-    return file.writeAsBytes(bytes, flush: true);
+    setState(() => _revealPhase = _LetterRevealPhase.opening);
+    await _envelopeController.forward(from: 0);
+    if (!mounted) return;
+    setState(() => _revealPhase = _LetterRevealPhase.opened);
   }
 }
 
@@ -378,29 +301,44 @@ class _EnvelopeReveal extends StatelessWidget {
   const _EnvelopeReveal({
     required this.animation,
     required this.visual,
-    required this.opened,
+    required this.phase,
   });
 
   final Animation<double> animation;
   final _LetterVisualStyle visual;
-  final bool opened;
+  final _LetterRevealPhase phase;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: animation,
       builder: (context, _) {
-        final open = Curves.easeOutCubic.transform(animation.value);
+        final raw = phase == _LetterRevealPhase.closed ? 0.0 : animation.value;
+        final open = Curves.easeOutBack.transform(
+          const Interval(0.08, 0.5).transform(raw),
+        );
+        final paperLift = Curves.easeOutCubic.transform(
+          const Interval(0.22, 0.76).transform(raw),
+        );
+        final sealOut = Curves.easeIn.transform(
+          const Interval(0, 0.2).transform(raw),
+        );
+        final exit = Curves.easeInCubic.transform(
+          const Interval(0.72, 1).transform(raw),
+        );
+        final envelopeOpacity = 1 - exit;
+        final closed = phase == _LetterRevealPhase.closed;
+
         return SizedBox(
-          height: 210,
+          height: 250,
           child: Stack(
             alignment: Alignment.bottomCenter,
             children: [
-              if (!opened)
+              if (closed)
                 Positioned(
-                  bottom: 10,
+                  bottom: 24,
                   child: TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.92, end: 1.08),
+                    tween: Tween(begin: 0.94, end: 1.06),
                     duration: const Duration(milliseconds: 1100),
                     curve: Curves.easeInOut,
                     builder: (context, value, child) {
@@ -424,38 +362,101 @@ class _EnvelopeReveal extends StatelessWidget {
                   ),
                 ),
               Transform.translate(
-                offset: Offset(0, -58 * open),
+                offset: Offset(0, -116 * paperLift + 18 * exit),
                 child: Opacity(
-                  opacity: opened ? 0.22 + open * 0.78 : 0,
-                  child: Container(
-                    width: 184,
-                    height: 104,
-                    decoration: BoxDecoration(
-                      color: visual.paper,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: visual.border),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.favorite_rounded,
-                        color: visual.accent.withOpacity(0.52),
-                        size: 30,
-                      ),
-                    ),
+                  opacity:
+                      closed ? 0 : (0.1 + paperLift * 0.9) * envelopeOpacity,
+                  child: Transform.scale(
+                    scale: 0.82 + paperLift * 0.18,
+                    child: _EmergingLetterPreview(visual: visual),
                   ),
                 ),
               ),
-              CustomPaint(
-                size: const Size(292, 150),
-                painter: _EnvelopePainter(
-                  open: open,
-                  visual: visual,
+              Opacity(
+                opacity: envelopeOpacity.clamp(0.0, 1.0),
+                child: Transform.translate(
+                  offset: Offset(0, 34 * exit),
+                  child: Transform.scale(
+                    scale: 1 - exit * 0.04,
+                    child: CustomPaint(
+                      size: const Size(292, 150),
+                      painter: _EnvelopePainter(
+                        open: open.clamp(0.0, 1.0),
+                        sealOpacity: (1 - sealOut).clamp(0.0, 1.0),
+                        visual: visual,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+class _EmergingLetterPreview extends StatelessWidget {
+  const _EmergingLetterPreview({required this.visual});
+
+  final _LetterVisualStyle visual;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 214,
+      height: 132,
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      decoration: BoxDecoration(
+        color: visual.paper,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: visual.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.favorite_rounded,
+            color: visual.accent.withOpacity(0.58),
+            size: 26,
+          ),
+          const SizedBox(height: 14),
+          _PreviewLine(width: 138, visual: visual),
+          const SizedBox(height: 8),
+          _PreviewLine(width: 168, visual: visual),
+          const SizedBox(height: 8),
+          _PreviewLine(width: 112, visual: visual),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewLine extends StatelessWidget {
+  const _PreviewLine({
+    required this.width,
+    required this.visual,
+  });
+
+  final double width;
+  final _LetterVisualStyle visual;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: 5,
+      decoration: BoxDecoration(
+        color: visual.mutedInk.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(999),
+      ),
     );
   }
 }
@@ -500,6 +501,57 @@ class _ClosedEnvelopeCaption extends StatelessWidget {
   }
 }
 
+class _OpeningEnvelopeCaption extends StatelessWidget {
+  const _OpeningEnvelopeCaption({
+    super.key,
+    required this.visual,
+  });
+
+  final _LetterVisualStyle visual;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 360),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withOpacity(0.14)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 17,
+              height: 17,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.2,
+                valueColor: AlwaysStoppedAnimation<Color>(visual.softAccent),
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Flexible(
+              child: Text(
+                'Đang mở thư...',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ThankYouLetterCard extends StatelessWidget {
   const _ThankYouLetterCard({
     required this.letter,
@@ -537,167 +589,204 @@ class _ThankYouLetterCard extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
           children: [
-            Row(
+            Positioned(
+              right: 4,
+              top: 36,
+              child: _LetterHeartCluster(visual: visual),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: visual.accent.withOpacity(0.12),
-                    border: Border.all(color: visual.accent.withOpacity(0.22)),
-                  ),
-                  child: Icon(
-                    Icons.favorite_rounded,
-                    color: visual.accent,
-                    size: 22,
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: visual.accent.withOpacity(0.12),
+                        border:
+                            Border.all(color: visual.accent.withOpacity(0.22)),
+                      ),
+                      child: Icon(
+                        Icons.favorite_rounded,
+                        color: visual.accent,
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            letter.messages.first.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: visual.ink,
+                              fontSize: 17,
+                              height: 1.2,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Từ ${letter.messages.first.sender}',
+                            style: TextStyle(
+                              color: visual.mutedInk,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    letter.donorName != null &&
+                            letter.donorName!.trim().isNotEmpty
+                        ? 'Gửi ${letter.donorName!},'
+                        : 'Gửi bạn,',
+                    textAlign: TextAlign.left,
+                    style: TextStyle(
+                      color: visual.ink,
+                      fontSize: 16,
+                      height: 1.35,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        letter.messages.first.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: visual.ink,
-                          fontSize: 17,
-                          height: 1.2,
-                          fontWeight: FontWeight.w900,
-                        ),
+                if (letter.hospitalName != null &&
+                    letter.hospitalName!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      letter.hospitalName!,
+                      textAlign: TextAlign.left,
+                      style: TextStyle(
+                        color: visual.mutedInk,
+                        fontSize: 12.5,
+                        height: 1.35,
+                        fontWeight: FontWeight.w700,
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        'Từ ${letter.messages.first.sender}',
-                        style: TextStyle(
-                          color: visual.mutedInk,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 14),
+                ...letter.messages.map(
+                  (message) => _LetterParagraph(
+                    message: message,
+                    visual: visual,
+                    showSender: letter.messages.length > 1,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '- ${letter.messages.last.signature} -',
+                    style: TextStyle(
+                      color: visual.mutedInk,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+                if (meta.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: meta
+                        .map(
+                          (item) => Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: visual.accent.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                  color: visual.accent.withOpacity(0.18)),
+                            ),
+                            child: Text(
+                              item,
+                              style: TextStyle(
+                                color: visual.ink,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(growable: false),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Text(
+                  letter.isSos
+                      ? 'Một hành động nhỏ hôm nay có thể là sự sống của một ai đó ngày mai.'
+                      : 'Cảm ơn bạn đã lan tỏa yêu thương và hy vọng.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: visual.accent,
+                    fontSize: 13,
+                    height: 1.45,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 18),
-            if (letter.donorName != null && letter.donorName!.trim().isNotEmpty)
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Gửi ${letter.donorName!},',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                    color: visual.ink,
-                    fontSize: 16,
-                    height: 1.35,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              )
-            else
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Gửi bạn,',
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                    color: visual.ink,
-                    fontSize: 16,
-                    height: 1.35,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            if (letter.hospitalName != null &&
-                letter.hospitalName!.trim().isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  letter.hospitalName!,
-                  textAlign: TextAlign.left,
-                  style: TextStyle(
-                    color: visual.mutedInk,
-                    fontSize: 12.5,
-                    height: 1.35,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: 14),
-            ...letter.messages.map(
-              (message) => _LetterParagraph(
-                message: message,
-                visual: visual,
-                showSender: letter.messages.length > 1,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                '- ${letter.messages.last.signature} -',
-                style: TextStyle(
-                  color: visual.mutedInk,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-            if (meta.isNotEmpty) ...[
-              const SizedBox(height: 18),
-              Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 8,
-                runSpacing: 8,
-                children: meta
-                    .map(
-                      (item) => Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: visual.accent.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                              color: visual.accent.withOpacity(0.18)),
-                        ),
-                        child: Text(
-                          item,
-                          style: TextStyle(
-                            color: visual.ink,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(growable: false),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Text(
-              letter.isSos
-                  ? 'Một hành động nhỏ hôm nay có thể là sự sống của một ai đó ngày mai.'
-                  : 'Cảm ơn bạn đã lan tỏa yêu thương và hy vọng.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: visual.accent,
-                fontSize: 13,
-                height: 1.45,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _LetterHeartCluster extends StatelessWidget {
+  const _LetterHeartCluster({required this.visual});
+
+  final _LetterVisualStyle visual;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Opacity(
+        opacity: 0.14,
+        child: SizedBox(
+          width: 120,
+          height: 150,
+          child: Stack(
+            children: [
+              _softHeart(72, 12, 34),
+              _softHeart(38, 44, 22),
+              _softHeart(92, 62, 20),
+              _softHeart(16, 92, 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _softHeart(double left, double top, double size) {
+    return Positioned(
+      left: left,
+      top: top,
+      child: Icon(
+        Icons.favorite_rounded,
+        size: size,
+        color: visual.accent,
       ),
     );
   }
@@ -747,155 +836,27 @@ class _LetterParagraph extends StatelessWidget {
   }
 }
 
-class _StyleSelector extends StatelessWidget {
-  const _StyleSelector({
-    required this.styles,
-    required this.selected,
-    required this.onChanged,
-  });
+class _CareActionButton extends StatelessWidget {
+  const _CareActionButton({required this.onOpenCare});
 
-  final List<_LetterVisualStyle> styles;
-  final String selected;
-  final ValueChanged<String> onChanged;
+  final VoidCallback onOpenCare;
 
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 460),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Chọn kiểu thiệp',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.82),
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
-            ),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: onOpenCare,
+          icon: const Icon(Icons.health_and_safety_rounded),
+          label: const Text('Mở chăm sóc sau hiến'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.white,
+            side: BorderSide(color: Colors.white.withOpacity(0.28)),
+            padding: const EdgeInsets.symmetric(vertical: 13),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 76,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: styles.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 10),
-              itemBuilder: (context, index) {
-                final style = styles[index];
-                final active = style.id == selected;
-                return InkWell(
-                  onTap: () => onChanged(style.id),
-                  borderRadius: BorderRadius.circular(14),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    width: 132,
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: style.paper,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: active
-                            ? style.accent
-                            : Colors.white.withOpacity(0.18),
-                        width: active ? 2 : 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(style.icon, color: style.accent, size: 17),
-                            const Spacer(),
-                            if (active)
-                              Icon(Icons.check_circle_rounded,
-                                  color: style.accent, size: 18),
-                          ],
-                        ),
-                        const Spacer(),
-                        Text(
-                          style.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: style.ink,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionBar extends StatelessWidget {
-  const _ActionBar({
-    required this.saving,
-    required this.hasCare,
-    required this.onSave,
-    required this.onShare,
-    this.onOpenCare,
-  });
-
-  final bool saving;
-  final bool hasCare;
-  final VoidCallback onSave;
-  final VoidCallback onShare;
-  final VoidCallback? onOpenCare;
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 460),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: saving ? null : onSave,
-                  icon: saving
-                      ? const SizedBox(
-                          width: 17,
-                          height: 17,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.download_rounded),
-                  label: const Text('Lưu thiệp'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              IconButton.filledTonal(
-                onPressed: saving ? null : onShare,
-                icon: const Icon(Icons.ios_share_rounded),
-                tooltip: 'Chia sẻ',
-              ),
-            ],
-          ),
-          if (hasCare) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onOpenCare,
-                icon: const Icon(Icons.health_and_safety_rounded),
-                label: const Text('Mở chăm sóc sau hiến'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: BorderSide(color: Colors.white.withOpacity(0.28)),
-                ),
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
@@ -942,10 +903,12 @@ class _HeroPill extends StatelessWidget {
 class _EnvelopePainter extends CustomPainter {
   const _EnvelopePainter({
     required this.open,
+    required this.sealOpacity,
     required this.visual,
   });
 
   final double open;
+  final double sealOpacity;
   final _LetterVisualStyle visual;
 
   @override
@@ -987,10 +950,20 @@ class _EnvelopePainter extends CustomPainter {
     );
 
     canvas.drawRRect(rrect, borderPaint);
-    final sealCenter = Offset(size.width / 2, body.top + 55 - 10 * open);
-    canvas.drawCircle(
-        sealCenter, 20, Paint()..color = visual.accent.withOpacity(0.95));
-    _drawHeart(canvas, sealCenter, 10, Paint()..color = Colors.white);
+    if (sealOpacity > 0) {
+      final sealCenter = Offset(size.width / 2, body.top + 55 - 10 * open);
+      canvas.drawCircle(
+        sealCenter,
+        20 * (0.84 + sealOpacity * 0.16),
+        Paint()..color = visual.accent.withOpacity(0.95 * sealOpacity),
+      );
+      _drawHeart(
+        canvas,
+        sealCenter,
+        10 * (0.86 + sealOpacity * 0.14),
+        Paint()..color = Colors.white.withOpacity(sealOpacity),
+      );
+    }
   }
 
   void _drawHeart(Canvas canvas, Offset center, double size, Paint paint) {
@@ -1017,7 +990,9 @@ class _EnvelopePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _EnvelopePainter oldDelegate) {
-    return oldDelegate.open != open || oldDelegate.visual != visual;
+    return oldDelegate.open != open ||
+        oldDelegate.sealOpacity != sealOpacity ||
+        oldDelegate.visual != visual;
   }
 }
 
@@ -1062,9 +1037,6 @@ class _GratitudeParticlePainter extends CustomPainter {
 @immutable
 class _LetterVisualStyle {
   const _LetterVisualStyle({
-    required this.id,
-    required this.label,
-    required this.icon,
     required this.backdropStart,
     required this.backdropEnd,
     required this.paper,
@@ -1075,64 +1047,22 @@ class _LetterVisualStyle {
     required this.border,
     required this.envelope,
     required this.envelopeShadow,
-    this.darkPaper = false,
   });
 
-  const _LetterVisualStyle.classic()
+  const _LetterVisualStyle.appreciation()
       : this(
-          id: 'classic',
-          label: 'Trang nhã',
-          icon: Icons.local_florist_rounded,
-          backdropStart: const Color(0xFF10233D),
-          backdropEnd: const Color(0xFF061424),
-          paper: const Color(0xFFFFFBF7),
-          ink: const Color(0xFF172033),
-          mutedInk: const Color(0xFF69758B),
-          accent: PulseLinkTheme.primaryRed,
-          softAccent: const Color(0xFFFFA1AE),
-          border: const Color(0xFFF3D9D9),
-          envelope: const Color(0xFF102D4F),
-          envelopeShadow: const Color(0xFF07172A),
+          backdropStart: const Color(0xFF071D38),
+          backdropEnd: const Color(0xFF020B1A),
+          paper: const Color(0xFFFFF7EF),
+          ink: const Color(0xFF342236),
+          mutedInk: const Color(0xFF8A6B72),
+          accent: const Color(0xFFE93A56),
+          softAccent: const Color(0xFFFFB5C1),
+          border: const Color(0xFFF1C8CF),
+          envelope: const Color(0xFF0B2748),
+          envelopeShadow: const Color(0xFF041326),
         );
 
-  const _LetterVisualStyle.heroNight()
-      : this(
-          id: 'hero_night',
-          label: 'Đêm SOS',
-          icon: Icons.favorite_rounded,
-          backdropStart: const Color(0xFF061A33),
-          backdropEnd: const Color(0xFF010816),
-          paper: const Color(0xFF101D33),
-          ink: Colors.white,
-          mutedInk: const Color(0xFFBAC8DE),
-          accent: const Color(0xFFFF3B58),
-          softAccent: const Color(0xFFFFA8B7),
-          border: const Color(0xFF31445F),
-          envelope: const Color(0xFF0D2746),
-          envelopeShadow: const Color(0xFF07182C),
-          darkPaper: true,
-        );
-
-  const _LetterVisualStyle.botanical()
-      : this(
-          id: 'botanical',
-          label: 'Hy vọng xanh',
-          icon: Icons.eco_rounded,
-          backdropStart: const Color(0xFF0E2D36),
-          backdropEnd: const Color(0xFF061822),
-          paper: const Color(0xFFFAFFF8),
-          ink: const Color(0xFF12312A),
-          mutedInk: const Color(0xFF5E766C),
-          accent: const Color(0xFF0FA37F),
-          softAccent: const Color(0xFF8CE9D4),
-          border: const Color(0xFFD5EADF),
-          envelope: const Color(0xFF123A48),
-          envelopeShadow: const Color(0xFF082631),
-        );
-
-  final String id;
-  final String label;
-  final IconData icon;
   final Color backdropStart;
   final Color backdropEnd;
   final Color paper;
@@ -1143,5 +1073,4 @@ class _LetterVisualStyle {
   final Color border;
   final Color envelope;
   final Color envelopeShadow;
-  final bool darkPaper;
 }

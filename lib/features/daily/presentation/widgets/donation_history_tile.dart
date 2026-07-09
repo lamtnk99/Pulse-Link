@@ -167,7 +167,7 @@ class DonationHistoryTile extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _openGratitudeLetter(context),
                 icon: const Icon(Icons.mark_email_read_rounded, size: 18),
-                label: const Text('Mở thiệp cảm ơn'),
+                label: const Text('Xem thư tri ân'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: PulseLinkTheme.primaryRed,
                   side: BorderSide(
@@ -395,7 +395,7 @@ class _BloodJourneyPanel extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.mail_outline_rounded, size: 18),
                 label: const Text(
-                  'Đọc lời cảm ơn',
+                  'Xem thư tri ân',
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
                 ),
               ),

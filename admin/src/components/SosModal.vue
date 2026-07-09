@@ -79,7 +79,7 @@ watch(
 
 <template>
   <div class="fixed inset-0 z-[2000] flex items-start justify-center overflow-y-auto bg-slate-950/60 p-4 py-6 backdrop-blur-sm">
-    <form class="relative z-[2001] w-full max-w-3xl rounded-lg bg-white shadow-2xl" @submit.prevent="submitSos">
+    <form class="relative z-[2001] w-full max-w-5xl overflow-hidden rounded-lg bg-white shadow-2xl" @submit.prevent="submitSos">
       <div class="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
         <div class="p-5 pb-0">
           <p class="text-xs font-black uppercase tracking-[0.22em] text-[#E31837]">Báo động đỏ</p>
@@ -93,15 +93,15 @@ watch(
         </button>
       </div>
 
-      <div class="grid gap-5 p-5 lg:grid-cols-[1.1fr_0.9fr]">
-        <div class="space-y-4">
+      <div class="grid min-w-0 gap-5 p-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.7fr)]">
+        <div class="min-w-0 space-y-4">
           <p v-if="errorMessage" class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">
             {{ errorMessage }}
           </p>
 
           <label class="grid gap-1 text-sm font-bold text-slate-700">
             Bệnh viện nhận SOS
-            <select v-model.number="form.hospital_id" class="h-11 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]">
+            <select v-model.number="form.hospital_id" class="h-11 min-w-0 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]">
               <option v-if="!hasHospitals" :value="0">Đang tải danh sách bệnh viện...</option>
               <option v-for="hospital in hospitals" :key="hospital.id" :value="hospital.id">
                 {{ hospital.name }} - {{ hospital.province?.full_name ?? hospital.province_code }}
@@ -112,7 +112,7 @@ watch(
           <div class="grid gap-4 md:grid-cols-2">
             <label class="grid gap-1 text-sm font-bold text-slate-700">
               Nhóm máu cần
-              <select v-model="form.required_blood_type" class="h-11 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]">
+              <select v-model="form.required_blood_type" class="h-11 min-w-0 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]">
                 <option v-for="bloodType in ['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+']" :key="bloodType">
                   {{ bloodType }}
                 </option>
@@ -121,13 +121,13 @@ watch(
 
             <label class="grid gap-1 text-sm font-bold text-slate-700">
               Số đơn vị máu
-              <input v-model.number="form.units_needed" min="1" max="99" type="number" class="h-11 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]" />
+              <input v-model.number="form.units_needed" min="1" max="99" type="number" class="h-11 min-w-0 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]" />
             </label>
           </div>
 
           <label class="grid gap-1 text-sm font-bold text-slate-700">
             Phạm vi nhóm máu nhận SOS
-            <select v-model="form.compatibility_mode" class="h-11 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]">
+            <select v-model="form.compatibility_mode" class="h-11 min-w-0 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]">
               <option value="compatible">Mở rộng tương thích</option>
               <option value="exact">Chỉ đúng nhóm máu đã chọn</option>
             </select>
@@ -142,7 +142,7 @@ watch(
 
           <label class="grid gap-1 text-sm font-bold text-slate-700">
             Cấp điều phối
-            <select v-model="form.level" class="h-11 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]">
+            <select v-model="form.level" class="h-11 min-w-0 rounded-md border border-slate-200 px-3 text-sm outline-none focus:border-[#E31837]">
               <option value="level1">Cấp 1 - bán kính 15km</option>
               <option value="level2">Cấp 2 - nội tỉnh 30km</option>
               <option value="level3">Cấp 3 - chi viện liên tỉnh</option>
@@ -163,17 +163,17 @@ watch(
 
           <label class="grid gap-1 text-sm font-bold text-slate-700">
             Nội dung phát lệnh
-            <textarea v-model="form.message" rows="4" class="rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#E31837]"></textarea>
+            <textarea v-model="form.message" rows="4" class="min-w-0 rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#E31837]"></textarea>
           </label>
         </div>
 
-        <aside class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <aside class="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4">
           <div class="flex items-start gap-3">
             <div class="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white text-[#E31837]">
               <Building2 class="h-5 w-5" />
             </div>
             <div class="min-w-0">
-              <p class="font-black text-slate-950">{{ selectedHospital?.name ?? 'Chưa chọn bệnh viện' }}</p>
+              <p class="break-words font-black text-slate-950">{{ selectedHospital?.name ?? 'Chưa chọn bệnh viện' }}</p>
               <p class="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">{{ selectedHospital?.code ?? 'NO-DATA' }}</p>
             </div>
           </div>
