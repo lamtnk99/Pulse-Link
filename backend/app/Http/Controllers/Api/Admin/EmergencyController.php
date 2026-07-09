@@ -423,9 +423,7 @@ class EmergencyController extends Controller
             $pulseLinkMessage = $journey->pulse_link_message
                 ?: $this->gratitudeCardService->pulseLinkMessageForJourney($journey);
             $gratitudeStyle = $journey->gratitude_style
-                ?: ($journey->destination_type === 'reserve'
-                    ? GratitudeCardService::STYLE_BOTANICAL
-                    : GratitudeCardService::STYLE_HERO_NIGHT);
+                ?: $this->gratitudeCardService->styleForJourney($journey);
             $journey->update([
                 'current_step' => $stepKey,
                 'location_label' => $payload['location_label'] ?? $journey->location_label,
@@ -675,11 +673,15 @@ class EmergencyController extends Controller
                 'current_step' => 'received',
                 'location_label' => $alert->hospital?->name,
                 'final_message' => BloodJourney::finalMessageFor($destinationType, $commitment->id),
-                'gratitude_style' => $destinationType === 'reserve'
-                    ? GratitudeCardService::STYLE_BOTANICAL
-                    : GratitudeCardService::STYLE_HERO_NIGHT,
+                'gratitude_style' => null,
             ],
         );
+
+        if (! $journey->gratitude_style) {
+            $journey->forceFill([
+                'gratitude_style' => $this->gratitudeCardService->styleForJourney($journey),
+            ])->save();
+        }
 
         if (! $journey->pulse_link_message) {
             $journey->forceFill([
@@ -703,9 +705,10 @@ class EmergencyController extends Controller
             'published_at' => null,
             'final_message' => BloodJourney::finalMessageFor($destinationType, $journey->emergency_commitment_id),
             'pulse_link_message' => null,
-            'gratitude_style' => $destinationType === 'reserve'
-                ? GratitudeCardService::STYLE_BOTANICAL
-                : GratitudeCardService::STYLE_HERO_NIGHT,
+            'gratitude_style' => null,
+        ]);
+        $journey->forceFill([
+            'gratitude_style' => $this->gratitudeCardService->styleForJourney($journey->refresh()),
         ]);
         $journey->forceFill([
             'pulse_link_message' => $this->gratitudeCardService->pulseLinkMessageForJourney($journey->refresh()),

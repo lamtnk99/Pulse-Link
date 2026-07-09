@@ -68,7 +68,8 @@ class _CommunityImpactCardState extends State<CommunityImpactCard> {
         children: [
           Row(
             children: [
-              const Icon(Icons.diversity_1_rounded, color: PulseLinkTheme.primaryRed, size: 20),
+              const Icon(Icons.diversity_1_rounded,
+                  color: PulseLinkTheme.primaryRed, size: 20),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -85,12 +86,17 @@ class _CommunityImpactCardState extends State<CommunityImpactCard> {
           const SizedBox(height: 4),
           Text.rich(
             TextSpan(
-              style: TextStyle(fontSize: 13, height: 1.5, color: PulseLinkTheme.mutedColor(context)),
+              style: TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: PulseLinkTheme.mutedColor(context)),
               children: [
                 const TextSpan(text: 'Bạn không đơn độc — '),
                 TextSpan(
                   text: '${formatter.format(impact.activeDonors)} hiệp sĩ',
-                  style: const TextStyle(fontWeight: FontWeight.w800, color: PulseLinkTheme.primaryRed),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: PulseLinkTheme.primaryRed),
                 ),
                 const TextSpan(text: ' đã cùng cho đi tháng này.'),
               ],
@@ -99,29 +105,37 @@ class _CommunityImpactCardState extends State<CommunityImpactCard> {
           const SizedBox(height: 14),
           Row(
             children: [
-              _stat(context, formatter.format(impact.donationsThisMonth), 'lượt hiến'),
+              _stat(context, formatter.format(impact.donationsThisMonth),
+                  'lượt hiến'),
               _statDivider(),
-              _stat(context, '${formatter.format(impact.volumeMlThisMonth)} mL', 'số lượng ML'),
+              _stat(context, '${formatter.format(impact.volumeMlThisMonth)} mL',
+                  'số lượng ML'),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              _stat(context, formatter.format(impact.campaignDonationsCount), 'lượt quyên góp'),
+              _stat(context, formatter.format(impact.campaignDonationsCount),
+                  'lượt quyên góp'),
               _statDivider(),
-              _stat(context, '${formatter.format(impact.totalDonatedAmount)}đ', 'tổng số tiền quyên góp'),
+              _stat(context, '${formatter.format(impact.totalDonatedAmount)}đ',
+                  'tổng số tiền quyên góp'),
             ],
           ),
           if (impact.gratitudeWall.isNotEmpty) ...[
             const SizedBox(height: 16),
-            SizedBox(
-              height: 118,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                clipBehavior: Clip.none,
-                itemCount: impact.gratitudeWall.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
-                itemBuilder: (context, index) => _noteCard(context, impact.gratitudeWall[index], isDark),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: SizedBox(
+                height: 116,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.hardEdge,
+                  itemCount: impact.gratitudeWall.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  itemBuilder: (context, index) =>
+                      _noteCard(context, impact.gratitudeWall[index], isDark),
+                ),
               ),
             ),
           ],
@@ -146,7 +160,10 @@ class _CommunityImpactCardState extends State<CommunityImpactCard> {
           const SizedBox(height: 2),
           Text(
             label,
-            style: TextStyle(fontSize: 10.5, height: 1.2, color: PulseLinkTheme.mutedColor(context)),
+            style: TextStyle(
+                fontSize: 10.5,
+                height: 1.2,
+                color: PulseLinkTheme.mutedColor(context)),
           ),
         ],
       ),
@@ -163,43 +180,47 @@ class _CommunityImpactCardState extends State<CommunityImpactCard> {
   }
 
   Widget _noteCard(BuildContext context, GratitudeNote note, bool isDark) {
-    return Container(
-      width: 210,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: PulseLinkTheme.surfaceColor(context).withOpacity(isDark ? 0.5 : 1),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Expanded(
-            child: Text(
-              '“${note.message}”',
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.35,
-                fontStyle: FontStyle.italic,
-                color: PulseLinkTheme.textColor(context).withOpacity(0.9),
+    return SizedBox(
+      width: 196,
+      height: double.infinity,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: PulseLinkTheme.surfaceColor(context)
+              .withOpacity(isDark ? 0.5 : 1),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                '“${note.message}”',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.3,
+                  fontStyle: FontStyle.italic,
+                  color: PulseLinkTheme.textColor(context).withOpacity(0.9),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '— ${note.donorName}',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: PulseLinkTheme.primaryRed,
+            const SizedBox(height: 6),
+            Text(
+              '— ${note.donorName}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                height: 1.15,
+                fontWeight: FontWeight.w700,
+                color: PulseLinkTheme.primaryRed,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

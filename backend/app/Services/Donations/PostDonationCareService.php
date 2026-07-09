@@ -103,7 +103,7 @@ class PostDonationCareService
             'gratitude_message' => $donation->gratitude_message
                 ?: $this->gratitudeCardService->regularMessage($donation, $hospitalName),
             'gratitude_style' => $donation->gratitude_style
-                ?: GratitudeCardService::STYLE_CLASSIC,
+                ?: $this->gratitudeCardService->styleForDonation($donation),
             'gratitude_created_at' => $donation->gratitude_created_at ?: now(),
         ])->save();
     }
