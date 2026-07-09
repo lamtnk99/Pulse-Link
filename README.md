@@ -1,5 +1,91 @@
 # Pulse Link
 
+## Giới thiệu dự án
+
+**PULSE LINK — MẠCH SỐNG** là nền tảng điều phối hiến máu cấp cứu ứng dụng **Generative AI** và **dữ liệu thời gian thực** nhằm giải quyết bài toán kết nối người hiến máu với bệnh viện và bệnh nhân trong các tình huống khẩn cấp.
+
+Khác với các nền tảng hiến máu hiện nay chủ yếu dừng lại ở việc đăng ký hoặc cung cấp thông tin, **Pulse Link** xây dựng một quy trình điều phối thông minh, tự động và xuyên suốt: từ dự báo nhu cầu máu, phát hiện nguy cơ thiếu hụt, huy động người hiến phù hợp, theo dõi hành trình máu, ghi nhận đóng góp, đến chăm sóc người hiến sau khi hoàn tất.
+
+Hệ thống hiện tập trung vào các nhóm tính năng chính:
+
+- **Điều phối hiến máu khẩn cấp SOS**: bệnh viện có thể phát lệnh báo động đỏ theo nhóm máu, số đơn vị cần huy động, vị trí và mức độ khẩn cấp. Backend tự động lọc người hiến tương thích theo nhóm máu, khoảng cách địa lý và trạng thái sẵn sàng, sau đó mở rộng phạm vi theo từng wave để tăng tốc độ tìm người phù hợp.
+- **Theo dõi realtime cho bệnh viện và điều phối viên**: Web Admin hiển thị ca SOS đang hoạt động, danh sách người đã được thông báo, người đã cam kết, người đang di chuyển và người đã đến nơi. Trạng thái được cập nhật realtime để đội điều phối ra quyết định nhanh trong từng phút.
+- **Ứng dụng Mobile cho người hiến máu**: người dùng có Hero Pass cá nhân, thông tin nhóm máu, điểm cống hiến, lịch sử hiến máu, lịch đã đặt, bộ đếm thời gian hồi phục sức khỏe và khả năng nhận lời kêu gọi SOS ngay trên điện thoại.
+- **Xác nhận cam kết an toàn bằng hold-to-confirm**: với các ca cấp cứu, Mobile yêu cầu người hiến giữ xác nhận trong 3 giây để giảm thao tác nhầm, đồng thời gửi trạng thái cam kết về hệ thống điều phối.
+- **Lập tuyến đường đến bệnh viện**: sau khi cam kết SOS, hệ thống có thể trả về kế hoạch di chuyển, khoảng cách và thời gian dự kiến để người hiến nhanh chóng đến đúng điểm tiếp nhận.
+- **Quản lý sự kiện hiến máu thường quy**: Admin tạo, chỉnh sửa, phân trang, tìm kiếm và quản lý các sự kiện hiến máu; người dùng Mobile xem sự kiện, đọc chi tiết, đặt lịch và hủy lịch qua API.
+- **Bản tin cộng đồng và truyền thông hiến máu**: Admin quản lý bài viết cộng đồng, lưu nháp hoặc xuất bản, lựa chọn đối tượng nhận tin theo nhóm máu, cấp Hero hoặc địa phương; Mobile hiển thị tin tức để duy trì kết nối với cộng đồng người hiến.
+- **Kho máu và dự báo nhu cầu bằng AI**: hệ thống Admin có module theo dõi tồn kho máu, ngưỡng an toàn, cảnh báo thiếu hụt và dự báo nhu cầu trong tương lai bằng AI dựa trên dữ liệu vận hành, kịch bản dịch bệnh, thời tiết hoặc ngày lễ.
+- **Đề xuất chiến dịch từ AI**: khi phát hiện nguy cơ thiếu máu, hệ thống có thể gợi ý đợt hiến máu hoặc nội dung kêu gọi phù hợp để điều phối viên nhanh chóng phát động chiến dịch bổ sung nguồn máu.
+- **Hành trình máu sau hiến**: với các ca SOS và lượt hiến đã ghi nhận, Pulse Link theo dõi quá trình máu được tiếp nhận, xử lý, lưu trữ hoặc truyền cho bệnh nhân. Người hiến có thể nhìn thấy tác động thực tế từ đóng góp của mình thay vì chỉ dừng ở một lần đăng ký.
+- **Chứng nhận, ghi nhận và chăm sóc sau hiến**: hệ thống tạo chứng nhận hiến máu, cập nhật điểm/cấp Hero, gửi thông báo chăm sóc sau hiến và tạo thư cảm ơn cá nhân hóa để tăng động lực quay lại của người hiến.
+- **Trợ lý sức khỏe AI**: Mobile tích hợp chatbot sức khỏe để hỗ trợ người hiến hỏi đáp về điều kiện hiến máu, phục hồi sau hiến và các lưu ý cá nhân hóa dựa trên ngữ cảnh hồ sơ.
+- **Quyên góp và chiến dịch hỗ trợ**: Pulse Link có luồng quản lý chiến dịch quyên góp, giao dịch demo và bảng xếp hạng đóng góp nhằm mở rộng tinh thần hỗ trợ cộng đồng bên cạnh hoạt động hiến máu.
+- **Quản trị bệnh viện, nhân sự và phân quyền**: Web Admin hỗ trợ dashboard vận hành, quản lý bệnh viện, nhân sự, quyền truy cập theo vai trò và phạm vi bệnh viện, giúp hệ thống phù hợp với mô hình nhiều đơn vị y tế.
+- **Dữ liệu địa phương Việt Nam**: backend seed dữ liệu tỉnh/thành, phường/xã, bệnh viện, người hiến, sự kiện, bài viết và các kịch bản SOS mẫu để demo sát thực tế vận hành tại Việt Nam.
+
+Nền tảng giúp:
+
+- Dự báo nhu cầu máu bằng dữ liệu thời gian thực.
+- Ghép nối nhanh người hiến phù hợp theo nhóm máu, vị trí và khả năng đáp ứng.
+- Nâng cao khả năng cứu sống người bệnh trong thời điểm nguy cấp.
+- Theo dõi, ghi nhận và chăm sóc người hiến, góp phần duy trì một cộng đồng hiến máu bền vững.
+
+> **Pulse Link không chỉ là một nền tảng công nghệ.  
+> Pulse Link là cầu nối giữa dữ liệu, trí tuệ nhân tạo và lòng nhân ái.**
+
+## Thông điệp dự án
+
+**Mỗi giọt máu trao đi là một mạch sống được tiếp nối.**
+
+Pulse Link được xây dựng với niềm tin rằng trong cấp cứu, thời gian, dữ liệu và sự sẵn lòng của cộng đồng đều có thể trở thành cơ hội sống cho người bệnh. Nền tảng không chỉ giúp tìm người hiến máu nhanh hơn, mà còn giúp mỗi hành động hiến máu được ghi nhận, theo dõi và lan tỏa thành một vòng kết nối nhân ái bền vững.
+
+## Vì sao Pulse Link xứng đáng được lựa chọn?
+
+- **Giải quyết đúng bài toán cấp thiết**: thiếu máu trong tình huống khẩn cấp đòi hỏi tốc độ phản ứng cao, dữ liệu chính xác và khả năng điều phối tức thời giữa bệnh viện, người hiến và đội vận hành.
+- **Khác biệt so với nền tảng đăng ký hiến máu truyền thống**: Pulse Link không dừng ở việc lưu thông tin người hiến, mà xây dựng một quy trình khép kín từ dự báo nhu cầu, kích hoạt SOS, ghép nối, xác nhận cam kết, theo dõi di chuyển đến ghi nhận kết quả.
+- **Kết hợp AI và realtime một cách thực tiễn**: AI được dùng để hỗ trợ dự báo nhu cầu máu, phân tích thiếu hụt, gợi ý chiến dịch; realtime giúp điều phối viên theo dõi diễn biến ca SOS ngay khi người hiến phản hồi.
+- **Lấy người hiến làm trung tâm**: Mobile app có Hero Pass, lịch sử hiến máu, chứng nhận, thư cảm ơn, hành trình máu và chăm sóc sau hiến để người hiến thấy rõ ý nghĩa đóng góp của mình.
+- **Phù hợp với bối cảnh Việt Nam**: hệ thống sử dụng dữ liệu địa phương, bệnh viện, tỉnh/thành, phường/xã và các kịch bản vận hành gần với thực tế triển khai trong nước.
+- **Có khả năng mở rộng**: kiến trúc gồm Mobile Flutter, Backend Laravel và Web Admin Vue có thể tiếp tục mở rộng sang xác thực thật, tích hợp FCM, bản đồ, hệ thống bệnh viện và dữ liệu kho máu thực tế.
+
+## Tầm nhìn phát triển
+
+Trong giai đoạn tiếp theo, Pulse Link hướng tới trở thành một hạ tầng điều phối hiến máu thông minh, có thể kết nối nhiều bệnh viện, trung tâm truyền máu, tổ chức tình nguyện và cộng đồng người hiến trên cùng một mạng lưới dữ liệu.
+
+Các định hướng phát triển chính:
+
+- Tích hợp xác thực người dùng, hồ sơ y tế cơ bản và quy trình xác minh danh tính người hiến.
+- Kết nối dữ liệu kho máu thật từ bệnh viện và trung tâm truyền máu để nâng cao độ chính xác của dự báo AI.
+- Mở rộng hệ thống thông báo đa kênh qua push notification, SMS, email hoặc các nền tảng nhắn tin phổ biến.
+- Tối ưu thuật toán ghép nối người hiến dựa trên nhóm máu, khoảng cách, lịch sử hiến, thời gian hồi phục và khả năng đáp ứng.
+- Xây dựng bản đồ điều phối vùng, giúp theo dõi năng lực đáp ứng máu theo khu vực và hỗ trợ quyết định trong thiên tai, dịch bệnh hoặc sự cố hàng loạt.
+- Phát triển hệ thống tri ân, chứng nhận số và báo cáo tác động để duy trì cộng đồng người hiến lâu dài.
+
+## Các nhóm người dùng chính
+
+- **Người hiến máu**: đăng ký hồ sơ, xem Hero Pass, theo dõi lịch sử hiến máu, nhận lời kêu gọi SOS, đặt lịch hiến máu thường quy và nhận chứng nhận sau hiến.
+- **Bệnh viện và trung tâm truyền máu**: tạo yêu cầu SOS, theo dõi người hiến theo thời gian thực, quản lý sự kiện hiến máu, ghi nhận lượt hiến và cập nhật hành trình máu.
+- **Điều phối viên/Admin**: giám sát dashboard, quản lý ca khẩn cấp, quản lý bài viết cộng đồng, sự kiện, kho máu, dự báo AI, nhân sự và phân quyền.
+- **Bệnh nhân/người nhận máu**: là nhóm hưởng lợi trực tiếp khi hệ thống giúp rút ngắn thời gian tìm nguồn máu phù hợp trong tình huống nguy cấp.
+- **Tổ chức cộng đồng và nhà tài trợ**: có thể tham gia các chiến dịch vận động hiến máu, quyên góp và truyền thông để mở rộng mạng lưới hỗ trợ.
+
+## Đội ngũ phát triển
+
+| Vai trò | Thành viên |
+| --- | --- |
+| Project Lead | Bùi Ngọc Minh |
+| Backend Developer | Nguyễn Văn Dân |
+| Frontend Developer | Đào Minh Quân |
+| AI Engineer | Phùng Văn Đại |
+| UI/UX Designer | Bùi Đức Đại |
+
+## License
+
+Dự án được phát triển phục vụ mục đích học tập, nghiên cứu và tham gia cuộc thi.
+
+## Tổng quan kỹ thuật
+
 Pulse Link là hệ sinh thái hiến máu gồm Mobile Flutter, Backend Laravel 11 và Web Admin Vue 3. Dự án đang ưu tiên demo vận hành thật cho hai luồng chính:
 
 - **Daily Mode**: Hero Pass, tin cộng đồng, sự kiện hiến máu, đặt/hủy lịch, lịch đã đặt, lịch sử hiến máu và health tracker.
@@ -634,4 +720,3 @@ Trạng thái triển khai:
   - Tích hợp tab **Quản lý Quyên góp** trên sidebar admin sử dụng biểu tượng `HeartHandshake`.
   - Hiển thị thống kê tổng dòng tiền mặt VND và điểm Hero đã thu nhận toàn hệ thống.
   - Form CRUD đầy đủ cho chiến dịch và cửa sổ xem chi tiết lịch sử giao dịch quyên góp từ donors.
-
