@@ -25,6 +25,11 @@ class PulseLinkBootstrap {
     defaultValue: 'https://api.pulselink.asia',
   );
 
+  static const String publicWebBaseUrl = String.fromEnvironment(
+    'PUBLIC_WEB_BASE_URL',
+    defaultValue: 'https://pulselink.asia',
+  );
+
   static const String mobileApiToken = String.fromEnvironment(
     'MOBILE_API_TOKEN',
     defaultValue: '',

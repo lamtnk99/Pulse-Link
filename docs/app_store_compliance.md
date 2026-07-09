@@ -2,12 +2,13 @@
 
 ## Public URLs
 
-- Privacy Policy: `/legal/privacy`
-- Terms of Use: `/legal/terms`
-- Account Deletion Guide: `/legal/delete-account`
-- Support: `/support`
+- Privacy Policy: `https://pulselink.asia/legal/privacy`
+- Terms of Use: `https://pulselink.asia/legal/terms`
+- Account Deletion Guide: `https://pulselink.asia/legal/delete-account`
+- Support: `https://pulselink.asia/support`
 
 All URLs must be reachable without login before App Review.
+The mobile app opens these links from `PUBLIC_WEB_BASE_URL`, not `LARAVEL_API_BASE_URL`, so the public legal pages do not need to live under the `api.` subdomain.
 
 ## Account Deletion
 
@@ -41,6 +42,12 @@ Declare at least these categories in App Store Connect:
 - `NSPhotoLibraryAddUsageDescription`
 
 Location must remain optional. If permission is denied, users can still set province/ward/address manually in profile.
+
+## Build Defines
+
+- API base URL: `--dart-define=LARAVEL_API_BASE_URL=https://api.pulselink.asia`
+- Public web/legal URL: `--dart-define=PUBLIC_WEB_BASE_URL=https://pulselink.asia`
+- Local development can point both values to `http://127.0.0.1:8000` if Laravel serves the legal pages locally.
 
 ## Fundraising
 

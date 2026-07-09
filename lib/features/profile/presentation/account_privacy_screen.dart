@@ -20,8 +20,8 @@ class _AccountPrivacyScreenState extends State<AccountPrivacyScreen> {
   bool _deleting = false;
 
   Uri _webUri(String path) {
-    final apiBase = Uri.parse(PulseLinkBootstrap.laravelBaseUrl);
-    return apiBase.replace(path: path, query: null, fragment: null);
+    final webBase = Uri.parse(PulseLinkBootstrap.publicWebBaseUrl);
+    return webBase.replace(path: path, query: null, fragment: null);
   }
 
   Future<void> _openPolicy(String path) async {
