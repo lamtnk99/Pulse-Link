@@ -1,37 +1,37 @@
 <x-legal.layout
-    title="Chinh sach quyen rieng tu"
-    summary="Chinh sach nay mo ta du lieu Pulse Link thu thap, muc dich su dung, ben thu ba lien quan va cach nguoi dung yeu cau xoa du lieu."
+    title="Chính sách quyền riêng tư"
+    summary="Chính sách này mô tả dữ liệu Pulse Link thu thập, mục đích sử dụng, bên thứ ba liên quan và cách người dùng yêu cầu xóa dữ liệu."
 >
     <section>
-        <h2>Du lieu chung toi thu thap</h2>
+        <h2>Dữ liệu chúng tôi thu thập</h2>
         <ul>
-            <li>Thong tin tai khoan: ho ten, email, so dien thoai, mat khau da bam.</li>
-            <li>Ho so nguoi hien: nhom mau, lich su hien mau, diem Hero, cap bac, ngay sinh, gioi tinh, dia chi, tinh/phuong.</li>
-            <li>Du lieu xac minh: so CCCD va anh hai mat CCCD khi nguoi dung chu dong gui de xac minh.</li>
-            <li>Vi tri: toa do gan dung/chinh xac khi nguoi dung cho phep de goi y su kien va dieu phoi SOS.</li>
-            <li>Thong bao va thiet bi: FCM/device token, trang thai da doc thong bao.</li>
-            <li>Noi dung nguoi dung: tin nhan chat cham soc, loi nhan quyen gop, tuong tac cong dong neu co.</li>
-            <li>Du lieu ky thuat: log loi, trang thai API, thong tin giao dich demo neu tinh nang quyen gop duoc bat.</li>
+            <li>Thông tin tài khoản: họ tên, email, số điện thoại, mật khẩu đã băm.</li>
+            <li>Hồ sơ người hiến: nhóm máu, lịch sử hiến máu, điểm Hero, cấp bậc, ngày sinh, giới tính, địa chỉ, tỉnh/phường.</li>
+            <li>Dữ liệu xác minh: số CCCD và ảnh hai mặt CCCD khi người dùng chủ động gửi để xác minh.</li>
+            <li>Vị trí: tọa độ gần đúng/chính xác khi người dùng cho phép để gợi ý sự kiện và điều phối SOS.</li>
+            <li>Thông báo và thiết bị: FCM/device token, trạng thái đã đọc thông báo.</li>
+            <li>Nội dung người dùng: tin nhắn chat chăm sóc, lời nhắn quyên góp, tương tác cộng đồng nếu có.</li>
+            <li>Dữ liệu kỹ thuật: log lỗi, trạng thái API, thông tin giao dịch demo nếu tính năng quyên góp được bật.</li>
         </ul>
     </section>
 
     <section>
-        <h2>Muc dich su dung</h2>
-        <p>Du lieu duoc dung de tao tai khoan, dieu phoi hien mau, ghep SOS, xac minh ho so, gui thong bao, cham soc sau hien, cap chung nhan, thong ke tac dong cong dong va cai thien do on dinh he thong.</p>
+        <h2>Mục đích sử dụng</h2>
+        <p>Dữ liệu được dùng để tạo tài khoản, điều phối hiến máu, ghép SOS, xác minh hồ sơ, gửi thông báo, chăm sóc sau hiến, cấp chứng nhận, thống kê tác động cộng đồng và cải thiện độ ổn định hệ thống.</p>
     </section>
 
     <section>
-        <h2>Ben thu ba</h2>
-        <p>Pulse Link co the su dung dich vu hosting backend, Firebase Cloud Messaging, ban do/route provider, nha cung cap AI cho tro ly suc khoe, va nha cung cap thanh toan neu tinh nang quyen gop tien duoc bat. Cac ben nay chi duoc nhan du lieu can thiet cho chuc nang tuong ung.</p>
+        <h2>Bên thứ ba</h2>
+        <p>Pulse Link có thể sử dụng dịch vụ hosting backend, Firebase Cloud Messaging, nhà cung cấp bản đồ/tuyến đường, nhà cung cấp AI cho trợ lý sức khỏe và nhà cung cấp thanh toán nếu tính năng quyên góp tiền được bật. Các bên này chỉ được nhận dữ liệu cần thiết cho chức năng tương ứng.</p>
     </section>
 
     <section>
-        <h2>Luu tru va xoa du lieu</h2>
-        <p>Nguoi dung co the xoa tai khoan trong app tai Ho so -> Tai khoan & quyen rieng tu -> Xoa tai khoan. Khi xoa, Pulse Link xoa tai khoan, token, FCM, thong bao, chat, vi tri va du lieu dinh danh/CCCD. Mot so ban ghi can doi soat y te, SOS, lich su hien hoac thong ke chien dich duoc giu o dang an danh, khong con lien ket truc tiep voi tai khoan.</p>
+        <h2>Lưu trữ và xóa dữ liệu</h2>
+        <p>Người dùng có thể xóa tài khoản trong app tại Hồ sơ -> Tài khoản & quyền riêng tư -> Xóa tài khoản. Khi xóa, Pulse Link xóa tài khoản, token, FCM, thông báo, chat, vị trí và dữ liệu định danh/CCCD. Một số bản ghi cần đối soát y tế, SOS, lịch sử hiến hoặc thống kê chiến dịch được giữ ở dạng ẩn danh, không còn liên kết trực tiếp với tài khoản.</p>
     </section>
 
     <section>
-        <h2>Lien he</h2>
-        <p>Neu can rut dong y, sua ho so, yeu cau xoa du lieu hoac hoi ve quyen rieng tu, vui long lien he qua trang <a href="{{ route('support') }}">Ho tro</a>.</p>
+        <h2>Liên hệ</h2>
+        <p>Nếu cần rút đồng ý, sửa hồ sơ, yêu cầu xóa dữ liệu hoặc hỏi về quyền riêng tư, vui lòng liên hệ qua trang <a href="{{ route('support') }}">Hỗ trợ</a>.</p>
     </section>
 </x-legal.layout>

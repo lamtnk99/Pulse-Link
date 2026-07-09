@@ -48,14 +48,14 @@
 <body>
 <main>
     <header>
-        <p class="muted">Pulse Link - Mach Song</p>
+        <p class="muted">Pulse Link - Mạch Sống</p>
         <h1>{{ $title ?? 'Pulse Link' }}</h1>
-        <p>{{ $summary ?? 'Thong tin cong khai ve quyen rieng tu, dieu khoan va ho tro nguoi dung.' }}</p>
+        <p>{{ $summary ?? 'Thông tin công khai về quyền riêng tư, điều khoản và hỗ trợ người dùng.' }}</p>
         <nav>
-            <a href="{{ route('legal.privacy') }}">Chinh sach rieng tu</a>
-            <a href="{{ route('legal.terms') }}">Dieu khoan</a>
-            <a href="{{ route('legal.delete-account') }}">Xoa tai khoan</a>
-            <a href="{{ route('support') }}">Ho tro</a>
+            <a href="{{ route('legal.privacy') }}">Chính sách riêng tư</a>
+            <a href="{{ route('legal.terms') }}">Điều khoản</a>
+            <a href="{{ route('legal.delete-account') }}">Xóa tài khoản</a>
+            <a href="{{ route('support') }}">Hỗ trợ</a>
         </nav>
     </header>
 

@@ -1,15 +1,15 @@
 <x-legal.layout
-    title="Ho tro Pulse Link"
-    summary="Kenh lien he danh cho nguoi hien, benh vien va App Review."
+    title="Hỗ trợ Pulse Link"
+    summary="Kênh liên hệ dành cho người hiến, bệnh viện và App Review."
 >
     <section>
-        <h2>Lien he</h2>
-        <p>Email ho tro: <a href="mailto:support@pulselink.asia">support@pulselink.asia</a></p>
-        <p>Neu day la tinh huong y te khan cap, hay lien he benh vien hoac cap cuu dia phuong ngay lap tuc.</p>
+        <h2>Liên hệ</h2>
+        <p>Email hỗ trợ: <a href="mailto:support@pulselink.asia">support@pulselink.asia</a></p>
+        <p>Nếu đây là tình huống y tế khẩn cấp, hãy liên hệ bệnh viện hoặc cấp cứu địa phương ngay lập tức.</p>
     </section>
 
     <section>
-        <h2>Thong tin cho App Review</h2>
-        <p>Pulse Link ho tro xoa tai khoan trong app, co chinh sach quyen rieng tu cong khai va hien thi canh bao an toan y te trong cac luong SOS/cham soc. Tai khoan demo va backend live se duoc cung cap trong App Store Connect Review Notes.</p>
+        <h2>Thông tin cho App Review</h2>
+        <p>Pulse Link hỗ trợ xóa tài khoản trong app, có chính sách quyền riêng tư công khai và hiển thị cảnh báo an toàn y tế trong các luồng SOS/chăm sóc. Tài khoản demo và backend live sẽ được cung cấp trong App Store Connect Review Notes.</p>
     </section>
 </x-legal.layout>

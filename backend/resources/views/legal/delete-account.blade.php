@@ -1,24 +1,24 @@
 <x-legal.layout
-    title="Huong dan xoa tai khoan"
-    summary="Nguoi dung Pulse Link co the chu dong xoa tai khoan truc tiep trong ung dung."
+    title="Hướng dẫn xóa tài khoản"
+    summary="Người dùng Pulse Link có thể chủ động xóa tài khoản trực tiếp trong ứng dụng."
 >
     <section>
-        <h2>Cach xoa trong app</h2>
+        <h2>Cách xóa trong app</h2>
         <ol>
-            <li>Mo Pulse Link va dang nhap tai khoan nguoi hien.</li>
-            <li>Vao tab Ho so.</li>
-            <li>Chon Tai khoan & quyen rieng tu.</li>
-            <li>Chon Xoa tai khoan, doc thong tin anh huong va nhap XOA TAI KHOAN theo yeu cau hien thi trong app.</li>
+            <li>Mở Pulse Link và đăng nhập tài khoản người hiến.</li>
+            <li>Vào tab Hồ sơ.</li>
+            <li>Chọn Tài khoản & quyền riêng tư.</li>
+            <li>Chọn Xóa tài khoản, đọc thông tin ảnh hưởng và nhập XÓA TÀI KHOẢN theo yêu cầu hiển thị trong app.</li>
         </ol>
     </section>
 
     <section>
-        <h2>Dieu gi se bi xoa?</h2>
-        <p>He thong xoa tai khoan, token dang nhap, FCM/device token, thong bao, chat, vi tri, anh CCCD va du lieu dinh danh. Cac ban ghi can giu cho doi soat y te/thong ke se duoc an danh va khong con lien ket truc tiep voi tai khoan.</p>
+        <h2>Điều gì sẽ bị xóa?</h2>
+        <p>Hệ thống xóa tài khoản, token đăng nhập, FCM/device token, thông báo, chat, vị trí, ảnh CCCD và dữ liệu định danh. Các bản ghi cần giữ cho đối soát y tế/thống kê sẽ được ẩn danh và không còn liên kết trực tiếp với tài khoản.</p>
     </section>
 
     <section>
-        <h2>Can ho tro?</h2>
-        <p>Neu khong dang nhap duoc de xoa trong app, vui long lien he qua trang <a href="{{ route('support') }}">Ho tro</a>. Doi ngu se xac minh danh tinh va phan hoi khung thoi gian xu ly.</p>
+        <h2>Cần hỗ trợ?</h2>
+        <p>Nếu không đăng nhập được để xóa trong app, vui lòng liên hệ qua trang <a href="{{ route('support') }}">Hỗ trợ</a>. Đội ngũ sẽ xác minh danh tính và phản hồi khung thời gian xử lý.</p>
     </section>
 </x-legal.layout>
