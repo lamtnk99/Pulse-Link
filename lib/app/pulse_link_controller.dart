@@ -550,11 +550,28 @@ class PulseLinkController extends ChangeNotifier {
       notification,
       profile: _state.profile,
     );
+    final keepCompletedJourneyLetter = _shouldKeepCompletedJourneyLetter(
+      gratitude,
+    );
     _state = _state.copyWith(
       notifications: notifications,
-      activeGratitudeLetter: gratitude,
+      activeGratitudeLetter:
+          keepCompletedJourneyLetter ? _state.activeGratitudeLetter : gratitude,
     );
     notifyListeners();
+  }
+
+  bool _shouldKeepCompletedJourneyLetter(GratitudeLetter? incoming) {
+    final active = _state.activeGratitudeLetter;
+    if (incoming == null || active == null) return false;
+    if (incoming.source != GratitudeLetterSource.sosPulseLink) return false;
+    if (incoming.bloodJourneyId == null ||
+        incoming.bloodJourneyId != active.bloodJourneyId) {
+      return false;
+    }
+
+    return active.source == GratitudeLetterSource.sosPatient ||
+        active.source == GratitudeLetterSource.sosReserve;
   }
 
   void _handlePushNotificationOpened(Map<String, dynamic> data) {

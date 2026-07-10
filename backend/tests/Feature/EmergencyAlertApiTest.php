@@ -456,6 +456,12 @@ class EmergencyAlertApiTest extends TestCase
             'volume_ml' => 350,
         ])->assertOk();
 
+        $initialRealtimePayload = (new \App\Events\EmergencyCommitmentUpdated(
+            $commitment->refresh()->load('donor', 'alert', 'bloodJourney.steps')
+        ))->broadcastWith();
+        $this->assertNull($initialRealtimePayload['commitment']['blood_journey']['final_message']);
+        $this->assertNull($initialRealtimePayload['commitment']['blood_journey']['gratitude_card']);
+
         $this->postJson("/api/admin/emergency-alerts/{$alertId}/commitments/{$commitment->id}/journey?admin_user_id={$staff->id}", [
             'destination_type' => 'reserve',
             'current_step' => 'stored',
@@ -470,5 +476,12 @@ class EmergencyAlertApiTest extends TestCase
             'user_id' => $donor->id,
             'type' => 'blood_journey_completed',
         ]);
+
+        $completedRealtimePayload = (new \App\Events\EmergencyCommitmentUpdated(
+            $commitment->refresh()->load('donor', 'alert', 'bloodJourney.steps')
+        ))->broadcastWith();
+        $completedCard = $completedRealtimePayload['commitment']['blood_journey']['gratitude_card'];
+        $this->assertSame('sos_reserve', $completedCard['source']);
+        $this->assertSame('Bệnh viện tiếp nhận', $completedCard['messages'][0]['sender']);
     }
 }

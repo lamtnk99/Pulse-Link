@@ -6,7 +6,9 @@ use App\Events\EmergencyAlertActivated;
 use App\Events\EmergencyCommitmentUpdated;
 use App\Models\CommunityPost;
 use App\Models\DonationEvent;
+use App\Models\DonationHistory;
 use App\Models\EmergencyAlert;
+use App\Models\Hospital;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -86,6 +88,48 @@ class MobileContractApiTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('data.removed', true);
+    }
+
+    public function test_mobile_donation_history_orders_same_day_records_by_issued_time(): void
+    {
+        $this->seed();
+
+        $donor = User::factory()->create([
+            'role' => 'donor',
+            'blood_type' => 'O+',
+        ]);
+        $hospital = Hospital::query()->firstOrFail();
+        $donatedAt = now()->startOfDay();
+
+        $earlier = DonationHistory::query()->create([
+            'user_id' => $donor->id,
+            'hospital_id' => $hospital->id,
+            'donation_type' => 'sos',
+            'donated_at' => $donatedAt,
+            'location_name' => $hospital->name,
+            'volume_ml' => 250,
+            'blood_type' => 'O+',
+            'certificate_id' => 'SOS-EARLIER-'.$donor->id,
+            'certificate_issued_at' => now()->subMinutes(5),
+            'status' => 'verified',
+        ]);
+        $later = DonationHistory::query()->create([
+            'user_id' => $donor->id,
+            'hospital_id' => $hospital->id,
+            'donation_type' => 'sos',
+            'donated_at' => $donatedAt,
+            'location_name' => $hospital->name,
+            'volume_ml' => 350,
+            'blood_type' => 'O+',
+            'certificate_id' => 'SOS-LATER-'.$donor->id,
+            'certificate_issued_at' => now(),
+            'status' => 'verified',
+        ]);
+
+        $this->getJson("/api/mobile/me/donations?user_id={$donor->id}")
+            ->assertOk()
+            ->assertJsonPath('data.0.id', (string) $later->id)
+            ->assertJsonPath('data.1.id', (string) $earlier->id);
     }
 
     public function test_mobile_daily_mode_exposes_event_detail_appointments_and_posts(): void

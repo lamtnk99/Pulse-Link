@@ -164,10 +164,10 @@ class LaravelDonationHistoryRepository implements DonationHistoryRepository {
   @override
   Future<List<PastDonation>> getDonationHistory() async {
     final json = await _client.getList('/api/mobile/me/donations');
-    return json
-        .cast<Map<String, dynamic>>()
-        .map(PastDonation.fromJson)
-        .toList(growable: false);
+    final history =
+        json.cast<Map<String, dynamic>>().map(PastDonation.fromJson).toList();
+    history.sort(_compareDonationHistory);
+    return List.unmodifiable(history);
   }
 
   @override
@@ -184,6 +184,21 @@ class LaravelDonationHistoryRepository implements DonationHistoryRepository {
     );
     return PastDonation.fromJson(_unwrapData(json));
   }
+}
+
+int _compareDonationHistory(PastDonation left, PastDonation right) {
+  final donatedAt = right.donatedAt.compareTo(left.donatedAt);
+  if (donatedAt != 0) return donatedAt;
+
+  final leftIssuedAt = left.certificateIssuedAt ?? left.donatedAt;
+  final rightIssuedAt = right.certificateIssuedAt ?? right.donatedAt;
+  final issuedAt = rightIssuedAt.compareTo(leftIssuedAt);
+  if (issuedAt != 0) return issuedAt;
+
+  final leftId = int.tryParse(left.id);
+  final rightId = int.tryParse(right.id);
+  if (leftId != null && rightId != null) return rightId.compareTo(leftId);
+  return right.id.compareTo(left.id);
 }
 
 Map<String, dynamic> _unwrapData(Map<String, dynamic> json) {

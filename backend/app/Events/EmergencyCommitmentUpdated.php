@@ -58,10 +58,12 @@ class EmergencyCommitmentUpdated implements ShouldBroadcastNow
                     'current_step' => $journey->current_step,
                     'location_label' => $journey->location_label,
                     'destination_type' => $journey->destination_type,
-                    'final_message' => $journey->final_message,
+                    'final_message' => $journey->completed_at ? $journey->final_message : null,
                     'pulse_link_message' => $journey->pulse_link_message,
                     'gratitude_style' => $journey->gratitude_style,
-                    'gratitude_card' => app(GratitudeCardService::class)->journeyPayload($journey),
+                    'gratitude_card' => $journey->completed_at
+                        ? app(GratitudeCardService::class)->journeyPayload($journey)
+                        : null,
                     'completed_at' => $journey->completed_at?->toIso8601String(),
                     'published_at' => $journey->published_at?->toIso8601String(),
                     'steps' => $journey->steps->map(fn ($step) => [

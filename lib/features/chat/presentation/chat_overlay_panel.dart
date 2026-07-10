@@ -304,6 +304,18 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final keyboardInset = mediaQuery.viewInsets.bottom;
+    final availablePanelHeight =
+        mediaQuery.size.height - mediaQuery.padding.top - keyboardInset - 32;
+    final isKeyboardVisible = keyboardInset > 0;
+    final panelHeight = math
+        .min(
+          mediaQuery.size.height * 0.78,
+          math.max(0, availablePanelHeight),
+        )
+        .toDouble();
+
     return Positioned.fill(
       child: Stack(
         children: [
@@ -321,42 +333,47 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
             ),
           ),
           // Floating chat panel
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Material(
-                type: MaterialType.transparency,
-                child: Container(
-                  height: MediaQuery.of(context).size.height * 0.78,
-                  width: double.infinity,
-                  margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                  decoration: BoxDecoration(
-                    color:
-                        PulseLinkTheme.dailyBackground.withValues(alpha: 0.95),
-                    borderRadius: BorderRadius.circular(28),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFFE31837).withValues(alpha: 0.12),
-                        blurRadius: 24,
-                        spreadRadius: 2,
+          AnimatedPadding(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + keyboardInset),
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Container(
+                    height: panelHeight,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: PulseLinkTheme.dailyBackground
+                          .withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(28),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.1),
+                        width: 1.5,
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      _buildHeader(),
-                      _buildQuotaBar(),
-                      _buildAiSafetyNotice(),
-                      if (_errorMessage != null) _buildErrorBanner(),
-                      Expanded(child: _buildChatBody()),
-                      _buildQuickRepliesBar(),
-                      _buildInputBar(),
-                    ],
+                      boxShadow: [
+                        BoxShadow(
+                          color:
+                              const Color(0xFFE31837).withValues(alpha: 0.12),
+                          blurRadius: 24,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        _buildHeader(),
+                        if (!isKeyboardVisible) _buildQuotaBar(),
+                        if (!isKeyboardVisible) _buildAiSafetyNotice(),
+                        if (_errorMessage != null) _buildErrorBanner(),
+                        Expanded(child: _buildChatBody()),
+                        if (!isKeyboardVisible) _buildQuickRepliesBar(),
+                        _buildInputBar(),
+                      ],
+                    ),
                   ),
                 ),
               ),

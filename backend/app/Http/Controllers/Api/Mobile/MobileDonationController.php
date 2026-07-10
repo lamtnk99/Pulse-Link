@@ -163,7 +163,9 @@ class MobileDonationController extends Controller
             'data' => DonationHistory::query()
                 ->with('appointment', 'hospital', 'bloodJourney.hospital', 'bloodJourney.steps')
                 ->where('user_id', $userId)
-                ->latest('donated_at')
+                ->orderByDesc('donated_at')
+                ->orderByDesc('certificate_issued_at')
+                ->orderByDesc('id')
                 ->get()
                 ->map(fn (DonationHistory $history): array => $this->historyPayload($history, $request)),
         ]);
