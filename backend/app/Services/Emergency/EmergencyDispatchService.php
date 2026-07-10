@@ -5,13 +5,14 @@ namespace App\Services\Emergency;
 use App\Domain\Blood\BloodCompatibility;
 use App\Domain\Emergency\DispatchWavePolicy;
 use App\Events\EmergencyAlertActivated;
+use App\Events\MobileNotificationCreated;
 use App\Models\EmergencyAlert;
 use App\Models\EmergencyAlertRecipient;
 use App\Models\Hospital;
+use App\Models\MobileNotification;
 use App\Repositories\Contracts\DonorRepository;
 use App\Repositories\Contracts\EmergencyAlertRepository;
 use App\Services\Contracts\EmergencyAlertRealtimeGateway;
-use App\Services\Contracts\PushNotificationGateway;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +26,6 @@ class EmergencyDispatchService
         private readonly DispatchWavePolicy $dispatchWavePolicy,
         private readonly DonorRepository $donors,
         private readonly EmergencyAlertRepository $alerts,
-        private readonly PushNotificationGateway $pushNotifications,
         private readonly EmergencyAlertRealtimeGateway $realtimeGateway,
     ) {}
 
@@ -43,8 +43,9 @@ class EmergencyDispatchService
             level: $payload['level'],
         );
 
+        $notifications = collect();
         /** @var EmergencyAlert $alert */
-        $alert = DB::transaction(function () use ($hospital, $payload, $dispatch): EmergencyAlert {
+        $alert = DB::transaction(function () use ($hospital, $payload, $dispatch, &$notifications): EmergencyAlert {
             $alert = $this->alerts->createActiveAlert([
                 ...$payload,
                 'expires_at' => Carbon::parse($payload['expires_at']),
@@ -65,10 +66,27 @@ class EmergencyDispatchService
                 ],
             ]);
 
+            $notifications = $recipients->map(fn (EmergencyAlertRecipient $recipient): MobileNotification => MobileNotification::query()->create([
+                'user_id' => $recipient->user_id,
+                'type' => 'emergency_alert',
+                'title' => "SOS {$alert->required_blood_type}: {$hospital->name}",
+                'body' => $alert->message,
+                'payload' => [
+                    'alert_id' => $alert->public_id,
+                    'required_blood_type' => $alert->required_blood_type,
+                    'hospital_name' => $hospital->name,
+                    'wave' => $recipient->wave,
+                    'distance_km' => $recipient->distance_km,
+                    'deep_link' => '/sos/'.$alert->public_id,
+                ],
+            ]));
+
             return $alert->load('hospital', 'recipients.donor');
         });
 
-        $this->pushNotifications->sendEmergencyAlert($alert, $alert->recipients);
+        foreach ($notifications as $notification) {
+            event(new MobileNotificationCreated($notification));
+        }
         $this->realtimeGateway->publish($alert);
         $this->broadcastAlert($alert);
 

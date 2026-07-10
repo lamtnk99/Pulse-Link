@@ -35,6 +35,8 @@ return [
         'project_id' => env('FIREBASE_PROJECT_ID'),
         'client_email' => env('FIREBASE_CLIENT_EMAIL'),
         'private_key' => env('FIREBASE_PRIVATE_KEY'),
+        'service_account_path' => env('FIREBASE_SERVICE_ACCOUNT_PATH'),
+        'service_account_json' => env('FIREBASE_SERVICE_ACCOUNT_JSON'),
         'messaging_endpoint' => env('FIREBASE_MESSAGING_ENDPOINT'),
         'firestore_endpoint' => env('FIREBASE_FIRESTORE_ENDPOINT'),
     ],

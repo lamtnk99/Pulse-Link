@@ -8,6 +8,7 @@ import '../infrastructure/laravel/laravel_route_planner_service.dart';
 import '../infrastructure/laravel/laravel_chat_service.dart';
 import '../infrastructure/laravel/laravel_donation_fund_service.dart';
 import '../infrastructure/laravel/laravel_community_impact_service.dart';
+import '../infrastructure/notifications/mobile_push_notification_service.dart';
 import '../infrastructure/mock/mock_emergency_services.dart';
 import '../infrastructure/mock/mock_repositories.dart';
 import 'pulse_link_controller.dart';
@@ -157,6 +158,8 @@ class PulseLinkBootstrap {
       chatService: LaravelChatService(apiClient),
       donationFundService: LaravelDonationFundService(apiClient),
       communityImpactService: LaravelCommunityImpactService(apiClient),
+      pushNotificationService:
+          MobilePushNotificationService(apiClient: apiClient),
     );
   }
 }

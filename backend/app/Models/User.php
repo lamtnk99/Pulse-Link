@@ -94,6 +94,16 @@ class User extends Authenticatable
         return $this->hasMany(MobileNotification::class);
     }
 
+    public function notificationDevices()
+    {
+        return $this->hasMany(NotificationDevice::class);
+    }
+
+    public function notificationPreference()
+    {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
     public function hospital()
     {
         return $this->belongsTo(Hospital::class);

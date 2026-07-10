@@ -45,6 +45,49 @@ class MobileContractApiTest extends TestCase
             ->assertJsonPath('data.0.booked', true);
     }
 
+    public function test_mobile_can_manage_push_devices_and_notification_preferences(): void
+    {
+        $this->seed();
+        $donor = User::query()->where('role', 'donor')->firstOrFail();
+
+        $this->getJson("/api/mobile/me/notification-preferences?user_id={$donor->id}")
+            ->assertOk()
+            ->assertJsonPath('data.sos_enabled', true)
+            ->assertJsonPath('data.nearby_events_enabled', false);
+
+        $this->putJson("/api/mobile/me/notification-preferences?user_id={$donor->id}", [
+            'care_enabled' => false,
+            'nearby_events_enabled' => true,
+            'quiet_hours_start' => '22:00',
+            'quiet_hours_end' => '07:00',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.care_enabled', false)
+            ->assertJsonPath('data.nearby_events_enabled', true)
+            ->assertJsonPath('data.quiet_hours_start', '22:00');
+
+        $this->postJson("/api/mobile/me/notification-devices?user_id={$donor->id}", [
+            'token' => 'firebase-device-token',
+            'platform' => 'ios',
+            'app_version' => '0.1.0',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.platform', 'ios')
+            ->assertJsonPath('data.enabled', true);
+
+        $this->assertDatabaseHas('notification_devices', [
+            'user_id' => $donor->id,
+            'token' => 'firebase-device-token',
+            'platform' => 'ios',
+        ]);
+
+        $this->deleteJson("/api/mobile/me/notification-devices?user_id={$donor->id}", [
+            'token' => 'firebase-device-token',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.removed', true);
+    }
+
     public function test_mobile_daily_mode_exposes_event_detail_appointments_and_posts(): void
     {
         $this->seed();

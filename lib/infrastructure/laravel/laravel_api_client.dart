@@ -41,6 +41,18 @@ class LaravelApiClient {
     return _decodeObject(response);
   }
 
+  Future<Map<String, dynamic>> putJson(
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
+    final response = await _httpClient.put(
+      _resolve(path),
+      headers: await _headers(),
+      body: jsonEncode(body ?? const <String, dynamic>{}),
+    );
+    return _decodeObject(response);
+  }
+
   /// Tải một tệp lên qua multipart/form-data (ví dụ ảnh CCCD). Trả về JSON body.
   ///
   /// Dùng bytes thay vì đường dẫn file để chạy được cả trên web (nơi không có

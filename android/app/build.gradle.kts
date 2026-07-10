@@ -11,6 +11,10 @@ tasks.whenTaskAdded {
     }
 }
 
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "asia.pulselink.app"
     compileSdk = flutter.compileSdkVersion

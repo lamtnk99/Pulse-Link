@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../app/pulse_link_bootstrap.dart';
 import '../../../app/pulse_link_controller.dart';
 import '../../../core/theme/pulse_link_theme.dart';
+import '../../notifications/presentation/notification_settings_screen.dart';
 
 class AccountPrivacyScreen extends StatefulWidget {
   const AccountPrivacyScreen({super.key, required this.controller});
@@ -175,6 +176,20 @@ class _AccountPrivacyScreenState extends State<AccountPrivacyScreen> {
             title: 'Hỗ trợ',
             subtitle: 'Kênh liên hệ cho người hiến, bệnh viện và App Review.',
             onTap: () => _openPolicy('/support'),
+          ),
+          _PrivacyTile(
+            icon: Icons.notifications_active_outlined,
+            title: 'Cài đặt thông báo',
+            subtitle: 'Chọn SOS, lịch hiến, chăm sóc sau hiến và giờ yên lặng.',
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => NotificationSettingsScreen(
+                    controller: widget.controller,
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 24),
           Container(

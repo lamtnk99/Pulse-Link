@@ -11,6 +11,8 @@ use App\Models\DonationHistory;
 use App\Models\EmergencyAlertRecipient;
 use App\Models\EmergencyCommitment;
 use App\Models\MobileNotification;
+use App\Models\NotificationDevice;
+use App\Models\NotificationPreference;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -37,6 +39,14 @@ class AccountDeletionService
                 ->delete();
 
             MobileNotification::query()
+                ->where('user_id', $user->id)
+                ->delete();
+
+            NotificationDevice::query()
+                ->where('user_id', $user->id)
+                ->delete();
+
+            NotificationPreference::query()
                 ->where('user_id', $user->id)
                 ->delete();
 

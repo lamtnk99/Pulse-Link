@@ -19,8 +19,10 @@ import '../features/emergency/domain/emergency_mission_resume.dart';
 import '../features/emergency/domain/route_plan.dart';
 import '../features/gratitude/domain/gratitude_letter.dart';
 import '../features/notifications/domain/mobile_notification.dart';
+import '../features/notifications/domain/notification_preferences.dart';
 import '../features/profile/domain/donor_profile.dart';
 import '../infrastructure/laravel/laravel_api_client.dart';
+import '../infrastructure/notifications/mobile_push_notification_service.dart';
 import '../services/donation_event_repository.dart';
 import '../services/donation_history_repository.dart';
 import '../services/donor_repository.dart';
@@ -47,6 +49,7 @@ class PulseLinkController extends ChangeNotifier {
     required ChatService chatService,
     required DonationFundService donationFundService,
     required CommunityImpactService communityImpactService,
+    MobilePushNotificationService? pushNotificationService,
   })  : _donorRepository = donorRepository,
         _eventRepository = eventRepository,
         _historyRepository = historyRepository,
@@ -57,7 +60,8 @@ class PulseLinkController extends ChangeNotifier {
         _audioService = audioService,
         _chatService = chatService,
         _donationFundService = donationFundService,
-        _communityImpactService = communityImpactService;
+        _communityImpactService = communityImpactService,
+        _pushNotificationService = pushNotificationService;
 
   final DonorRepository _donorRepository;
   final DonationEventRepository _eventRepository;
@@ -70,6 +74,7 @@ class PulseLinkController extends ChangeNotifier {
   final ChatService _chatService;
   final DonationFundService _donationFundService;
   final CommunityImpactService _communityImpactService;
+  final MobilePushNotificationService? _pushNotificationService;
 
   StreamSubscription<EmergencyAlert>? _alertSubscription;
   StreamSubscription<EmergencyCommitment>? _commitmentSubscription;
@@ -175,6 +180,13 @@ class PulseLinkController extends ChangeNotifier {
       _notificationSubscription = _emergencySignalService
           .watchNotifications(profile: profile)
           .listen(_handleMobileNotification);
+      unawaited(
+        _pushNotificationService?.start(
+              profile: profile,
+              onNotificationOpened: _handlePushNotificationOpened,
+            ) ??
+            Future<void>.value(),
+      );
     } catch (error) {
       if (error is LaravelApiException && error.statusCode == 401) {
         await logout();
@@ -196,6 +208,7 @@ class PulseLinkController extends ChangeNotifier {
   Future<void> logout() async {
     // Vô hiệu hoá mọi tác vụ nạp hồ sơ đang chạy dở của phiên hiện tại.
     _sessionEpoch++;
+    final profile = _state.profile;
 
     // Xoá state + báo UI NGAY LẬP TỨC để chuyển về màn đăng nhập, không chờ
     // các thao tác dọn dẹp bất đồng bộ (huỷ stream, xoá prefs) — nếu một await
@@ -229,6 +242,9 @@ class PulseLinkController extends ChangeNotifier {
     _alertSubscription = null;
     _commitmentSubscription = null;
     _notificationSubscription = null;
+    if (profile != null) {
+      unawaited(_pushNotificationService?.unregister() ?? Future<void>.value());
+    }
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -248,6 +264,29 @@ class PulseLinkController extends ChangeNotifier {
     );
     await _purgeLocalAccountData();
     await logout();
+  }
+
+  Future<NotificationPreferences> getNotificationPreferences() async {
+    final profile = _state.profile;
+    final service = _pushNotificationService;
+    if (profile == null || service == null) {
+      return const NotificationPreferences();
+    }
+    return service.fetchPreferences(profile);
+  }
+
+  Future<NotificationPreferences> updateNotificationPreferences(
+    NotificationPreferences preferences,
+  ) async {
+    final profile = _state.profile;
+    final service = _pushNotificationService;
+    if (profile == null || service == null) return preferences;
+    return service.savePreferences(profile: profile, preferences: preferences);
+  }
+
+  Future<PushPermissionStatus> requestPushPermission() async {
+    return _pushNotificationService?.requestPermission() ??
+        PushPermissionStatus.unavailable;
   }
 
   Future<void> setThemePreference(AppThemePreference preference) async {
@@ -516,6 +555,13 @@ class PulseLinkController extends ChangeNotifier {
       activeGratitudeLetter: gratitude,
     );
     notifyListeners();
+  }
+
+  void _handlePushNotificationOpened(Map<String, dynamic> data) {
+    // Sync before routing so a push opened from a terminated app still uses
+    // the current SOS, gratitude, and inbox data from Laravel.
+    unawaited(handleAppResumed());
+    unawaited(refreshDailyData());
   }
 
   Future<void> simulateSosAlert() async {
@@ -1026,6 +1072,7 @@ class PulseLinkController extends ChangeNotifier {
     _alertSubscription?.cancel();
     _commitmentSubscription?.cancel();
     _notificationSubscription?.cancel();
+    _pushNotificationService?.dispose();
     _audioService.dispose();
     super.dispose();
   }

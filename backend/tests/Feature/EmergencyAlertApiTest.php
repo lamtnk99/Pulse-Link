@@ -7,6 +7,7 @@ use App\Models\EmergencyCommitment;
 use App\Models\Hospital;
 use App\Models\User;
 use App\Services\Contracts\EmergencyAlertRealtimeGateway;
+use App\Services\Donations\DonationRecognitionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
@@ -51,6 +52,9 @@ class EmergencyAlertApiTest extends TestCase
 
         $this->assertDatabaseHas('emergency_alert_recipients', [
             'wave' => 'local5km',
+        ]);
+        $this->assertDatabaseHas('mobile_notifications', [
+            'type' => 'emergency_alert',
         ]);
         $this->assertSame(1, $fakeRealtimeGateway->published);
     }
@@ -221,7 +225,7 @@ class EmergencyAlertApiTest extends TestCase
             ->where('role', 'donor')
             ->where('blood_type', 'O+')
             ->firstOrFail();
-        app(\App\Services\Donations\DonationRecognitionService::class)->refreshDonorRecognition($donor);
+        app(DonationRecognitionService::class)->refreshDonorRecognition($donor);
         $donor->refresh();
         $initialDonations = $donor->total_donations;
         $initialPoints = $donor->points;
