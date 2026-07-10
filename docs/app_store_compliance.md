@@ -47,7 +47,8 @@ Location must remain optional. If permission is denied, users can still set prov
 
 - API base URL: `--dart-define=LARAVEL_API_BASE_URL=https://api.pulselink.asia`
 - Public web/legal URL: `--dart-define=PUBLIC_WEB_BASE_URL=https://pulselink.asia`
-- Local development can point both values to `http://127.0.0.1:8000` if Laravel serves the legal pages locally.
+- Khi chạy local, app tự mở trang pháp lý trên cùng host với `LARAVEL_API_BASE_URL` nếu host là `localhost`, `127.0.0.1`, `10.0.2.2` hoặc IP mạng LAN. Vì vậy không cần truyền thêm `PUBLIC_WEB_BASE_URL` cho các lệnh chạy local trong README.
+- Có thể ép URL trang pháp lý bằng `--dart-define=PUBLIC_WEB_BASE_URL=http://127.0.0.1:8000` khi cần kiểm thử một host khác.
 
 ## Fundraising
 

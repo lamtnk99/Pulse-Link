@@ -25,10 +25,52 @@ class PulseLinkBootstrap {
     defaultValue: 'https://api.pulselink.asia',
   );
 
-  static const String publicWebBaseUrl = String.fromEnvironment(
+  static const String _configuredPublicWebBaseUrl = String.fromEnvironment(
     'PUBLIC_WEB_BASE_URL',
-    defaultValue: 'https://pulselink.asia',
+    defaultValue: '',
   );
+
+  /// Legal pages use the local Laravel host while developing, unless an
+  /// explicit public web host is supplied. Release builds retain the public
+  /// website as their fallback.
+  static String get publicWebBaseUrl {
+    if (_configuredPublicWebBaseUrl.isNotEmpty) {
+      return _configuredPublicWebBaseUrl;
+    }
+
+    final apiBase = Uri.tryParse(laravelBaseUrl);
+    if (apiBase != null && _isLocalDevelopmentHost(apiBase)) {
+      return apiBase.origin;
+    }
+
+    return 'https://pulselink.asia';
+  }
+
+  static bool _isLocalDevelopmentHost(Uri uri) {
+    final host = uri.host.toLowerCase();
+    if (uri.scheme.isEmpty || host.isEmpty) return false;
+
+    return host == 'localhost' ||
+        host == '::1' ||
+        host == '127.0.0.1' ||
+        _isPrivateIpv4(host);
+  }
+
+  static bool _isPrivateIpv4(String host) {
+    final segments = host.split('.');
+    if (segments.length != 4) return false;
+
+    final octets = segments.map(int.tryParse).toList();
+    if (octets.any((octet) => octet == null || octet < 0 || octet > 255)) {
+      return false;
+    }
+
+    final first = octets[0]!;
+    final second = octets[1]!;
+    return first == 10 ||
+        (first == 172 && second >= 16 && second <= 31) ||
+        (first == 192 && second == 168);
+  }
 
   static const String mobileApiToken = String.fromEnvironment(
     'MOBILE_API_TOKEN',
