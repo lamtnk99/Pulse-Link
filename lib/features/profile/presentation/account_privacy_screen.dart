@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../app/pulse_link_bootstrap.dart';
 import '../../../app/pulse_link_controller.dart';
 import '../../../core/theme/pulse_link_theme.dart';
-import 'legal_document_screen.dart';
 
 class AccountPrivacyScreen extends StatefulWidget {
   const AccountPrivacyScreen({super.key, required this.controller});
@@ -18,10 +19,19 @@ class _AccountPrivacyScreenState extends State<AccountPrivacyScreen> {
 
   bool _deleting = false;
 
-  void _openDocument(LegalDocumentType type) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => LegalDocumentScreen(type: type)),
-    );
+  Uri _webUri(String path) {
+    final webBase = Uri.parse(PulseLinkBootstrap.publicWebBaseUrl);
+    return webBase.replace(path: path, query: null, fragment: null);
+  }
+
+  Future<void> _openPolicy(String path) async {
+    final uri = _webUri(path);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication) &&
+        mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không mở được $uri')),
+      );
+    }
   }
 
   Future<void> _confirmDelete() async {
@@ -141,20 +151,20 @@ class _AccountPrivacyScreenState extends State<AccountPrivacyScreen> {
             title: 'Chính sách quyền riêng tư',
             subtitle:
                 'Dữ liệu thu thập, mục đích sử dụng, bên thứ ba và cách xóa dữ liệu.',
-            onTap: () => _openDocument(LegalDocumentType.privacy),
+            onTap: () => _openPolicy('/legal/privacy'),
           ),
           _PrivacyTile(
             icon: Icons.description_outlined,
             title: 'Điều khoản sử dụng',
             subtitle:
                 'Vai trò nền tảng, cảnh báo y tế và trách nhiệm người dùng.',
-            onTap: () => _openDocument(LegalDocumentType.terms),
+            onTap: () => _openPolicy('/legal/terms'),
           ),
           _PrivacyTile(
             icon: Icons.support_agent_outlined,
             title: 'Hỗ trợ',
             subtitle: 'Kênh liên hệ cho người hiến, bệnh viện và App Review.',
-            onTap: () => _openDocument(LegalDocumentType.support),
+            onTap: () => _openPolicy('/support'),
           ),
           const SizedBox(height: 18),
           Container(

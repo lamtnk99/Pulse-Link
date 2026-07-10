@@ -2,13 +2,13 @@
 
 ## Public URLs
 
-- Privacy Policy: `https://pulselink.asia/legal/privacy`
-- Terms of Use: `https://pulselink.asia/legal/terms`
-- Account Deletion Guide: `https://pulselink.asia/legal/delete-account`
-- Support: `https://pulselink.asia/support`
+- Privacy Policy: `https://api.pulselink.asia/legal/privacy`
+- Terms of Use: `https://api.pulselink.asia/legal/terms`
+- Account Deletion Guide: `https://api.pulselink.asia/legal/delete-account`
+- Support: `https://api.pulselink.asia/support`
 
 All URLs must be reachable without login before App Review.
-The mobile app opens these links from `PUBLIC_WEB_BASE_URL`, not `LARAVEL_API_BASE_URL`, so the public legal pages do not need to live under the `api.` subdomain.
+The mobile app opens these public Laravel routes from `PUBLIC_WEB_BASE_URL`. On the current VPS deployment, this value is `https://api.pulselink.asia`.
 
 ## Account Deletion
 
@@ -46,7 +46,7 @@ Location must remain optional. If permission is denied, users can still set prov
 ## Build Defines
 
 - API base URL: `--dart-define=LARAVEL_API_BASE_URL=https://api.pulselink.asia`
-- Public web/legal URL: `--dart-define=PUBLIC_WEB_BASE_URL=https://pulselink.asia`
+- Public web/legal URL: `--dart-define=PUBLIC_WEB_BASE_URL=https://api.pulselink.asia`
 - Khi chạy local, app tự mở trang pháp lý trên cùng host với `LARAVEL_API_BASE_URL` nếu host là `localhost`, `127.0.0.1`, `10.0.2.2` hoặc IP mạng LAN. Vì vậy không cần truyền thêm `PUBLIC_WEB_BASE_URL` cho các lệnh chạy local trong README.
 - Có thể ép URL trang pháp lý bằng `--dart-define=PUBLIC_WEB_BASE_URL=http://127.0.0.1:8000` khi cần kiểm thử một host khác.
 

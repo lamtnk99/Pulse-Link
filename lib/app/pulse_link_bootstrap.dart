@@ -31,8 +31,8 @@ class PulseLinkBootstrap {
   );
 
   /// Legal pages use the local Laravel host while developing, unless an
-  /// explicit public web host is supplied. Release builds retain the public
-  /// website as their fallback.
+  /// explicit public web host is supplied. Production uses the Laravel API
+  /// host because it serves the public legal routes.
   static String get publicWebBaseUrl {
     if (_configuredPublicWebBaseUrl.isNotEmpty) {
       return _configuredPublicWebBaseUrl;
@@ -43,7 +43,7 @@ class PulseLinkBootstrap {
       return apiBase.origin;
     }
 
-    return 'https://pulselink.asia';
+    return 'https://api.pulselink.asia';
   }
 
   static bool _isLocalDevelopmentHost(Uri uri) {
