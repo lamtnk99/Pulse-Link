@@ -80,6 +80,11 @@ class EmergencyController extends Controller
         $admin = $this->adminUserResolver->resolve(request());
         abort_unless($this->adminUserResolver->hasPermission($admin, 'sos.activate'), 403);
         abort_unless($this->adminUserResolver->canAccessHospital($admin, $alert->hospital_id), 403);
+        abort_if(
+            $alert->commitments()->where('status', 'donated')->exists(),
+            422,
+            'Ca SOS đã có người hiến máu thành công, chỉ có thể hoàn thành ca SOS.'
+        );
 
         $alert->update(['status' => 'cancelled']);
         $alert->load('hospital.province', 'hospital.ward', 'recipients.donor.province', 'commitments.donor.province', 'commitments.bloodJourney.steps');

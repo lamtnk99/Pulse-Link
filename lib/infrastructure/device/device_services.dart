@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -32,7 +33,8 @@ class DeviceLocationService implements LocationService {
 class JustAudioEmergencyAudioService implements EmergencyAudioService {
   final AudioPlayer _player = AudioPlayer();
   bool _isPrepared = false;
-  bool _isAvailable = true;
+  // Bản web chưa đóng gói âm thanh nhịp tim; tránh gọi asset gây lỗi 404.
+  bool _isAvailable = !kIsWeb;
 
   @override
   Future<void> startHeartbeat({

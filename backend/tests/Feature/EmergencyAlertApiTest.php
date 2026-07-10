@@ -264,6 +264,14 @@ class EmergencyAlertApiTest extends TestCase
         $donor->refresh();
         $this->assertSame($initialDonations + 1, $donor->total_donations);
         $this->assertSame($initialPoints + 630, $donor->points);
+        $this->assertDatabaseHas('mobile_notifications', [
+            'user_id' => $donor->id,
+            'type' => 'donation_verified',
+        ]);
+
+        $this->postJson("/api/admin/emergency-alerts/{$alertId}/cancel?admin_user_id={$staff->id}")
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Ca SOS đã có người hiến máu thành công, chỉ có thể hoàn thành ca SOS.');
 
         $this->postJson("/api/admin/emergency-alerts/{$alertId}/complete?admin_user_id={$staff->id}")
             ->assertOk()

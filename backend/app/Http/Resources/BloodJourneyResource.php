@@ -16,7 +16,9 @@ class BloodJourneyResource extends JsonResource
             'current_step' => $this->current_step,
             'location_label' => $this->location_label,
             'final_message' => $this->completed_at ? $this->final_message : null,
-            'pulse_link_message' => $this->completed_at ? $this->pulse_link_message : null,
+            // Lời cảm ơn Pulse Link được gửi ngay khi xác nhận hiến.
+            // Thư từ người nhà/bệnh viện chỉ mở khi hành trình hoàn tất.
+            'pulse_link_message' => $this->pulse_link_message,
             'gratitude_style' => $this->gratitude_style,
             'gratitude_card' => $this->completed_at
                 ? app(GratitudeCardService::class)->journeyPayload($this->resource)

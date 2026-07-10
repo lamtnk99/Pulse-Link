@@ -228,10 +228,6 @@ class GratitudeLetter {
     MobileNotification notification, {
     DonorProfile? profile,
   }) {
-    // Xác nhận đã hiến chỉ mở hành trình, không mở thư kết thúc. Lá thư cuối
-    // được gửi khi bệnh viện xác nhận giọt máu đã tới điểm cuối.
-    if (notification.type == 'donation_verified') return null;
-
     final card = notification.payload['gratitude_card'];
     if (card is Map<String, dynamic>) {
       return GratitudeLetter.fromCardJson(card, profile: profile);

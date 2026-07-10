@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pulse_link/features/daily/domain/blood_journey.dart';
 import 'package:pulse_link/features/gratitude/domain/gratitude_letter.dart';
+import 'package:pulse_link/features/notifications/domain/mobile_notification.dart';
 
 void main() {
   test('thư kết thúc ca truyền máu luôn mang nguồn từ gia đình', () {
@@ -46,5 +47,36 @@ void main() {
     expect(letter.source, GratitudeLetterSource.sosReserve);
     expect(letter.messages.single.sender, 'Bệnh viện tiếp nhận');
     expect(letter.messages.single.signature, 'Đội ngũ y tế');
+  });
+
+  test('xác nhận hiến SOS mở thư cảm ơn ngay từ PulseLink', () {
+    final letter = GratitudeLetter.maybeFromNotification(
+      MobileNotification(
+        id: 'donation-verified-1',
+        type: 'donation_verified',
+        title: 'Cảm ơn bạn đã hiến máu cứu người',
+        body: 'Cảm ơn nghĩa cử cao đẹp của bạn!',
+        createdAt: DateTime(2026, 7, 10),
+        payload: const {
+          'gratitude_card': {
+            'id': 'sos-donation-journey-1',
+            'source': 'sos_pulselink',
+            'style': 'hero_night',
+            'messages': [
+              {
+                'sender': 'PulseLink',
+                'title': 'Một lá thư từ PulseLink',
+                'body': 'Bạn vừa trao đi một cơ hội sống.',
+                'signature': 'Đội ngũ PulseLink',
+              },
+            ],
+          },
+        },
+      ),
+    );
+
+    expect(letter, isNotNull);
+    expect(letter!.source, GratitudeLetterSource.sosPulseLink);
+    expect(letter.messages.single.sender, 'PulseLink');
   });
 }

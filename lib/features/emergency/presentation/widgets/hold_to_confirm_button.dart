@@ -64,12 +64,17 @@ class _HoldToConfirmButtonState extends State<HoldToConfirmButton>
   @override
   void didUpdateWidget(covariant HoldToConfirmButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.committed && !oldWidget.committed) {
-      _controller.value = 1;
-    }
-    if (!widget.committed && oldWidget.committed) {
-      _controller.reset();
-    }
+    if (widget.committed == oldWidget.committed) return;
+
+    // Đồng bộ sau frame để listener không cập nhật controller ngay trong build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (widget.committed) {
+        _controller.value = 1;
+      } else {
+        _controller.reset();
+      }
+    });
   }
 
   @override
@@ -135,7 +140,7 @@ class _HoldToConfirmButtonState extends State<HoldToConfirmButton>
                         color: committed
                             ? PulseLinkTheme.successGreen
                             : PulseLinkTheme.alertRed,
-                        backgroundColor: Colors.white.withOpacity(0.08),
+                        backgroundColor: Colors.white.withValues(alpha: 0.08),
                         strokeCap: StrokeCap.round,
                       ),
                     ),
@@ -163,7 +168,7 @@ class _HoldToConfirmButtonState extends State<HoldToConfirmButton>
                             color: (committed
                                     ? PulseLinkTheme.successGreen
                                     : PulseLinkTheme.alertRed)
-                                .withOpacity(0.28 + progress * 0.38),
+                                .withValues(alpha: 0.28 + progress * 0.38),
                             blurRadius: 22 + progress * 30,
                             spreadRadius: 3 + progress * 7,
                           ),

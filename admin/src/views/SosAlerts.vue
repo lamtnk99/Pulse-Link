@@ -169,6 +169,10 @@ function donatedCount(alert: EmergencyAlert) {
   return alert.commitments?.filter((commitment) => commitment.status === 'donated').length ?? 0
 }
 
+function hasSuccessfulDonation(alert: EmergencyAlert) {
+  return donatedCount(alert) > 0
+}
+
 function compatibilityModeLabel(alert: EmergencyAlert) {
   return alert.compatibility_mode === 'exact' ? 'Đúng nhóm' : 'Mở rộng tương thích'
 }
@@ -267,11 +271,16 @@ function saveJourney() {
                 Hoàn thành
               </button>
               <button
-                class="inline-flex h-8 items-center gap-1 rounded-md border border-red-100 px-2 text-[11px] font-black uppercase text-[#E31837] hover:bg-white"
+                class="inline-flex h-8 items-center gap-1 rounded-md border px-2 text-[11px] font-black uppercase"
+                :class="hasSuccessfulDonation(alert)
+                  ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+                  : 'border-red-100 text-[#E31837] hover:bg-white'"
+                :disabled="hasSuccessfulDonation(alert)"
+                :title="hasSuccessfulDonation(alert) ? 'Đã có người hiến máu thành công. Hãy hoàn thành ca SOS.' : 'Hủy ca SOS'"
                 @click.stop="emit('cancelAlert', alert)"
               >
                 <XCircle class="h-3.5 w-3.5" />
-                Hủy
+                {{ hasSuccessfulDonation(alert) ? 'Chỉ hoàn thành' : 'Hủy' }}
               </button>
             </div>
           </div>

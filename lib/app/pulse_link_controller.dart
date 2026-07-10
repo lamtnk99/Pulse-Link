@@ -1104,8 +1104,12 @@ class PulseLinkController extends ChangeNotifier {
               volumeMl: commitment.donationVolumeMl,
               donatedAt: commitment.donatedAt,
             )
-          : null,
-      clearActiveGratitudeLetter: !journeyCompleted,
+          : GratitudeLetter.fromSosDonation(
+              commitment,
+              profile: _state.profile,
+              hospitalName: sourceAlert?.hospitalName,
+              bloodType: sourceAlert?.requiredBloodType,
+            ),
       sosMissionPhase: SosMissionPhase.alertPreview,
       sosIntensity: 0,
       emergencyCommitted: false,
