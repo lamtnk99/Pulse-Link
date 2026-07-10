@@ -32,6 +32,8 @@
 	<string>Pulse Link cần quyền truy cập micro khi quay video trong quá trình chụp/chọn ảnh.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Pulse Link dùng vị trí của bạn để gợi ý điểm hiến máu gần nhất và điều phối SOS theo khoảng cách tới bệnh viện.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Pulse Link cần vị trí của bạn để gửi thông báo khẩn cấp SOS ngay cả khi ứng dụng đang chạy ngầm.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Pulse Link cần quyền thư viện ảnh khi bạn chọn ảnh CCCD hoặc ảnh hồ sơ để xác minh tài khoản.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
