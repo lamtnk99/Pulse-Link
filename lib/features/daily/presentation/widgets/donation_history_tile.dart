@@ -326,9 +326,9 @@ class _BloodJourneyPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final journey = donation.bloodJourney!;
-    final isPublished = journey.publishedAt != null;
+    final isCompleted = journey.completedAt != null;
     final letter = (journey.finalMessage ?? '').trim();
-    final hasLetter = isPublished && letter.isNotEmpty;
+    final hasLetter = isCompleted && letter.isNotEmpty;
 
     return Container(
       width: double.infinity,
@@ -402,7 +402,7 @@ class _BloodJourneyPanel extends StatelessWidget {
             )
           else
             Text(
-              'Bệnh viện đang cập nhật hành trình giọt máu của bạn.',
+              'Hành trình chưa hoàn tất. Thư tri ân sẽ được gửi khi giọt máu đến điểm cuối.',
               style: TextStyle(
                 color: PulseLinkTheme.mutedColor(context),
                 fontSize: 12,

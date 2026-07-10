@@ -15,10 +15,12 @@ class BloodJourneyResource extends JsonResource
             'destination_type' => $this->destination_type,
             'current_step' => $this->current_step,
             'location_label' => $this->location_label,
-            'final_message' => $this->final_message,
-            'pulse_link_message' => $this->pulse_link_message,
+            'final_message' => $this->completed_at ? $this->final_message : null,
+            'pulse_link_message' => $this->completed_at ? $this->pulse_link_message : null,
             'gratitude_style' => $this->gratitude_style,
-            'gratitude_card' => app(GratitudeCardService::class)->journeyPayload($this->resource),
+            'gratitude_card' => $this->completed_at
+                ? app(GratitudeCardService::class)->journeyPayload($this->resource)
+                : null,
             'published_at' => $this->published_at?->toIso8601String(),
             'completed_at' => $this->completed_at?->toIso8601String(),
             'verify_url' => $request->getSchemeAndHttpHost().'/journeys/'.$this->public_id,

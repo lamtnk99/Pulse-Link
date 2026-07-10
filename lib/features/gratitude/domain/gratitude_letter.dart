@@ -103,9 +103,13 @@ class GratitudeLetter {
     DateTime? donatedAt,
     String? certificateId,
   }) {
+    final isReserve = journey.destinationType == 'reserve';
+    final expectedSource = isReserve
+        ? GratitudeLetterSource.sosReserve
+        : GratitudeLetterSource.sosPatient;
     final card = journey.gratitudeCard;
-    if (card != null) {
-      return GratitudeLetter.fromCardJson(
+    if (journey.completedAt != null && card != null) {
+      final letter = GratitudeLetter.fromCardJson(
         card,
         profile: profile,
         fallbackHospitalName: hospitalName,
@@ -114,16 +118,14 @@ class GratitudeLetter {
         fallbackDonatedAt: donatedAt,
         fallbackCertificateId: certificateId,
       );
+      if (letter.source == expectedSource) return letter;
     }
 
-    final isReserve = journey.destinationType == 'reserve';
     final patientOrHospitalMessage = (journey.finalMessage ?? '').trim();
 
     return GratitudeLetter(
       id: 'journey-${journey.id}',
-      source: isReserve
-          ? GratitudeLetterSource.sosReserve
-          : GratitudeLetterSource.sosPatient,
+      source: expectedSource,
       style: journey.gratitudeStyle ?? (isReserve ? 'botanical' : 'hero_night'),
       donorName: profile?.name,
       bloodType: bloodType,
@@ -226,29 +228,13 @@ class GratitudeLetter {
     MobileNotification notification, {
     DonorProfile? profile,
   }) {
+    // Xác nhận đã hiến chỉ mở hành trình, không mở thư kết thúc. Lá thư cuối
+    // được gửi khi bệnh viện xác nhận giọt máu đã tới điểm cuối.
+    if (notification.type == 'donation_verified') return null;
+
     final card = notification.payload['gratitude_card'];
     if (card is Map<String, dynamic>) {
       return GratitudeLetter.fromCardJson(card, profile: profile);
-    }
-
-    if (notification.type == 'donation_verified') {
-      return GratitudeLetter(
-        id: 'notification-${notification.id}',
-        source: GratitudeLetterSource.sosPulseLink,
-        style: 'hero_night',
-        donorName: profile?.name,
-        bloodType: notification.payload['blood_type'] as String?,
-        volumeMl: (notification.payload['volume_ml'] as num?)?.toInt(),
-        bloodJourneyId: notification.payload['blood_journey_id'] as String?,
-        messages: [
-          GratitudeLetterMessage(
-            sender: 'PulseLink',
-            title: 'Một lá thư từ PulseLink',
-            body: notification.body,
-            signature: 'Đội ngũ PulseLink',
-          ),
-        ],
-      );
     }
 
     if (notification.type == 'post_donation_checkup') {

@@ -345,7 +345,7 @@ class _BloodJourneyPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final journey = donation.bloodJourney!;
-    final message = journey.publishedAt == null
+    final message = journey.completedAt == null
         ? 'Bệnh viện đang cập nhật hành trình giọt máu của bạn.'
         : journey.finalMessage ?? 'Hành trình giọt máu đã được ghi nhận.';
 
@@ -408,7 +408,7 @@ class _BloodJourneyPanel extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          if (journey.publishedAt != null &&
+          if (journey.completedAt != null &&
               (journey.finalMessage ?? '').trim().isNotEmpty) ...[
             const SizedBox(height: 12),
             SizedBox(

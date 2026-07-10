@@ -1083,6 +1083,9 @@ class PulseLinkController extends ChangeNotifier {
     _stopEmergencyLocationSync();
 
     final sourceAlert = alert ?? _state.activeAlert;
+    final journey = commitment.bloodJourney;
+    final journeyCompleted = journey?.completedAt != null;
+    final showLiveJourney = !journeyCompleted && journey?.publishedAt != null;
     final committedAlertIds = {..._state.committedAlertIds}
       ..remove(commitment.alertId);
 
@@ -1092,12 +1095,17 @@ class PulseLinkController extends ChangeNotifier {
           .where((candidate) => candidate.id != commitment.alertId)
           .toList(growable: false),
       committedAlertIds: committedAlertIds,
-      activeGratitudeLetter: GratitudeLetter.fromSosDonation(
-        commitment,
-        profile: _state.profile,
-        hospitalName: sourceAlert?.hospitalName,
-        bloodType: sourceAlert?.requiredBloodType,
-      ),
+      activeGratitudeLetter: journeyCompleted
+          ? GratitudeLetter.fromBloodJourney(
+              journey!,
+              profile: _state.profile,
+              hospitalName: sourceAlert?.hospitalName,
+              bloodType: sourceAlert?.requiredBloodType,
+              volumeMl: commitment.donationVolumeMl,
+              donatedAt: commitment.donatedAt,
+            )
+          : null,
+      clearActiveGratitudeLetter: !journeyCompleted,
       sosMissionPhase: SosMissionPhase.alertPreview,
       sosIntensity: 0,
       emergencyCommitted: false,
@@ -1107,9 +1115,14 @@ class PulseLinkController extends ChangeNotifier {
       clearLocationSyncError: true,
       clearDispatchMatch: true,
       clearRoutePlan: true,
-      clearActiveLiveBloodJourney: true,
-      clearActiveLiveBloodJourneyHospitalName: true,
-      clearActiveLiveBloodJourneyBloodType: true,
+      activeLiveBloodJourney: showLiveJourney ? journey : null,
+      activeLiveBloodJourneyHospitalName:
+          showLiveJourney ? sourceAlert?.hospitalName : null,
+      activeLiveBloodJourneyBloodType:
+          showLiveJourney ? sourceAlert?.requiredBloodType : null,
+      clearActiveLiveBloodJourney: !showLiveJourney,
+      clearActiveLiveBloodJourneyHospitalName: !showLiveJourney,
+      clearActiveLiveBloodJourneyBloodType: !showLiveJourney,
     );
     unawaited(refreshDailyData());
     notifyListeners();
