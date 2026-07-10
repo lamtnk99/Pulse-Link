@@ -958,6 +958,10 @@ class _AiCompanionAvatarState extends State<AiCompanionAvatar>
                   ),
                 ),
               ),
+              _CompanionBlinkingEyelids(
+                size: size,
+                controller: _motionController,
+              ),
               if (widget.isThinking)
                 Positioned(
                   right: size * 0.01,
@@ -974,6 +978,66 @@ class _AiCompanionAvatarState extends State<AiCompanionAvatar>
                   ),
                 ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CompanionBlinkingEyelids extends StatelessWidget {
+  const _CompanionBlinkingEyelids({
+    required this.size,
+    required this.controller,
+  });
+
+  final double size;
+  final Animation<double> controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        const start = 0.72;
+        const duration = 0.09;
+        final phase = (controller.value - start) / duration;
+        final blink =
+            phase <= 0 || phase >= 1 ? 0.0 : math.sin(phase * math.pi);
+
+        return Positioned(
+          top: size * 0.39,
+          left: size * 0.29,
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: blink,
+              child: Row(
+                children: [
+                  _eyelid(),
+                  SizedBox(width: size * 0.13),
+                  _eyelid(),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _eyelid() {
+    return Container(
+      width: size * 0.16,
+      height: size * 0.095,
+      decoration: BoxDecoration(
+        color: const Color(0xFF07152D),
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.elliptical(size * 0.1, size * 0.08),
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: const Color(0xFF38BDF8).withValues(alpha: 0.6),
+            width: size * 0.012,
           ),
         ),
       ),
