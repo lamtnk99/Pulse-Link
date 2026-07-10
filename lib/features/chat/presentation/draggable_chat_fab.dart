@@ -18,7 +18,7 @@ class DraggableChatFab extends StatefulWidget {
 class _DraggableChatFabState extends State<DraggableChatFab>
     with SingleTickerProviderStateMixin {
   late final AnimationController _pulseController;
-  
+
   double? _x;
   double? _y;
   bool _isOpen = false;
@@ -60,7 +60,8 @@ class _DraggableChatFabState extends State<DraggableChatFab>
 
   Future<void> _checkActiveCheckup() async {
     try {
-      final activeCheckup = await widget.controller.chatService.getActiveCheckup();
+      final activeCheckup =
+          await widget.controller.chatService.getActiveCheckup();
       if (activeCheckup == null || !mounted) return;
 
       // Chỉ báo chấm đỏ cho các cuộc trò chuyện chăm sóc THẬT (checkup sau hiến,
@@ -125,7 +126,10 @@ class _DraggableChatFabState extends State<DraggableChatFab>
                 );
                 _y = (_y! + details.delta.dy).clamp(
                   mediaQuery.padding.top + _edgePadding,
-                  screenHeight - _fabSize - mediaQuery.padding.bottom - _edgePadding,
+                  screenHeight -
+                      _fabSize -
+                      mediaQuery.padding.bottom -
+                      _edgePadding,
                 );
               });
             },
@@ -135,7 +139,7 @@ class _DraggableChatFabState extends State<DraggableChatFab>
               final targetX = (_x! + _fabSize / 2) < middle
                   ? _edgePadding
                   : screenWidth - _fabSize - _edgePadding;
-              
+
               setState(() {
                 _x = targetX;
               });
@@ -174,8 +178,8 @@ class _DraggableChatFabState extends State<DraggableChatFab>
                       );
                     },
                   ),
-                  // Glowing FAB core
-                  RobotMedicalAvatar(size: _fabSize),
+                  // Glowing 3D AI companion core.
+                  AiCompanionAvatar(size: _fabSize),
                   // Notification red dot badge
                   if (_hasActiveCheckup)
                     Positioned(
@@ -194,7 +198,8 @@ class _DraggableChatFabState extends State<DraggableChatFab>
                             height: 10,
                             width: 10,
                             decoration: const BoxDecoration(
-                              color: Color(0xFF10B981), // Green for health care dot
+                              color: Color(
+                                  0xFF10B981), // Green for health care dot
                               shape: BoxShape.circle,
                             ),
                           ),

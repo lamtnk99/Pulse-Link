@@ -1,5 +1,5 @@
+import 'dart:math' as math;
 import 'dart:ui';
-import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../core/theme/pulse_link_theme.dart';
 import '../../../app/pulse_link_controller.dart';
@@ -313,7 +313,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
               _slideController.reverse().then((_) => widget.onClose());
             },
             child: Container(
-              color: Colors.black.withOpacity(0.65),
+              color: Colors.black.withValues(alpha: 0.65),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
                 child: const SizedBox.expand(),
@@ -332,15 +332,16 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                   width: double.infinity,
                   margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   decoration: BoxDecoration(
-                    color: PulseLinkTheme.dailyBackground.withOpacity(0.95),
+                    color:
+                        PulseLinkTheme.dailyBackground.withValues(alpha: 0.95),
                     borderRadius: BorderRadius.circular(28),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
+                      color: Colors.white.withValues(alpha: 0.1),
                       width: 1.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFE31837).withOpacity(0.12),
+                        color: const Color(0xFFE31837).withValues(alpha: 0.12),
                         blurRadius: 24,
                         spreadRadius: 2,
                       ),
@@ -390,18 +391,17 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: PulseLinkTheme.cardBackground.withOpacity(0.5),
+        color: PulseLinkTheme.cardBackground.withValues(alpha: 0.5),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(
           bottom: BorderSide(
-            color: Colors.white.withOpacity(0.06),
+            color: Colors.white.withValues(alpha: 0.06),
           ),
         ),
       ),
       child: Row(
         children: [
-          // AI robot avatar
-          const RobotMedicalAvatar(size: 44),
+          AiCompanionAvatar(size: 48, isThinking: _isSending),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -476,7 +476,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
 
     return Container(
       width: double.infinity,
-      color: Colors.white.withOpacity(0.03),
+      color: Colors.white.withValues(alpha: 0.03),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -509,9 +509,9 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 6),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,7 +537,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
   Widget _buildErrorBanner() {
     return Container(
       width: double.infinity,
-      color: const Color(0xFFE31837).withOpacity(0.15),
+      color: const Color(0xFFE31837).withValues(alpha: 0.15),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Text(
         _errorMessage!,
@@ -582,12 +582,8 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.chat_bubble_outline_rounded,
-              color: Color(0xFFE31837),
-              size: 40,
-            ),
-            const SizedBox(height: 16),
+            const AiCompanionAvatar(size: 122, showOrbit: true),
+            const SizedBox(height: 20),
             const Text(
               'Xin chào! Tôi có thể giúp gì cho bạn?',
               textAlign: TextAlign.center,
@@ -623,7 +619,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                     ),
                   ),
                   backgroundColor: PulseLinkTheme.cardBackground,
-                  side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
                   onPressed: () => _handleSendMessage(chipText),
                 );
               }).toList(),
@@ -656,7 +652,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
           border: Border.all(
             color: msg.isUser
                 ? Colors.transparent
-                : Colors.white.withOpacity(0.04),
+                : Colors.white.withValues(alpha: 0.04),
           ),
         ),
         child: Text(
@@ -678,28 +674,15 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: PulseLinkTheme.cardBackground,
-          borderRadius: const BorderRadius.only(
+          borderRadius: BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
             bottomRight: Radius.circular(16),
           ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(3, (i) {
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 2.5),
-              height: 6,
-              width: 6,
-              decoration: const BoxDecoration(
-                color: Color(0xFFE31837),
-                shape: BoxShape.circle,
-              ),
-            );
-          }),
-        ),
+        child: const AiThinkingDots(),
       ),
     );
   }
@@ -736,7 +719,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                 ),
               ),
               backgroundColor: PulseLinkTheme.cardBackground,
-              side: BorderSide(color: Colors.white.withOpacity(0.08)),
+              side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
               onPressed: () => _handleSendMessage(chipText),
             ),
           );
@@ -751,10 +734,10 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: PulseLinkTheme.cardBackground.withOpacity(0.3),
+        color: PulseLinkTheme.cardBackground.withValues(alpha: 0.3),
         border: Border(
           top: BorderSide(
-            color: Colors.white.withOpacity(0.06),
+            color: Colors.white.withValues(alpha: 0.06),
           ),
         ),
       ),
@@ -770,7 +753,7 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
                     ? 'Nhập tin nhắn tư vấn sức khỏe...'
                     : 'Đã hết hạn mức tin nhắn hôm nay...',
                 hintStyle: TextStyle(
-                  color: Colors.white.withOpacity(0.3),
+                  color: Colors.white.withValues(alpha: 0.3),
                   fontSize: 13,
                 ),
                 filled: true,
@@ -787,8 +770,8 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
           ),
           const SizedBox(width: 8),
           Container(
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
                 colors: [Color(0xFFE31837), Color(0xFFB91C1C)],
               ),
               shape: BoxShape.circle,
@@ -895,299 +878,206 @@ class _ChatOverlayPanelState extends State<ChatOverlayPanel>
   }
 }
 
-class RobotMedicalAvatar extends StatefulWidget {
-  const RobotMedicalAvatar({super.key, this.size = 44.0});
+class AiCompanionAvatar extends StatefulWidget {
+  const AiCompanionAvatar({
+    super.key,
+    this.size = 44.0,
+    this.isThinking = false,
+    this.showOrbit = false,
+  });
+
   final double size;
+  final bool isThinking;
+  final bool showOrbit;
 
   @override
-  State<RobotMedicalAvatar> createState() => _RobotMedicalAvatarState();
+  State<AiCompanionAvatar> createState() => _AiCompanionAvatarState();
 }
 
-class _RobotMedicalAvatarState extends State<RobotMedicalAvatar>
+class _AiCompanionAvatarState extends State<AiCompanionAvatar>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _blinkController;
-  Timer? _blinkTimer;
+  late final AnimationController _motionController;
 
   @override
   void initState() {
     super.initState();
-    _blinkController = AnimationController(
+    _motionController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 120),
-    );
-
-    // Blinks every 3.5 seconds
-    _blinkTimer = Timer.periodic(const Duration(milliseconds: 3500), (timer) {
-      if (mounted) {
-        _blinkController.forward().then((_) {
-          if (mounted) {
-            _blinkController.reverse();
-          }
-        });
-      }
-    });
+      duration: const Duration(milliseconds: 2600),
+    )..repeat();
   }
 
   @override
   void dispose() {
-    _blinkTimer?.cancel();
-    _blinkController.dispose();
+    _motionController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final size = widget.size;
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
-        children: [
-          // Glossy Neck / Collar support (adds 3D depth)
-          Positioned(
-            bottom: size * 0.04,
-            child: Container(
-              width: size * 0.3,
-              height: size * 0.14,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF475569), Color(0xFF1E293B)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+    return AnimatedBuilder(
+      animation: _motionController,
+      builder: (context, child) {
+        final wave = math.sin(_motionController.value * math.pi * 2);
+        final scale = widget.isThinking ? 1 + wave * 0.035 : 1.0;
+        return Transform.translate(
+          offset: Offset(0, wave * size * -0.035),
+          child: Transform.scale(scale: scale, child: child),
+        );
+      },
+      child: Semantics(
+        label: 'Trợ lý AI Pulse Link đang hoạt động',
+        image: true,
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Stack(
+            alignment: Alignment.center,
+            clipBehavior: Clip.none,
+            children: [
+              if (widget.showOrbit)
+                _CompanionOrbit(size: size, controller: _motionController),
+              Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFE31837).withValues(alpha: 0.32),
+                      blurRadius: size * 0.2,
+                      spreadRadius: size * 0.02,
+                    ),
+                  ],
                 ),
-                borderRadius: BorderRadius.circular(size * 0.04),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 3,
-                    offset: const Offset(0, 1),
-                  )
-                ],
-              ),
-            ),
-          ),
-          // Side ear caps/plates (adds 3D robot aesthetic)
-          Positioned(
-            left: size * 0.02,
-            child: _buildEarCap(size),
-          ),
-          Positioned(
-            right: size * 0.02,
-            child: _buildEarCap(size),
-          ),
-          // Head Spherical Face (Radial gradient for 3D metallic volume)
-          Container(
-            width: size * 0.78,
-            height: size * 0.78,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFFE31837), // Pulse red outer glow border
-                width: 1.5,
-              ),
-              gradient: const RadialGradient(
-                colors: [
-                  Color(
-                      0xFF334155), // Slate 700 (light reflection point at center-top)
-                  Color(0xFF0F172A), // Slate 900 (shadow edge)
-                ],
-                center: Alignment(-0.15, -0.2),
-                radius: 0.85,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFE31837).withOpacity(0.4),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                )
-              ],
-            ),
-          ),
-          // Screen Reflection Glare (glossy 3D overlay)
-          Positioned(
-            top: size * 0.18,
-            left: size * 0.22,
-            child: Container(
-              width: size * 0.2,
-              height: size * 0.08,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: const BorderRadius.all(Radius.elliptical(20, 8)),
-              ),
-            ),
-          ),
-          // Blinking Glowing Cyan Eyes
-          Positioned(
-            top: size * 0.38,
-            child: AnimatedBuilder(
-              animation: _blinkController,
-              builder: (context, child) {
-                return Transform.scale(
-                  scaleY: 1.0 - _blinkController.value,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildGlowingEye(size),
-                      SizedBox(width: size * 0.16),
-                      _buildGlowingEye(size),
-                    ],
+                child: ClipOval(
+                  child: Image.asset(
+                    'assets/images/ai_health_companion_3d.png',
+                    fit: BoxFit.cover,
                   ),
-                );
-              },
-            ),
-          ),
-          // Empathetic Rosy Cheeks
-          Positioned(
-            top: size * 0.54,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildRosyCheek(size),
-                SizedBox(width: size * 0.32),
-                _buildRosyCheek(size),
-              ],
-            ),
-          ),
-          // Nurse/Medical Cap (Enlarged, detailed 3D curves)
-          Positioned(
-            top: -size * 0.08,
-            child: _buildNurseHat(size),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEarCap(double size) {
-    return Container(
-      width: size * 0.12,
-      height: size * 0.22,
-      decoration: BoxDecoration(
-        color: const Color(0xFF64748B), // Slate 500
-        borderRadius: BorderRadius.circular(size * 0.04),
-        border: Border.all(color: const Color(0xFF1E293B), width: 1.0),
-      ),
-    );
-  }
-
-  Widget _buildGlowingEye(double size) {
-    return Container(
-      width: size * 0.12,
-      height: size * 0.12,
-      decoration: const BoxDecoration(
-        color: Color(0xFF38BDF8), // Cyan sky glow
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFF0EA5E9),
-            blurRadius: 6,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Center(
-        // Small white reflection point inside eye for extra life
-        child: Container(
-          width: size * 0.03,
-          height: size * 0.03,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRosyCheek(double size) {
-    return Container(
-      width: size * 0.09,
-      height: size * 0.05,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE31837).withOpacity(0.45),
-        borderRadius:
-            BorderRadius.all(Radius.elliptical(size * 0.09, size * 0.05)),
-      ),
-    );
-  }
-
-  Widget _buildNurseHat(double size) {
-    final hatWidth = size * 0.65;
-    final hatHeight = size * 0.28;
-    return Stack(
-      alignment: Alignment.center,
-      clipBehavior: Clip.none,
-      children: [
-        // Nurse Cap base with curvy border radius
-        Container(
-          width: hatWidth,
-          height: hatHeight,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(size * 0.16),
-              topRight: Radius.circular(size * 0.16),
-              bottomLeft: Radius.circular(size * 0.04),
-              bottomRight: Radius.circular(size * 0.04),
-            ),
-            border: Border.all(
-              color: const Color(0xFFCBD5E1), // Slate 300 edge line
-              width: 0.8,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2),
-                blurRadius: 4,
-                offset: const Offset(0, 1.5),
+                ),
               ),
+              if (widget.isThinking)
+                Positioned(
+                  right: size * 0.01,
+                  bottom: size * 0.02,
+                  child: Container(
+                    width: size * 0.2,
+                    height: size * 0.2,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF38BDF8),
+                      shape: BoxShape.circle,
+                      border:
+                          Border.all(color: const Color(0xFF08142E), width: 2),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
-        // Nurse hat blue/red stripe at the bottom edge (traditional medical cap detail)
-        Positioned(
-          bottom: 0,
-          child: Container(
-            width: hatWidth,
-            height: size * 0.04,
-            decoration: const BoxDecoration(
-              color: Color(0xFF1E3A8A), // Dark blue trim
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(2)),
-            ),
-          ),
-        ),
-        // Enlarged Bold Red Cross (bold sign)
-        Positioned(
-          top: hatHeight * 0.15,
-          child: _buildBoldRedCross(size * 0.18),
-        ),
-      ],
+      ),
     );
   }
+}
 
-  Widget _buildBoldRedCross(double size) {
-    final thickness = size * 0.28;
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Container(
-          width: size,
-          height: thickness,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE31837),
-            borderRadius: BorderRadius.circular(1),
+class _CompanionOrbit extends StatelessWidget {
+  const _CompanionOrbit({required this.size, required this.controller});
+
+  final double size;
+  final Animation<double> controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return Transform.rotate(
+          angle: controller.value * math.pi * 2,
+          child: SizedBox(
+            width: size * 1.22,
+            height: size * 1.22,
+            child: Stack(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF38BDF8).withValues(alpha: 0.28),
+                    ),
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: Container(
+                    width: size * 0.075,
+                    height: size * 0.075,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE31837),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        Container(
-          width: thickness,
-          height: size,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE31837),
-            borderRadius: BorderRadius.circular(1),
-          ),
-        ),
-      ],
+        );
+      },
+    );
+  }
+}
+
+class AiThinkingDots extends StatefulWidget {
+  const AiThinkingDots({super.key});
+
+  @override
+  State<AiThinkingDots> createState() => _AiThinkingDotsState();
+}
+
+class _AiThinkingDotsState extends State<AiThinkingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (index) {
+            final phase = (_controller.value + index / 3) % 1;
+            final lift = math.sin(phase * math.pi) * -5;
+            return Transform.translate(
+              offset: Offset(0, lift),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                height: 6,
+                width: 6,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE31837),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }
