@@ -151,7 +151,7 @@ watch([searchQuery, selectedBloodType, selectedStatus], () => {
 
 async function loadProvinces() {
   try {
-    const res = await fetch(`${apiBase}/api/location/provinces`)
+    const res = await fetch(`${apiBase}/api/locations/provinces`)
     if (!res.ok) throw new Error()
     const json = await res.json()
     provinces.value = json.data
@@ -166,7 +166,7 @@ async function loadWards(provinceCode: string) {
     return
   }
   try {
-    const res = await fetch(`${apiBase}/api/location/provinces/${provinceCode}/wards`)
+    const res = await fetch(`${apiBase}/api/locations/provinces/${provinceCode}/wards`)
     if (!res.ok) throw new Error()
     const json = await res.json()
     wards.value = json.data

@@ -17,8 +17,6 @@ class DispatchMobilePushNotification implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public bool $afterCommit = true;
-
     public function __construct(public readonly int $notificationId) {}
 
     public function handle(MobilePushNotificationDispatcher $dispatcher): void
