@@ -46,7 +46,10 @@ return new class extends Migration
             $table->timestamp('sent_at')->nullable();
             $table->timestamps();
 
-            $table->index(['mobile_notification_id', 'notification_device_id']);
+            $table->index(
+                ['mobile_notification_id', 'notification_device_id'],
+                'notification_delivery_lookup_idx'
+            );
         });
     }
 
