@@ -124,7 +124,7 @@ jobs:
             <key>provisioningProfiles</key>
             <dict>
               <key>com.pulselinkvn.app</key>
-              <string>pulse-link-app</string>
+              <string>pulselinkvn-appstore-profile</string>
             </dict>
           </dict>
           </plist>
