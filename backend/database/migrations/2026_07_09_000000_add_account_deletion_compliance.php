@@ -44,21 +44,37 @@ return new class extends Migration
             DB::statement('PRAGMA foreign_keys=OFF');
         }
 
-        Schema::table($table, function (Blueprint $schema) use ($table, $column, $referencesTable, $uniqueColumns): void {
-            if ($uniqueColumns !== null) {
-                $schema->dropUnique($uniqueColumns);
-            }
+        // MySQL may use the leftmost column of the composite unique key to
+        // enforce another foreign key. Keep an explicit index before removing
+        // that unique key.
+        if ($uniqueColumns !== null && ! Schema::hasIndex($table, [$uniqueColumns[0]])) {
+            Schema::table($table, function (Blueprint $schema) use ($uniqueColumns): void {
+                $schema->index($uniqueColumns[0]);
+            });
+        }
 
+        Schema::table($table, function (Blueprint $schema) use ($column): void {
             try {
                 $schema->dropForeign([$column]);
             } catch (Throwable) {
                 // SQLite test databases may not expose Laravel's generated FK name.
             }
+        });
 
+        if ($uniqueColumns !== null && Schema::hasIndex($table, $uniqueColumns, 'unique')) {
+            Schema::table($table, function (Blueprint $schema) use ($uniqueColumns): void {
+                $schema->dropUnique($uniqueColumns);
+            });
+        }
+
+        Schema::table($table, function (Blueprint $schema) use ($column): void {
             $schema->unsignedBigInteger($column)->nullable()->change();
+        });
+
+        Schema::table($table, function (Blueprint $schema) use ($table, $column, $referencesTable, $uniqueColumns): void {
             $schema->foreign($column)->references('id')->on($referencesTable)->nullOnDelete();
 
-            if ($uniqueColumns !== null) {
+            if ($uniqueColumns !== null && ! Schema::hasIndex($table, $uniqueColumns, 'unique')) {
                 $schema->unique($uniqueColumns);
             }
         });
