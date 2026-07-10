@@ -26,7 +26,10 @@ class MobilePushNotificationService {
 
   static const _firebaseEnabled = bool.fromEnvironment(
     'FIREBASE_PUSH_ENABLED',
-    defaultValue: false,
+    // Firebase is part of the mobile app runtime. Keeping this enabled by
+    // default prevents release builds from silently skipping permission and
+    // FCM token registration when a dart-define is omitted.
+    defaultValue: true,
   );
 
   static const _sosChannel = AndroidNotificationChannel(
@@ -91,8 +94,10 @@ class MobilePushNotificationService {
           await FirebaseMessaging.instance.getInitialMessage();
       if (initialMessage != null) _handleOpenedMessage(initialMessage);
 
-      final settings =
-          await FirebaseMessaging.instance.getNotificationSettings();
+      var settings = await FirebaseMessaging.instance.getNotificationSettings();
+      if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+        settings = await _requestSystemPermission();
+      }
       if (_isAuthorized(settings.authorizationStatus)) {
         final token = await FirebaseMessaging.instance.getToken();
         if (token != null) await _registerToken(token);
@@ -108,11 +113,7 @@ class MobilePushNotificationService {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      final settings = await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      final settings = await _requestSystemPermission();
       if (!_isAuthorized(settings.authorizationStatus)) {
         return PushPermissionStatus.denied;
       }
@@ -193,6 +194,14 @@ class MobilePushNotificationService {
             AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(_sosChannel);
     await androidPlugin?.createNotificationChannel(_generalChannel);
+  }
+
+  Future<NotificationSettings> _requestSystemPermission() {
+    return FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
   }
 
   Future<void> _showForeground(RemoteMessage message) async {

@@ -1,4 +1,6 @@
 import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -742,16 +744,21 @@ class _DonationFormBottomSheet extends StatefulWidget {
 }
 
 class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
-  static const bool _cashDonationEnabled = bool.fromEnvironment(
+  static const bool _cashDonationEnabledOnIos = bool.fromEnvironment(
     'APP_STORE_CASH_DONATION_ENABLED',
     defaultValue: false,
   );
+
+  // Android builds use the Vietnamese payment gateways directly. iOS remains
+  // explicitly gated until the App Store fundraising/payment model is ready.
+  bool get _cashDonationEnabled =>
+      defaultTargetPlatform != TargetPlatform.iOS || _cashDonationEnabledOnIos;
 
   final _nameController = TextEditingController();
   final _messageController = TextEditingController();
 
   // Tab type index: 0 = Cash, 1 = Points (Hero Points)
-  int _selectedTypeIndex = _cashDonationEnabled ? 0 : 1;
+  int _selectedTypeIndex = 0;
 
   // Presets
   final List<double> _cashPresets = [50000, 100000, 200000, 500000];
@@ -769,6 +776,10 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
     // Default form name is current user name
     final user = widget.controller.state.profile;
     _nameController.text = user?.name ?? '';
+
+    if (!_cashDonationEnabled) {
+      _selectedTypeIndex = 1;
+    }
 
     // Mọi chiến dịch đều nhận cả tiền mặt lẫn điểm Hero; mặc định mở tab Tiền mặt.
   }
