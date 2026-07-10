@@ -6,13 +6,16 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../../firebase_options.dart';
 import '../../features/notifications/domain/notification_preferences.dart';
 import '../../features/profile/domain/donor_profile.dart';
 import '../laravel/laravel_api_client.dart';
 
 @pragma('vm:entry-point')
 Future<void> pulseLinkFirebaseBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 }
 
 enum PushPermissionStatus { unavailable, denied, granted }
@@ -62,7 +65,9 @@ class MobilePushNotificationService {
 
     try {
       if (!_initialized) {
-        await Firebase.initializeApp();
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
         await _initializeLocalNotifications();
         await FirebaseMessaging.instance
             .setForegroundNotificationPresentationOptions(
@@ -100,7 +105,9 @@ class MobilePushNotificationService {
   Future<PushPermissionStatus> requestPermission() async {
     if (!isAvailable) return PushPermissionStatus.unavailable;
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       final settings = await FirebaseMessaging.instance.requestPermission(
         alert: true,
         badge: true,

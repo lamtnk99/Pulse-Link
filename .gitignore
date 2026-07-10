@@ -34,6 +34,13 @@ migrate_working_dir/
 /coverage/
 /dist/
 
+# Firebase platform configuration and server credentials
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+**/firebase-service-account*.json
+firebase-debug.log
+firebase-debug.*.log
+
 # Symbolication related
 app.*.symbols
 
