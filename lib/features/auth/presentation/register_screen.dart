@@ -39,7 +39,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   static const String _apiBaseUrl = String.fromEnvironment(
     'LARAVEL_API_BASE_URL',
-    defaultValue: 'https://api.pulselink.asia',
+    defaultValue: 'http://127.0.0.1:8000',
   );
 
   @override

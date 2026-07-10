@@ -131,7 +131,7 @@ jobs:
           EOF
 
       - name: Build Flutter IPA
-        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist --dart-define=LARAVEL_API_BASE_URL="${{ vars.LARAVEL_API_BASE_URL }}"
         
       - name: Upload via iTMSTransporter
         env:

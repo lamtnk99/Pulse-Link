@@ -22,7 +22,7 @@ class PulseLinkBootstrap {
 
   static const String laravelBaseUrl = String.fromEnvironment(
     'LARAVEL_API_BASE_URL',
-    defaultValue: 'https://api.pulselink.asia',
+    defaultValue: 'http://127.0.0.1:8000',
   );
 
   static const String _configuredPublicWebBaseUrl = String.fromEnvironment(
@@ -43,7 +43,7 @@ class PulseLinkBootstrap {
       return apiBase.origin;
     }
 
-    return 'https://api.pulselink.asia';
+    return laravelBaseUrl;
   }
 
   static bool _isLocalDevelopmentHost(Uri uri) {
