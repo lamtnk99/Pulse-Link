@@ -2,6 +2,7 @@
     title="Điều khoản sử dụng"
     summary="Điều khoản này áp dụng cho việc sử dụng Pulse Link như một nền tảng điều phối hiến máu và chăm sóc thông tin."
 >
+    <p class="legal-callout">Pulse Link hỗ trợ điều phối hiến máu, không thay thế chẩn đoán hay quyết định chuyên môn của bệnh viện.</p>
     <section>
         <h2>Vai trò của Pulse Link</h2>
         <p>Pulse Link là nền tảng hỗ trợ đăng ký, điều phối và kết nối người hiến máu với bệnh viện. Ứng dụng không thay thế quy trình chuyên môn, chẩn đoán, điều trị hoặc quyết định truyền máu của bác sĩ và bệnh viện.</p>

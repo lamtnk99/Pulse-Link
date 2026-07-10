@@ -2,6 +2,7 @@
     title="Hỗ trợ Pulse Link"
     summary="Kênh liên hệ dành cho người hiến, bệnh viện và App Review."
 >
+    <p class="legal-callout">Nếu cần hỗ trợ về dữ liệu cá nhân hoặc xóa tài khoản, đội ngũ sẽ tiếp nhận yêu cầu qua email hỗ trợ.</p>
     <section>
         <h2>Liên hệ</h2>
         <p>Email hỗ trợ: <a href="mailto:support@pulselink.asia">support@pulselink.asia</a></p>

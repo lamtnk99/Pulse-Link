@@ -2,6 +2,7 @@
     title="Hướng dẫn xóa tài khoản"
     summary="Người dùng Pulse Link có thể chủ động xóa tài khoản trực tiếp trong ứng dụng."
 >
+    <p class="legal-callout">Bạn có thể xóa tài khoản trực tiếp trong ứng dụng mà không cần gửi yêu cầu qua email.</p>
     <section>
         <h2>Cách xóa trong app</h2>
         <ol>

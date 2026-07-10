@@ -2,6 +2,7 @@
     title="Chính sách quyền riêng tư"
     summary="Chính sách này mô tả dữ liệu Pulse Link thu thập, mục đích sử dụng, bên thứ ba liên quan và cách người dùng yêu cầu xóa dữ liệu."
 >
+    <p class="legal-callout">Bạn có thể quản lý hồ sơ, từ chối quyền vị trí hoặc xóa tài khoản ngay trong ứng dụng. Pulse Link không bán dữ liệu cá nhân.</p>
     <section>
         <h2>Dữ liệu chúng tôi thu thập</h2>
         <ul>

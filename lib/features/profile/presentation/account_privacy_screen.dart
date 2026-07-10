@@ -142,10 +142,20 @@ class _AccountPrivacyScreenState extends State<AccountPrivacyScreen> {
         title: const Text('Tài khoản & quyền riêng tư'),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
         children: [
           _PrivacyHero(surface: surface, isDark: isDark),
-          const SizedBox(height: 14),
+          const SizedBox(height: 24),
+          const Text(
+            'TÀI LIỆU & HỖ TRỢ',
+            style: TextStyle(
+              color: PulseLinkTheme.primaryRed,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 10),
           _PrivacyTile(
             icon: Icons.privacy_tip_outlined,
             title: 'Chính sách quyền riêng tư',
@@ -166,14 +176,14 @@ class _AccountPrivacyScreenState extends State<AccountPrivacyScreen> {
             subtitle: 'Kênh liên hệ cho người hiến, bệnh viện và App Review.',
             onTap: () => _openPolicy('/support'),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 24),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF231316) : const Color(0xFFFFF1F2),
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
-                color: PulseLinkTheme.primaryRed.withOpacity(0.22),
+                color: PulseLinkTheme.primaryRed.withValues(alpha: 0.22),
               ),
             ),
             child: Column(
@@ -247,17 +257,17 @@ class _PrivacyHero extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: PulseLinkTheme.subtleBorderColor(context)),
       ),
       child: Row(
         children: [
           Container(
-            width: 46,
-            height: 46,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: PulseLinkTheme.primaryRed.withOpacity(0.12),
-              shape: BoxShape.circle,
+              color: PulseLinkTheme.primaryRed.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
               Icons.verified_user_outlined,
@@ -273,9 +283,9 @@ class _PrivacyHero extends StatelessWidget {
                   'Bạn kiểm soát dữ liệu của mình',
                   style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 5),
                 Text(
-                  'Pulse Link chỉ dùng dữ liệu để điều phối hiến máu, chăm sóc và vận hành an toàn.',
+                  'Quản lý dữ liệu và đọc các điều khoản quan trọng của Pulse Link.',
                   style: TextStyle(
                     height: 1.4,
                     color: isDark ? Colors.white70 : PulseLinkTheme.mutedText,
@@ -309,22 +319,30 @@ class _PrivacyTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: Material(
         color: PulseLinkTheme.surfaceColor(context),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(8),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: PulseLinkTheme.subtleBorderColor(context),
               ),
             ),
             child: Row(
               children: [
-                Icon(icon, color: PulseLinkTheme.primaryRed),
-                const SizedBox(width: 14),
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: PulseLinkTheme.primaryRed.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(icon, color: PulseLinkTheme.primaryRed, size: 21),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,13 +357,13 @@ class _PrivacyTile extends StatelessWidget {
                         style: TextStyle(
                           color: PulseLinkTheme.mutedColor(context),
                           height: 1.35,
-                          fontSize: 12.5,
+                          fontSize: 13,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded),
+                const Icon(Icons.open_in_new_rounded, size: 19),
               ],
             ),
           ),
