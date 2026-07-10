@@ -31,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   static const String _apiBaseUrl = String.fromEnvironment(
     'LARAVEL_API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8000',
+    defaultValue: 'https://api.pulselink.asia',
   );
 
   @override
