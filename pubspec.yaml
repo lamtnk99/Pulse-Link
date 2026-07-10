@@ -31,6 +31,7 @@ dependencies:
   gal: ^2.3.2
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.3
   flutter_lints: ^5.0.0
   flutter_test:
     sdk: flutter
@@ -53,3 +54,9 @@ flutter:
           weight: 700
         - asset: assets/fonts/be_vietnam_pro/BeVietnamPro-ExtraBold.ttf
           weight: 800
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/images/pulse_link_icon.png"
