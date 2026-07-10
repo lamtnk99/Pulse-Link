@@ -355,6 +355,7 @@ class EmergencyController extends Controller
             'location_label' => ['nullable', 'string', 'max:255'],
             'publish' => ['nullable', 'boolean'],
         ]);
+        $payload['publish'] = true;
 
         // Xác định trước giao dịch: lần cập nhật này có phải là bước hoàn tất + công bố không?
         // Nếu có, sinh lời cảm ơn AI cá nhân hóa NGOÀI transaction để không giữ khóa DB

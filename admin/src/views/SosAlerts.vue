@@ -79,7 +79,7 @@ const journeyForm = reactive({
   destination_type: 'patient' as 'patient' | 'reserve',
   current_step: 'received',
   location_label: '',
-  publish: false,
+  publish: true,
 })
 
 const isStepDisabled = (stepKey: string) => {
@@ -182,7 +182,7 @@ function openJourney(commitment: EmergencyCommitment) {
   journeyForm.destination_type = commitment.blood_journey?.destination_type ?? 'patient'
   journeyForm.current_step = commitment.blood_journey?.current_step ?? 'received'
   journeyForm.location_label = commitment.blood_journey?.location_label ?? props.activeAlert?.hospital?.name ?? ''
-  journeyForm.publish = Boolean(commitment.blood_journey?.published_at)
+  journeyForm.publish = true
 }
 
 function closeJourney() {
@@ -197,7 +197,7 @@ function saveJourney() {
     destination_type: journeyForm.destination_type,
     current_step: journeyForm.current_step,
     location_label: journeyForm.location_label,
-    publish: journeyForm.publish,
+    publish: true,
   })
   closeJourney()
 }
@@ -496,7 +496,7 @@ function saveJourney() {
           </label>
 
           <label class="flex items-center gap-3 rounded-md bg-red-50 p-3 text-sm font-bold text-red-900">
-            <input v-model="journeyForm.publish" type="checkbox" class="h-4 w-4 accent-[#E31837]" />
+            <input :checked="true" type="checkbox" class="h-4 w-4 cursor-not-allowed accent-[#E31837]" disabled />
             Công bố và gửi thông báo cho người hiến khi bước hiện tại là bước cuối
           </label>
         </div>
