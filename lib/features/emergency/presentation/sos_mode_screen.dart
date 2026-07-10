@@ -31,6 +31,7 @@ class SosModeScreen extends StatefulWidget {
 class _SosModeScreenState extends State<SosModeScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ambientController;
+  bool _isActivatingMission = false;
 
   @override
   void initState() {
@@ -45,6 +46,20 @@ class _SosModeScreenState extends State<SosModeScreen>
   void dispose() {
     _ambientController.dispose();
     super.dispose();
+  }
+
+  Future<void> _activateEmergencyMission() async {
+    if (_isActivatingMission) return;
+
+    setState(() => _isActivatingMission = true);
+    try {
+      await Future.wait([
+        widget.controller.commitToEmergency(),
+        Future<void>.delayed(const Duration(milliseconds: 850)),
+      ]);
+    } finally {
+      if (mounted) setState(() => _isActivatingMission = false);
+    }
   }
 
   Future<void> _callHospital(EmergencyAlert alert) async {
@@ -194,7 +209,8 @@ class _SosModeScreenState extends State<SosModeScreen>
               );
             }
 
-            if (state.sosMissionPhase == SosMissionPhase.missionActive) {
+            if (state.sosMissionPhase == SosMissionPhase.missionActive &&
+                !_isActivatingMission) {
               return _SosMissionScaffold(
                 alert: alert,
                 routePlan: route,
@@ -208,75 +224,197 @@ class _SosModeScreenState extends State<SosModeScreen>
               );
             }
 
-            return Scaffold(
-              body: DecoratedBox(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFF3A050B),
-                      Color(0xFF17090B),
-                      PulseLinkTheme.dailyBackground,
-                    ],
+            return Stack(
+              children: [
+                Scaffold(
+                  body: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Color(0xFF3A050B),
+                          Color(0xFF17090B),
+                          PulseLinkTheme.dailyBackground,
+                        ],
+                      ),
+                    ),
+                    child: SafeArea(
+                      child: ListView(
+                        padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
+                        children: [
+                          _SosHeader(
+                            alert: alert,
+                            onClose: widget.controller.dismissEmergency,
+                          ),
+                          if (state.activeAlerts.length > 1) ...[
+                            const SizedBox(height: 12),
+                            _SosCaseSwitcher(
+                              alerts: state.activeAlerts,
+                              activeAlertId: alert.id,
+                              committedAlertIds: state.committedAlertIds,
+                              onSelected: (alertId) {
+                                widget.controller.selectEmergencyAlert(alertId);
+                              },
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          LivingPulseWave(
+                            progress: _ambientController.value,
+                            intensity: state.sosIntensity,
+                          ),
+                          const SizedBox(height: 16),
+                          DispatchWavePanel(
+                            alert: alert,
+                            dispatchMatch: dispatch,
+                            animationValue: _ambientController.value,
+                          ),
+                          const SizedBox(height: 14),
+                          EmergencyRouteMap(
+                            routePlan: route,
+                            hospitalName: alert.hospitalName,
+                            intensity: state.sosIntensity,
+                          ),
+                          const SizedBox(height: 18),
+                          const _MedicalSafetyNotice(),
+                          const SizedBox(height: 14),
+                          HoldToConfirmButton(
+                            committed: state.emergencyCommitted,
+                            onProgressChanged:
+                                widget.controller.updateSosIntensity,
+                            onConfirmed: _activateEmergencyMission,
+                          ),
+                          const SizedBox(height: 14),
+                          _SosGuidanceCard(committed: state.emergencyCommitted),
+                          const SizedBox(height: 14),
+                          _FooterCopy(committed: state.emergencyCommitted),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                child: SafeArea(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
-                    children: [
-                      _SosHeader(
-                        alert: alert,
-                        onClose: widget.controller.dismissEmergency,
-                      ),
-                      if (state.activeAlerts.length > 1) ...[
-                        const SizedBox(height: 12),
-                        _SosCaseSwitcher(
-                          alerts: state.activeAlerts,
-                          activeAlertId: alert.id,
-                          committedAlertIds: state.committedAlertIds,
-                          onSelected: (alertId) {
-                            widget.controller.selectEmergencyAlert(alertId);
-                          },
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      LivingPulseWave(
-                        progress: _ambientController.value,
-                        intensity: state.sosIntensity,
-                      ),
-                      const SizedBox(height: 16),
-                      DispatchWavePanel(
-                        alert: alert,
-                        dispatchMatch: dispatch,
-                        animationValue: _ambientController.value,
-                      ),
-                      const SizedBox(height: 14),
-                      EmergencyRouteMap(
-                        routePlan: route,
-                        hospitalName: alert.hospitalName,
-                        intensity: state.sosIntensity,
-                      ),
-                      const SizedBox(height: 18),
-                      const _MedicalSafetyNotice(),
-                      const SizedBox(height: 14),
-                      HoldToConfirmButton(
-                        committed: state.emergencyCommitted,
-                        onProgressChanged: widget.controller.updateSosIntensity,
-                        onConfirmed: widget.controller.commitToEmergency,
-                      ),
-                      const SizedBox(height: 14),
-                      _SosGuidanceCard(committed: state.emergencyCommitted),
-                      const SizedBox(height: 14),
-                      _FooterCopy(committed: state.emergencyCommitted),
-                    ],
+                if (_isActivatingMission)
+                  _SosActivationOverlay(
+                    alert: alert,
+                    pulse: _ambientController.value,
                   ),
-                ),
-              ),
+              ],
             );
           },
         );
       },
+    );
+  }
+}
+
+class _SosActivationOverlay extends StatelessWidget {
+  const _SosActivationOverlay({required this.alert, required this.pulse});
+
+  final EmergencyAlert alert;
+  final double pulse;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = 0.96 + math.sin(pulse * math.pi * 2).abs() * 0.07;
+
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: ColoredBox(
+          color: const Color(0xE60B0608),
+          child: SafeArea(
+            child: Center(
+              child: TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 240),
+                tween: Tween(begin: 0, end: 1),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.scale(
+                      scale: 0.92 + value * 0.08,
+                      child: child,
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 300,
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1D0A0D),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: PulseLinkTheme.alertRed.withValues(alpha: 0.52),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: PulseLinkTheme.alertRed.withValues(alpha: 0.26),
+                        blurRadius: 36,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Transform.scale(
+                        scale: scale,
+                        child: Container(
+                          width: 88,
+                          height: 88,
+                          decoration: BoxDecoration(
+                            color: PulseLinkTheme.alertRed,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: PulseLinkTheme.alertRed
+                                    .withValues(alpha: 0.55),
+                                blurRadius: 26,
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.emergency_share_rounded,
+                            color: Colors.white,
+                            size: 42,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+                      const Text(
+                        'ĐANG PHÁT TÍN HIỆU SOS',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Đang gửi cam kết và chuẩn bị chỉ đường tới ${VietnameseLabels.text(alert.hospitalName)}.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFFD8C6C9),
+                          fontSize: 12.5,
+                          height: 1.45,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const LinearProgressIndicator(
+                        minHeight: 4,
+                        color: PulseLinkTheme.alertRed,
+                        backgroundColor: Color(0xFF512027),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
