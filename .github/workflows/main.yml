@@ -1,0 +1,169 @@
+name: build iOS app & upload to appstore connect
+
+on:
+  push:
+    branches: [ "prod" ]
+  pull_request:
+    branches: [ "prod" ]
+
+jobs:
+  build-and-upload:
+    runs-on: [self-hosted, macOS, personal]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: prod
+
+      - name: Inject Environment and Firebase Configs
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE_BASE64 }}
+          FIREBASE_JSON: ${{ secrets.FIREBASE_JSON_BASE64 }}
+          FIREBASE_OPTIONS: ${{ secrets.FIREBASE_OPTIONS_BASE64 }}
+          GOOGLE_SERVICES: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          GOOGLE_SERVICE_INFO: ${{ secrets.GOOGLE_SERVICE_INFO_BASE64 }}
+        run: |
+          # 1. Decode generic and root files
+          echo -n "$ENV_FILE" | base64 --decode -o .env
+          echo -n "$FIREBASE_JSON" | base64 --decode -o firebase.json
+          
+          # SAFETY: Copy GoogleService-Info.plist to root as requested by teammate
+          echo -n "$GOOGLE_SERVICE_INFO" | base64 --decode -o GoogleService-Info.plist
+          
+          # 2. Ensure internal directories exist
+          mkdir -p lib android/app ios/Runner
+          
+          # 3. Decode platform-specific files into their required locations
+          echo -n "$FIREBASE_OPTIONS" | base64 --decode -o lib/firebase_options.dart
+          echo -n "$GOOGLE_SERVICES" | base64 --decode -o android/app/google-services.json
+          
+          # NATIVE REQUIREMENT: Place file where the iOS build system expects it
+          echo -n "$GOOGLE_SERVICE_INFO" | base64 --decode -o ios/Runner/GoogleService-Info.plist
+
+      - name: Ensure Flutter SDK is Installed
+        run: |
+          # Define the specific directories
+          CUSTOM_PATH="$HOME/Documents/FlutterSDK/flutter"
+          DOWNLOAD_PATH="$HOME/flutter"
+
+          # 1. Check the machine-specific custom path first
+          if [ -f "$CUSTOM_PATH/bin/flutter" ]; then
+            echo "Flutter SDK found at custom path: $CUSTOM_PATH"
+            echo "$CUSTOM_PATH/bin" >> $GITHUB_PATH
+            
+          # 2. Check the fallback downloaded path second
+          elif [ -f "$DOWNLOAD_PATH/bin/flutter" ]; then
+            echo "Flutter SDK found at default path: $DOWNLOAD_PATH"
+            echo "$DOWNLOAD_PATH/bin" >> $GITHUB_PATH
+            
+          # 3. If neither exist, download fresh
+          else
+            echo "Flutter binary not found anywhere. Downloading Flutter stable..."
+            rm -rf "$DOWNLOAD_PATH" || true
+            git clone https://github.com/flutter/flutter.git -b stable "$DOWNLOAD_PATH"
+            "$DOWNLOAD_PATH/bin/flutter" precache
+            echo "$DOWNLOAD_PATH/bin" >> $GITHUB_PATH
+          fi
+
+      - name: Flutter Clean
+        run: flutter clean
+
+      - name: Clean iOS Pods
+        run: |
+          rm -rf ios/Pods
+          rm -f ios/Podfile.lock
+
+      - name: Flutter Pub Get
+        run: flutter pub get
+
+      - name: Install iOS Pods
+        env:
+          LANG: en_US.UTF-8
+        run: |
+          cd ios
+          pod install --repo-update
+
+      - name: Rebuild iOS Launcher Icons
+        run: flutter pub run flutter_launcher_icons
+
+      - name: Install Apple Certificate and Provisioning Profile
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.APPSTORE_CERT_BASE64 }}
+          P12_PASSWORD: ${{ secrets.APPSTORE_CERT_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.MOBILEPROVISION_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          # Add temporary keychain to the search list and set it as default
+          security list-keychains -d user -s $KEYCHAIN_PATH $(security list-keychains -d user | sed s/\"//g)
+          security default-keychain -s $KEYCHAIN_PATH
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+
+      - name: Create ExportOptions.plist
+        run: |
+          cat <<EOF > ios/ExportOptions.plist
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.pulselinkvn.app</key>
+              <string>pulse-link-app</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+
+      - name: Build Flutter IPA
+        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+        
+      - name: Upload via iTMSTransporter
+        env:
+          API_KEY: ${{ secrets.AUTH_KEY }}
+          API_ISSUER: ${{ secrets.API_ISSUER }}
+          API_KEY_P8_BASE64: ${{ secrets.APPSTORE_API_KEY_BASE64 }}
+        run: |
+          # [App Store Connect Auth] Create the required directory for the AuthKey
+          mkdir -p ~/.appstoreconnect/private_keys/
+          
+          # Decode the .p8 file into the expected directory
+          echo -n "$API_KEY_P8_BASE64" | base64 --decode -o ~/.appstoreconnect/private_keys/AuthKey_${API_KEY}.p8
+          rm -rf ~/.itmstransporter/UploadTokens/ || true
+          rm -rf ~/.itmstransporter/file_cache/ || true
+          
+          # Dynamically locate the built .ipa file to prevent hardcoded naming errors
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -n 1)
+          echo "Uploading IPA at path: $IPA_PATH"
+          
+          xcrun altool --upload-app --type ios -f "$IPA_PATH" --apiKey "$API_KEY" --apiIssuer "$API_ISSUER"
+
+      - name: Clean up keychain and profile
+        if: ${{ always() }}
+        env:
+          API_KEY: ${{ secrets.AUTH_KEY }}
+        run: |
+          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
+          rm -f ~/Library/MobileDevice/Provisioning\ Profiles/build_pp.mobileprovision || true
+          
+          # Clean up the injected .p8 key securely
+          rm -f ~/.appstoreconnect/private_keys/AuthKey_${API_KEY}.p8 || true
+          
+          # Restore the default keychain to prevent local environment issues
+          security list-keychains -d user -s login.keychain || true
+          security default-keychain -s login.keychain || true
