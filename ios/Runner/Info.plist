@@ -30,10 +30,10 @@
 	<string>Pulse Link cần camera khi bạn muốn chụp ảnh giấy tờ xác minh hồ sơ người hiến.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Pulse Link dùng vị trí của bạn để gợi ý điểm hiến máu gần nhất và điều phối SOS theo khoảng cách tới bệnh viện.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Pulse Link cần quyền thư viện ảnh khi bạn chọn ảnh CCCD hoặc ảnh hồ sơ để xác minh tài khoản.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Pulse Link cần quyền lưu ảnh để lưu thiệp cảm ơn hiến máu vào máy của bạn.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pulse Link cần quyền thư viện ảnh khi bạn chọn ảnh CCCD hoặc ảnh hồ sơ để xác minh tài khoản.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -68,15 +68,11 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 </dict>
 </plist>

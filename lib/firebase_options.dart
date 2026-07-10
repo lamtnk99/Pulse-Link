@@ -56,13 +56,12 @@ class DefaultFirebaseOptions {
     projectId: 'pulse-link-asia',
     storageBucket: 'pulse-link-asia.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyD4B0NQgaCtiIuPylfaFouEVPizB_BQg5I',
-    appId: '1:149313658511:ios:cf28f282951be1ef3a5afa',
+    appId: '1:149313658511:ios:3d3f1dc7e9cba2953a5afa',
     messagingSenderId: '149313658511',
     projectId: 'pulse-link-asia',
     storageBucket: 'pulse-link-asia.firebasestorage.app',
-    iosBundleId: 'asia.pulselink.app',
+    iosBundleId: 'com.pulselinkvn.app',
   );
 }

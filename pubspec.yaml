@@ -1,7 +1,7 @@
 name: pulse_link
 description: Pulse Link mobile app for blood donation, emergency SOS dispatch, and hero pass identity.
 publish_to: "none"
-version: 0.1.0+1
+version: 0.1.1+1
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -34,6 +34,7 @@ dependencies:
   flutter_local_notifications: ^22.0.1
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.3
   flutter_lints: ^5.0.0
   flutter_test:
     sdk: flutter
@@ -56,3 +57,9 @@ flutter:
           weight: 700
         - asset: assets/fonts/be_vietnam_pro/BeVietnamPro-ExtraBold.ttf
           weight: 800
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/images/pulse_link_icon.png"

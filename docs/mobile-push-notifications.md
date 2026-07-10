@@ -13,7 +13,8 @@
 
 - Project name: `Pulse Link`.
 - Project ID: `pulse-link-asia`.
-- Android package và iOS bundle ID: `asia.pulselink.app`.
+- Android package: `asia.pulselink.app`.
+- iOS App Store bundle ID: `com.pulselinkvn.app`.
 - `lib/firebase_options.dart` được sinh bằng FlutterFire CLI và được commit vì chỉ chứa cấu hình client công khai.
 - `google-services.json`, `GoogleService-Info.plist` và service account JSON không được commit.
 
