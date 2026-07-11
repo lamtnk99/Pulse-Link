@@ -59,6 +59,12 @@ jobs:
         run: |
           mkdir -p ios/Runner
           echo -n "$GOOGLE_SERVICE_INFO" | base64 --decode -o ios/Runner/GoogleService-Info.plist
+          
+          PLIST_BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print BUNDLE_ID" ios/Runner/GoogleService-Info.plist || echo "")
+          if [ "$PLIST_BUNDLE_ID" != "${{ env.IOS_BUNDLE_ID }}" ]; then
+            echo "Error: BUNDLE_ID in GoogleService-Info.plist ($PLIST_BUNDLE_ID) does not match IOS_BUNDLE_ID (${{ env.IOS_BUNDLE_ID }})."
+            exit 1
+          fi
 
       - name: Ensure Flutter SDK is available
         run: |
