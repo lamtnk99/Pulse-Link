@@ -14,7 +14,8 @@ class DonationCampaignsScreen extends StatefulWidget {
   final PulseLinkController controller;
 
   @override
-  State<DonationCampaignsScreen> createState() => _DonationCampaignsScreenState();
+  State<DonationCampaignsScreen> createState() =>
+      _DonationCampaignsScreenState();
 }
 
 class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
@@ -34,14 +35,16 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
       _error = null;
     });
     try {
-      final campaigns = await widget.controller.donationFundService.getCampaigns();
+      final campaigns =
+          await widget.controller.donationFundService.getCampaigns();
       setState(() {
         _campaigns = campaigns;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _error = 'Không thể tải danh sách chiến dịch quyên góp. Vui lòng thử lại.';
+        _error =
+            'Không thể tải danh sách chiến dịch quyên góp. Vui lòng thử lại.';
         _isLoading = false;
       });
     }
@@ -84,12 +87,14 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
               padding: const EdgeInsets.all(24.0),
               child: Column(
                 children: [
-                  const Icon(Icons.error_outline, size: 64, color: DonationPalette.primary),
+                  const Icon(Icons.error_outline,
+                      size: 64, color: DonationPalette.primary),
                   const SizedBox(height: 16),
                   Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: DonationPalette.mutedText(isDark)),
+                    style: TextStyle(
+                        fontSize: 14, color: DonationPalette.mutedText(isDark)),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
@@ -111,7 +116,8 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
     return _buildCampaignList(_campaigns, isDark: isDark);
   }
 
-  Widget _buildCampaignList(List<DonationCampaign> list, {required bool isDark}) {
+  Widget _buildCampaignList(List<DonationCampaign> list,
+      {required bool isDark}) {
     if (list.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -120,12 +126,16 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
           Center(
             child: Column(
               children: [
-                Icon(Icons.favorite_border_rounded, size: 44, color: DonationPalette.primary.withOpacity(0.6)),
+                Icon(Icons.favorite_border_rounded,
+                    size: 44, color: DonationPalette.primary.withOpacity(0.6)),
                 const SizedBox(height: 12),
                 Text(
                   'Hiện chưa có chiến dịch nào đang diễn ra.\nHãy quay lại sau nhé!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: DonationPalette.mutedText(isDark), fontSize: 14, height: 1.5),
+                  style: TextStyle(
+                      color: DonationPalette.mutedText(isDark),
+                      fontSize: 14,
+                      height: 1.5),
                 ),
               ],
             ),
@@ -159,18 +169,22 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
     final daysLeft = campaign.daysLeft;
     final beneficiary = (campaign.beneficiaryName ?? '').trim();
     // Ưu tiên kể câu chuyện; nếu chưa có thì rơi về mô tả.
-    final storyLine = campaign.hasStory ? campaign.beneficiaryStory!.trim() : campaign.description;
+    final storyLine = campaign.hasStory
+        ? campaign.beneficiaryStory!.trim()
+        : campaign.description;
 
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (context) => DonationDetailScreen(
-              controller: widget.controller,
-              campaignId: campaign.id,
-            ),
-          ),
-        ).then((_) => _loadCampaigns());
+        Navigator.of(context)
+            .push(
+              MaterialPageRoute<void>(
+                builder: (context) => DonationDetailScreen(
+                  controller: widget.controller,
+                  campaignId: campaign.id,
+                ),
+              ),
+            )
+            .then((_) => _loadCampaigns());
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 18),
@@ -199,7 +213,8 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
                       ? Image.network(
                           campaign.imageUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
+                          errorBuilder: (context, error, stackTrace) =>
+                              _buildPlaceholderImage(),
                         )
                       : _buildPlaceholderImage(),
                 ),
@@ -209,7 +224,10 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Colors.transparent, Colors.black.withOpacity(0.6)],
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.6)
+                        ],
                       ),
                     ),
                   ),
@@ -218,7 +236,10 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
                   Positioned(
                     top: 12,
                     left: 12,
-                    child: _CampaignBadge(icon: urgency.icon, label: urgency.label, color: urgency.color),
+                    child: _CampaignBadge(
+                        icon: urgency.icon,
+                        label: urgency.label,
+                        color: urgency.color),
                   ),
                 if (daysLeft != null && daysLeft <= 30)
                   Positioned(
@@ -226,7 +247,8 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
                     right: 12,
                     child: _CampaignBadge(
                       icon: Icons.schedule_rounded,
-                      label: daysLeft <= 0 ? 'Sắp kết thúc' : 'Còn $daysLeft ngày',
+                      label:
+                          daysLeft <= 0 ? 'Sắp kết thúc' : 'Còn $daysLeft ngày',
                       color: Colors.black.withOpacity(0.55),
                     ),
                   ),
@@ -237,7 +259,8 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
                     bottom: 12,
                     child: Row(
                       children: [
-                        const Icon(Icons.favorite_rounded, size: 15, color: Colors.white),
+                        const Icon(Icons.favorite_rounded,
+                            size: 15, color: Colors.white),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -248,7 +271,9 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
                               color: Colors.white,
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
-                              shadows: [Shadow(blurRadius: 6, color: Colors.black54)],
+                              shadows: [
+                                Shadow(blurRadius: 6, color: Colors.black54)
+                              ],
                             ),
                           ),
                         ),
@@ -289,9 +314,12 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(6),
                     child: LinearProgressIndicator(
-                      value: progress == 0 ? null : progress,
+                      // A zero-value campaign is valid. Passing null would
+                      // incorrectly render the indeterminate loading animation.
+                      value: progress,
                       backgroundColor: DonationPalette.primary.withOpacity(0.1),
-                      valueColor: const AlwaysStoppedAnimation<Color>(DonationPalette.primary),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          DonationPalette.primary),
                       minHeight: 8,
                     ),
                   ),
@@ -313,8 +341,12 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              remaining <= 0 ? 'Đã về đích, cảm ơn cộng đồng!' : 'Còn thiếu $remainingText để về đích',
-                              style: TextStyle(fontSize: 12, color: DonationPalette.mutedText(isDark)),
+                              remaining <= 0
+                                  ? 'Đã về đích, cảm ơn cộng đồng!'
+                                  : 'Còn thiếu $remainingText để về đích',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: DonationPalette.mutedText(isDark)),
                             ),
                           ],
                         ),
@@ -322,7 +354,8 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
                       if (campaign.donorCount > 0)
                         Row(
                           children: [
-                            Icon(Icons.people_alt_rounded, size: 14, color: DonationPalette.coral),
+                            Icon(Icons.people_alt_rounded,
+                                size: 14, color: DonationPalette.coral),
                             const SizedBox(width: 4),
                             Text(
                               '${campaign.donorCount}',
@@ -367,7 +400,8 @@ class _DonationCampaignsScreenState extends State<DonationCampaignsScreen> {
 }
 
 class _CampaignBadge extends StatelessWidget {
-  const _CampaignBadge({required this.icon, required this.label, required this.color});
+  const _CampaignBadge(
+      {required this.icon, required this.label, required this.color});
 
   final IconData icon;
   final String label;
@@ -388,7 +422,8 @@ class _CampaignBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
+            style: const TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w700, color: Colors.white),
           ),
         ],
       ),

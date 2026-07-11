@@ -2692,23 +2692,27 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
   }
 
   void _openCampaigns() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) =>
-            DonationCampaignsScreen(controller: widget.controller),
-      ),
-    );
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute<void>(
+            builder: (context) =>
+                DonationCampaignsScreen(controller: widget.controller),
+          ),
+        )
+        .then((_) => _loadFeatured());
   }
 
   void _openCampaign(DonationCampaign campaign) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => DonationDetailScreen(
-          controller: widget.controller,
-          campaignId: campaign.id,
-        ),
-      ),
-    );
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute<void>(
+            builder: (context) => DonationDetailScreen(
+              controller: widget.controller,
+              campaignId: campaign.id,
+            ),
+          ),
+        )
+        .then((_) => _loadFeatured());
   }
 
   void _openFeatured() {
@@ -2869,7 +2873,7 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(5),
                     child: LinearProgressIndicator(
-                      value: progress == 0 ? null : progress,
+                      value: progress,
                       minHeight: 5,
                       backgroundColor: DonationPalette.primary.withOpacity(0.1),
                       valueColor: const AlwaysStoppedAnimation<Color>(
@@ -3075,7 +3079,7 @@ class _DonationPromoCardState extends State<_DonationPromoCard> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(6),
                       child: LinearProgressIndicator(
-                        value: progress == 0 ? null : progress,
+                        value: progress,
                         minHeight: 7,
                         backgroundColor:
                             DonationPalette.primary.withOpacity(0.1),

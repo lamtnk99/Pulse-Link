@@ -330,7 +330,7 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
           child: LinearProgressIndicator(
-            value: progress == 0 ? null : progress,
+            value: progress,
             backgroundColor: DonationPalette.primary.withOpacity(0.08),
             valueColor:
                 const AlwaysStoppedAnimation<Color>(DonationPalette.primary),
@@ -699,18 +699,21 @@ class _DonationDetailScreenState extends State<DonationDetailScreen>
   }
 
   void _showDonationBottomSheet(DonationCampaign campaign) {
+    final navigator = Navigator.of(context);
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _DonationFormBottomSheet(
+      builder: (_) => _DonationFormBottomSheet(
         controller: widget.controller,
         campaign: campaign,
-        onSuccess: (result) {
-          Navigator.of(context).pop(); // Đóng bottom sheet
-          _loadDetails(showLoading: false); // Làm mới ngầm
+        onSuccess: (result) async {
+          navigator.pop(); // Đóng bottom sheet
+          await _loadDetails(showLoading: false);
+          if (!mounted) return;
           // Khoảnh khắc cảm ơn full-screen thay cho SnackBar lạnh lẽo.
-          Navigator.of(context).push(
+          navigator.push(
             MaterialPageRoute<void>(
               builder: (_) => DonationThankYouScreen(
                 campaign: campaign,
@@ -736,7 +739,7 @@ class _DonationFormBottomSheet extends StatefulWidget {
 
   final PulseLinkController controller;
   final DonationCampaign campaign;
-  final ValueChanged<DonationResult> onSuccess;
+  final Future<void> Function(DonationResult result) onSuccess;
 
   @override
   State<_DonationFormBottomSheet> createState() =>
@@ -835,8 +838,8 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
                 builder: (_) => _PaymentWaitingDialog(
                   controller: widget.controller,
                   transactionId: transactionId,
-                  onPaymentSuccess: () {
-                    widget.onSuccess(_buildResult(isPending: false));
+                  onPaymentSuccess: () async {
+                    await widget.onSuccess(_buildResult(isPending: false));
                   },
                 ),
               );
@@ -854,7 +857,7 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
           message: _messageController.text,
           isAnonymous: _isAnonymous,
         );
-        widget.onSuccess(_buildResult(isPending: false));
+        await widget.onSuccess(_buildResult(isPending: false));
       }
     } catch (e) {
       if (mounted) {
@@ -1299,7 +1302,7 @@ class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
 class _PaymentWaitingDialog extends StatefulWidget {
   final PulseLinkController controller;
   final String transactionId;
-  final VoidCallback onPaymentSuccess;
+  final Future<void> Function() onPaymentSuccess;
 
   const _PaymentWaitingDialog({
     required this.controller,
@@ -1341,7 +1344,7 @@ class _PaymentWaitingDialogState extends State<_PaymentWaitingDialog> {
       if (status == 'success') {
         _timer?.cancel();
         Navigator.of(context).pop(); // Close dialog
-        widget.onPaymentSuccess();
+        await widget.onPaymentSuccess();
       } else if (status == 'failed') {
         _timer?.cancel();
         setState(() {
