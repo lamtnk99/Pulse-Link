@@ -61,8 +61,10 @@ class MobileNotificationController extends Controller
         $status = $delivery?->status ?? 'no_device';
         $message = match ($status) {
             'sent' => 'Firebase đã gửi thông báo thử tới thiết bị.',
-            'skipped' => 'VPS đã bỏ qua Firebase. Hãy kiểm tra service account hoặc giờ yên lặng.',
-            'failed' => 'Firebase từ chối yêu cầu gửi. Hãy kiểm tra FCM token và service account trên VPS.',
+            'skipped' => $delivery?->failure_code === 'preference'
+                ? 'Thông báo đang bị chặn bởi tùy chọn người dùng hoặc giờ yên lặng.'
+                : 'VPS chưa tạo được access token Firebase từ service account.',
+            'failed' => $this->firebaseFailureMessage($delivery?->failure_message),
             default => 'Thiết bị chưa đăng ký FCM token trên VPS.',
         };
 
@@ -153,6 +155,21 @@ class MobileNotificationController extends Controller
         }
 
         return response()->json(['data' => ['removed' => $removed > 0]]);
+    }
+
+    private function firebaseFailureMessage(?string $failure): string
+    {
+        $failure ??= '';
+
+        return match (true) {
+            str_contains($failure, 'UNREGISTERED'),
+            str_contains($failure, 'registration-token-not-registered') => 'FCM token trên VPS đã hết hiệu lực. Hãy mở lại app để đăng ký token mới.',
+            str_contains($failure, 'SENDER_ID_MISMATCH') => 'FCM token và service account đang thuộc hai Firebase project khác nhau.',
+            str_contains($failure, 'PERMISSION_DENIED') => 'Service account chưa có quyền gửi FCM hoặc Cloud Messaging API chưa được bật.',
+            str_contains($failure, 'UNAUTHENTICATED'),
+            str_contains($failure, '401') => 'Firebase không chấp nhận thông tin xác thực của service account.',
+            default => 'Firebase từ chối yêu cầu gửi. Kiểm tra failure_message trong notification_deliveries.',
+        };
     }
 
     private function preferencePayload(NotificationPreference $preference): array

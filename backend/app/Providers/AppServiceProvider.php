@@ -20,7 +20,9 @@ use App\Services\Contracts\PushNotificationGateway;
 use App\Services\Firebase\FcmHttpV1PushNotificationGateway;
 use App\Services\Firebase\FirestoreEmergencyAlertRealtimeGateway;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -45,7 +47,16 @@ class AppServiceProvider extends ServiceProvider
     {
         DonationAppointment::observe(DonationAppointmentObserver::class);
         Event::listen(MobileNotificationCreated::class, function (MobileNotificationCreated $event): void {
-            DispatchMobilePushNotification::dispatch($event->notification->id)->afterCommit();
+            try {
+                DispatchMobilePushNotification::dispatch($event->notification->id)->afterCommit();
+            } catch (Throwable $exception) {
+                // FCM chạy qua queue riêng; lỗi enqueue không được phép chặn
+                // broadcast Reverb vốn đang phục vụ các luồng realtime hiện có.
+                Log::error('Could not enqueue Firebase push notification.', [
+                    'notification_id' => $event->notification->id,
+                    'message' => $exception->getMessage(),
+                ]);
+            }
         });
     }
 }

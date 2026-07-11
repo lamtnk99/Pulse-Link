@@ -185,7 +185,19 @@ class MobilePushNotificationService {
         '/api/mobile/me/notifications/test?user_id=${Uri.encodeComponent(profile.id)}',
       );
     } catch (error) {
-      throw StateError('VPS chưa chạy được kiểm tra Firebase: $error');
+      if (error is LaravelApiException) {
+        final message = switch (error.statusCode) {
+          429 =>
+            'Bạn đang gửi thử quá nhanh. Vui lòng chờ một phút rồi thử lại.',
+          404 => 'VPS chưa được cập nhật endpoint kiểm tra Firebase.',
+          401 ||
+          403 =>
+            'Phiên đăng nhập không có quyền kiểm tra Firebase. Hãy đăng nhập lại.',
+          _ => 'VPS không kiểm tra được Firebase (mã ${error.statusCode}).',
+        };
+        throw StateError(message);
+      }
+      throw StateError('Không kết nối được VPS để kiểm tra Firebase.');
     }
     final data = response['data'];
     final result = data is Map<String, dynamic> ? data : response;
