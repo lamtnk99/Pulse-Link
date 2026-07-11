@@ -20,6 +20,7 @@ class _NotificationSettingsScreenState
   NotificationPreferences _preferences = const NotificationPreferences();
   bool _loading = true;
   bool _saving = false;
+  bool _testingPush = false;
 
   @override
   void initState() {
@@ -71,6 +72,28 @@ class _NotificationSettingsScreenState
     };
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _testPush() async {
+    setState(() => _testingPush = true);
+    try {
+      final message = await widget.controller.sendTestPushNotification();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.green),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      final message = error
+          .toString()
+          .replaceFirst('Bad state: ', '')
+          .replaceFirst('StateError: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _testingPush = false);
+    }
   }
 
   Future<void> _pickQuietHours() async {
@@ -140,6 +163,22 @@ class _NotificationSettingsScreenState
                   onPressed: _requestPermission,
                   icon: const Icon(Icons.notifications_active_outlined),
                   label: const Text('Bật thông báo trên thiết bị'),
+                ),
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: _testingPush ? null : _testPush,
+                  icon: _testingPush
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send_to_mobile_outlined),
+                  label: Text(
+                    _testingPush
+                        ? 'Đang kiểm tra kết nối Firebase...'
+                        : 'Gửi thông báo thử',
+                  ),
                 ),
                 const SizedBox(height: 24),
                 const _SectionTitle('CA KHẨN VÀ LỊCH HIẾN'),

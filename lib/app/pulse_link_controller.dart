@@ -289,6 +289,15 @@ class PulseLinkController extends ChangeNotifier {
         PushPermissionStatus.unavailable;
   }
 
+  Future<String> sendTestPushNotification() async {
+    final service = _pushNotificationService;
+    if (service == null) {
+      throw StateError(
+          'Firebase push chưa được cấu hình cho bản ứng dụng này.');
+    }
+    return service.sendTestNotification();
+  }
+
   Future<void> setThemePreference(AppThemePreference preference) async {
     _state = _state.copyWith(themePreference: preference);
     notifyListeners();

@@ -50,6 +50,8 @@ Route::prefix('mobile')->middleware(['role:donor'])->group(function () {
     Route::post('uploads', [MobileUploadController::class, 'store']);
     Route::get('me/donations', [MobileDonationController::class, 'history']);
     Route::get('me/notifications', [MobileNotificationController::class, 'index']);
+    Route::post('me/notifications/test', [MobileNotificationController::class, 'testPush'])
+        ->middleware('throttle:3,1');
     Route::post('me/notifications/{notification}/read', [MobileNotificationController::class, 'markRead']);
     Route::get('me/notification-preferences', [MobileNotificationController::class, 'preferences']);
     Route::put('me/notification-preferences', [MobileNotificationController::class, 'updatePreferences']);

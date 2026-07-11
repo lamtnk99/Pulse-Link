@@ -20,7 +20,7 @@ class BloodJourney extends Model
         'Không nỗi sợ hãi nào bằng việc nhìn người mình yêu thương nhất đứng trước cửa tử mà bản thân bất lực.',
         'Khi tiếng còi xe cấp cứu reo lên cũng là lúc chúng tôi nín thở chờ đợi một phép màu.',
         'Cả gia đình tôi đã có một đêm không ngủ, cầu nguyện trong sự lo âu tột độ trước phòng hồi sức cấp cứu.',
-        'Giữa lằn ranh sinh tử cận kề, từng giây phút trôi qua đối với người bệnh đều là cuộc chiến khốc liệt.'
+        'Giữa lằn ranh sinh tử cận kề, từng giây phút trôi qua đối với người bệnh đều là cuộc chiến khốc liệt.',
     ];
 
     public const PATIENT_MIDDLES = [
@@ -33,7 +33,7 @@ class BloodJourney extends Model
         'Giọt máu hồng ấy không chỉ cứu một người, mà thực sự đã cứu vớt cả một gia đình khỏi sự đổ vỡ và đau thương.',
         'Món quà sự sống từ bạn đã giúp ca phẫu thuật kết thúc tốt đẹp và bệnh nhân đã có thể tự thở được.',
         'Chính tấm lòng nhân ái của bạn đã nâng đỡ cơ thể yếu ớt ấy vượt qua thời khắc hiểm nghèo nhất.',
-        'Dòng máu lành mạnh của bạn đã hòa làm một, thắp lên hy vọng sống cho người bệnh đang nằm kia.'
+        'Dòng máu lành mạnh của bạn đã hòa làm một, thắp lên hy vọng sống cho người bệnh đang nằm kia.',
     ];
 
     public const PATIENT_CLOSINGS = [
@@ -46,7 +46,7 @@ class BloodJourney extends Model
         'Không từ ngữ nào diễn tả hết lòng biết ơn này, xin kính chúc bạn luôn mạnh khỏe và hạnh phúc.',
         'Sự tử tế của bạn đã cứu sống một cuộc đời, gia đình chúng tôi xin gửi vạn lời chúc lành và bình an đến bạn.',
         'Xin tri ân nghĩa cử cao đẹp cứu người của bạn, cầu chúc cuộc sống của bạn luôn tràn ngập ánh sáng ấm áp.',
-        'Cảm ơn bạn, người ân nhân đặc biệt đã mang nụ cười và hy vọng trở lại với mái ấm của chúng tôi.'
+        'Cảm ơn bạn, người ân nhân đặc biệt đã mang nụ cười và hy vọng trở lại với mái ấm của chúng tôi.',
     ];
 
     public const RESERVE_OPENINGS = [
@@ -59,7 +59,7 @@ class BloodJourney extends Model
         'Mỗi khi nhận được một đơn vị máu từ những người tình nguyện như bạn, chúng tôi lại thêm vững tin vào công việc của mình.',
         'Nhìn dòng người xếp hàng hiến máu trong tình trạng SOS, tập thể y bác sĩ vô cùng xúc động.',
         'Khi ca cấp cứu khẩn cấp cần tiếp máu khẩn thiết, hành động của bạn đã tháo gỡ khó khăn cho bệnh viện.',
-        'Tập thể y bác sĩ trực cấp cứu hôm nay xin được gửi lời tri ân chân thành nhất tới tấm lòng vàng của bạn.'
+        'Tập thể y bác sĩ trực cấp cứu hôm nay xin được gửi lời tri ân chân thành nhất tới tấm lòng vàng của bạn.',
     ];
 
     public const RESERVE_MIDDLES = [
@@ -72,7 +72,7 @@ class BloodJourney extends Model
         'Sự sẻ chia của bạn là món quà vô giá, giúp chúng tôi luôn chủ động trong cuộc chiến giành giật sinh mạng người bệnh.',
         'Máu của bạn đã được bảo quản tối ưu tại kho dự trữ của bệnh viện, sẵn sàng hồi sinh những cuộc đời gặp nạn sắp tới.',
         'Nhờ có sự đóng góp của bạn, ngân hàng máu có thêm nguồn sống sẵn sàng bảo vệ những bệnh nhân ở ranh giới hiểm nghèo.',
-        'Đơn vị máu hiến tặng của bạn đã được phân loại cẩn thận và lưu kho đạt chuẩn để phục vụ công tác điều trị khẩn cấp.'
+        'Đơn vị máu hiến tặng của bạn đã được phân loại cẩn thận và lưu kho đạt chuẩn để phục vụ công tác điều trị khẩn cấp.',
     ];
 
     public const RESERVE_CLOSINGS = [
@@ -85,7 +85,7 @@ class BloodJourney extends Model
         'Xin chúc bạn luôn giữ mãi ngọn lửa nhân ái này trong tim để sưởi ấm thêm nhiều mảnh đời.',
         'Tri ân sâu sắc tấm lòng vàng của bạn, chúc bạn luôn bình an trên mọi nẻo đường.',
         'Cảm ơn người chiến sĩ thầm lặng trên mặt trận cứu người, kính chúc bạn mọi điều tốt đẹp nhất.',
-        'Bệnh viện xin gửi vạn lời chúc lành và lời cảm ơn chân thành nhất đến bạn.'
+        'Bệnh viện xin gửi vạn lời chúc lành và lời cảm ơn chân thành nhất đến bạn.',
     ];
 
     protected $fillable = [
@@ -160,6 +160,30 @@ class BloodJourney extends Model
         $c = $closings[($seedId + 7) % count($closings)];
 
         return "$o $m $c";
+    }
+
+    public static function hasCompleteFinalMessage(?string $message): bool
+    {
+        $message = trim((string) $message);
+        if ($message === '' || mb_strlen($message) < 80) {
+            return false;
+        }
+
+        $words = preg_split('/\s+/u', $message, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (count($words) < 18 || ! preg_match('/[.!?]$/u', $message)) {
+            return false;
+        }
+
+        preg_match_all('/[.!?](?:\s|$)/u', $message, $sentences);
+
+        return count($sentences[0]) >= 2;
+    }
+
+    public function resolvedFinalMessage(): string
+    {
+        return self::hasCompleteFinalMessage($this->final_message)
+            ? trim($this->final_message)
+            : self::finalMessageFor($this->destination_type, $this->emergency_commitment_id);
     }
 
     public function alert()

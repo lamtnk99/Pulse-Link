@@ -8,7 +8,9 @@ use App\Models\DonationHistory;
 class GratitudeCardService
 {
     public const STYLE_CLASSIC = 'classic';
+
     public const STYLE_HERO_NIGHT = 'hero_night';
+
     public const STYLE_BOTANICAL = 'botanical';
 
     public const STYLES = [
@@ -205,7 +207,7 @@ class GratitudeCardService
                 [
                     'sender' => $isReserve ? 'Bệnh viện tiếp nhận' : 'Người nhà bệnh nhân',
                     'title' => $isReserve ? 'Lời cảm ơn từ bệnh viện' : 'Lời cảm ơn từ người nhà',
-                    'body' => $journey->final_message ?: BloodJourney::finalMessageFor($journey->destination_type, $journey->emergency_commitment_id),
+                    'body' => $journey->resolvedFinalMessage(),
                     'signature' => $isReserve ? 'Đội ngũ y tế' : 'Gia đình người nhận máu',
                 ],
             ],

@@ -139,7 +139,7 @@ class GratitudeLetter {
           sender: isReserve ? 'Bệnh viện tiếp nhận' : 'Người nhà bệnh nhân',
           title:
               isReserve ? 'Lời cảm ơn từ bệnh viện' : 'Lời cảm ơn từ người nhà',
-          body: patientOrHospitalMessage.isNotEmpty
+          body: _isCompleteJourneyMessage(patientOrHospitalMessage)
               ? patientOrHospitalMessage
               : _sosFallback(isReserve),
           signature: isReserve ? 'Đội ngũ y tế' : 'Gia đình người nhận máu',
@@ -201,7 +201,12 @@ class GratitudeLetter {
         ? rawMessages
             .whereType<Map<String, dynamic>>()
             .map(GratitudeLetterMessage.fromJson)
-            .where((message) => message.body.trim().isNotEmpty)
+            .where(
+              (message) =>
+                  message.body.trim().isNotEmpty &&
+                  (!_isFinalJourneySource(source) ||
+                      _isCompleteJourneyMessage(message.body)),
+            )
             .toList(growable: false)
         : const <GratitudeLetterMessage>[];
 
@@ -272,7 +277,9 @@ class GratitudeLetter {
             title: source == GratitudeLetterSource.sosReserve
                 ? 'Lời cảm ơn từ bệnh viện'
                 : 'Lời cảm ơn từ người nhà',
-            body: notification.body,
+            body: _isCompleteJourneyMessage(notification.body)
+                ? notification.body
+                : _sosFallback(source == GratitudeLetterSource.sosReserve),
             signature: source == GratitudeLetterSource.sosReserve
                 ? 'Đội ngũ y tế'
                 : 'Gia đình người nhận máu',
@@ -358,6 +365,22 @@ String _defaultStyleFor(GratitudeLetterSource source) {
     GratitudeLetterSource.sosPatient => 'hero_night',
     GratitudeLetterSource.sosReserve => 'botanical',
   };
+}
+
+bool _isFinalJourneySource(GratitudeLetterSource source) {
+  return source == GratitudeLetterSource.sosPatient ||
+      source == GratitudeLetterSource.sosReserve;
+}
+
+bool _isCompleteJourneyMessage(String message) {
+  final value = message.trim();
+  if (value.runes.length < 80 || !RegExp(r'[.!?]$').hasMatch(value)) {
+    return false;
+  }
+
+  final words = value.split(RegExp(r'\s+')).where((word) => word.isNotEmpty);
+  final sentenceMarks = RegExp(r'[.!?](?:\s|$)').allMatches(value).length;
+  return words.length >= 18 && sentenceMarks >= 2;
 }
 
 GratitudeLetterMessage _fallbackMessageFor(GratitudeLetterSource source) {

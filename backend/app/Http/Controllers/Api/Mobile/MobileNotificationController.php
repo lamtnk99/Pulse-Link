@@ -7,6 +7,7 @@ use App\Http\Resources\MobileNotificationResource;
 use App\Models\MobileNotification;
 use App\Models\NotificationDevice;
 use App\Models\NotificationPreference;
+use App\Services\Mobile\MobilePushNotificationDispatcher;
 use App\Services\Mobile\MobileUserResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ class MobileNotificationController extends Controller
 {
     public function __construct(
         private readonly MobileUserResolver $mobileUserResolver,
+        private readonly MobilePushNotificationDispatcher $pushDispatcher,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -40,6 +42,37 @@ class MobileNotificationController extends Controller
         $notification->update(['read_at' => $notification->read_at ?? now()]);
 
         return MobileNotificationResource::make($notification->refresh());
+    }
+
+    public function testPush(Request $request): JsonResponse
+    {
+        $user = $this->mobileUserResolver->resolve($request->integer('user_id'));
+        $notification = MobileNotification::query()->create([
+            'user_id' => $user->id,
+            'type' => 'system_test',
+            'title' => 'Pulse Link đã kết nối',
+            'body' => 'Thông báo Firebase trên thiết bị của bạn đang hoạt động bình thường.',
+            'payload' => ['deep_link' => '/notifications'],
+        ]);
+
+        $this->pushDispatcher->dispatch($notification);
+        $deliveries = $notification->deliveries()->latest()->get();
+        $delivery = $deliveries->firstWhere('status', 'sent') ?? $deliveries->first();
+        $status = $delivery?->status ?? 'no_device';
+        $message = match ($status) {
+            'sent' => 'Firebase đã gửi thông báo thử tới thiết bị.',
+            'skipped' => 'VPS đã bỏ qua Firebase. Hãy kiểm tra service account hoặc giờ yên lặng.',
+            'failed' => 'Firebase từ chối yêu cầu gửi. Hãy kiểm tra FCM token và service account trên VPS.',
+            default => 'Thiết bị chưa đăng ký FCM token trên VPS.',
+        };
+
+        return response()->json([
+            'data' => [
+                'status' => $status,
+                'message' => $message,
+                'failure_code' => $delivery?->failure_code,
+            ],
+        ]);
     }
 
     public function preferences(Request $request): JsonResponse

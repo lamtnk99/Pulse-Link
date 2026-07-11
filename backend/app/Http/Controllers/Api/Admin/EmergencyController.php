@@ -12,6 +12,7 @@ use App\Http\Resources\BloodJourneyResource;
 use App\Http\Resources\EmergencyAlertResource;
 use App\Http\Resources\EmergencyCommitmentResource;
 use App\Models\BloodJourney;
+use App\Models\BloodStock;
 use App\Models\DonationHistory;
 use App\Models\EmergencyAlert;
 use App\Models\EmergencyCommitment;
@@ -42,7 +43,6 @@ class EmergencyController extends Controller
         private readonly EmergencyAlertRealtimeGateway $realtimeGateway,
         private readonly DonationRecognitionService $recognitionService,
         private readonly BloodCompatibility $bloodCompatibility,
-        private readonly \App\Services\Gratitude\GratitudeMessageService $gratitudeService,
         private readonly GratitudeCardService $gratitudeCardService,
     ) {}
 
@@ -279,16 +279,16 @@ class EmergencyController extends Controller
             );
 
             // Tự động đồng bộ sang kho máu (BloodStock)
-            \App\Models\BloodStock::updateOrCreate(
+            BloodStock::updateOrCreate(
                 ['donation_history_id' => $history->id],
                 [
                     'hospital_id' => $alert->hospital_id,
                     'blood_type' => $confirmedBloodType,
                     'volume_ml' => $volumeMl,
                     'received_date' => $history->donated_at,
-                    'expiry_date' => \Illuminate\Support\Carbon::parse($history->donated_at)->addDays(35)->toDateString(),
+                    'expiry_date' => Carbon::parse($history->donated_at)->addDays(35)->toDateString(),
                     'status' => 'available',
-                    'notes' => 'Hiến máu khẩn cấp SOS từ ca cấp cứu: ' . $alert->public_id,
+                    'notes' => 'Hiến máu khẩn cấp SOS từ ca cấp cứu: '.$alert->public_id,
                 ]
             );
 
@@ -326,7 +326,7 @@ class EmergencyController extends Controller
                     $commitment->donor_id,
                     'donation_verified',
                     'Cảm ơn bạn đã hiến máu cứu người',
-                    "Chứng nhận hiến máu SOS của bạn đã được ghi nhận. Cảm ơn nghĩa cử cao đẹp của bạn!",
+                    'Chứng nhận hiến máu SOS của bạn đã được ghi nhận. Cảm ơn nghĩa cử cao đẹp của bạn!',
                     [
                         'blood_journey_id' => $journey->public_id,
                         'destination_type' => $journey->destination_type,
@@ -362,49 +362,30 @@ class EmergencyController extends Controller
         ]);
         $payload['publish'] = true;
 
-        // Xác định trước giao dịch: lần cập nhật này có phải là bước hoàn tất + công bố không?
-        // Nếu có, sinh lời cảm ơn AI cá nhân hóa NGOÀI transaction để không giữ khóa DB
-        // trong lúc gọi HTTP tới nhà cung cấp AI. Chỉ sinh khi journey chưa hoàn tất trước đó.
+        // Xác định trước giao dịch: lần cập nhật này có phải là bước hoàn tất không.
         $existingJourney = $commitment->bloodJourney;
         $destinationTypePre = $payload['destination_type']
             ?? $existingJourney?->destination_type
             ?? $this->defaultJourneyDestination($alert);
         $stepKeysPre = collect(BloodJourney::defaultSteps($destinationTypePre))->pluck('step_key');
         $requestedStep = $payload['current_step'] ?? $existingJourney?->current_step ?? 'received';
-        
-        $hasStepChanged = ($existingJourney === null)
-            || ($existingJourney->destination_type !== $destinationTypePre)
-            || ($existingJourney->current_step !== $requestedStep);
 
         $isFinalStep = $stepKeysPre->last() === $requestedStep;
         $willComplete = ($payload['publish'] ?? false) && $isFinalStep;
 
         $oldFallbacks = [
             'Giọt máu quý giá của bạn đã được truyền cho bệnh nhân tại phòng cấp cứu. Cảm ơn bạn đã giành lại một mạng sống!',
-            'Ca cấp cứu hiện đã ổn định nhờ sự hỗ trợ kịp thời. Đơn vị máu của bạn đã được lưu trữ an toàn tại kho máu dự trữ để sẵn sàng cứu sống những bệnh nhân tiếp theo. Cảm ơn nghĩa cử cao đẹp của bạn!'
+            'Ca cấp cứu hiện đã ổn định nhờ sự hỗ trợ kịp thời. Đơn vị máu của bạn đã được lưu trữ an toàn tại kho máu dự trữ để sẵn sàng cứu sống những bệnh nhân tiếp theo. Cảm ơn nghĩa cử cao đẹp của bạn!',
         ];
-        $isOldOrEmpty = empty($existingJourney?->final_message) || in_array($existingJourney?->final_message, $oldFallbacks);
-
-        $aiFinalMessage = null;
-        if ($willComplete && (empty($existingJourney?->completed_at) || $isOldOrEmpty)) {
-            $commitment->loadMissing('donor');
-            $aiFinalMessage = $this->gratitudeService->generate(
-                [
-                    'donor_name' => $commitment->donor?->name,
-                    'blood_type' => $commitment->donor?->blood_type,
-                    'hospital_name' => $alert->hospital?->name,
-                    'destination_type' => $destinationTypePre,
-                ],
-                BloodJourney::finalMessageFor($destinationTypePre, $commitment->id),
-            );
-        }
+        $isOldOrEmpty = ! BloodJourney::hasCompleteFinalMessage($existingJourney?->final_message)
+            || in_array($existingJourney?->final_message, $oldFallbacks, true);
 
         $wasAlreadyCompleted = false;
-        $journey = DB::transaction(function () use ($alert, $commitment, $payload, $aiFinalMessage, $willComplete, $isFinalStep, $isOldOrEmpty, &$wasAlreadyCompleted): BloodJourney {
+        $journey = DB::transaction(function () use ($alert, $commitment, $payload, $willComplete, $isFinalStep, $isOldOrEmpty, &$wasAlreadyCompleted): BloodJourney {
             $history = DonationHistory::query()->findOrFail($commitment->donation_history_id);
             $journey = $this->ensureBloodJourney($alert, $commitment->loadMissing('donor'), $history, $payload['destination_type'] ?? null);
 
-            $wasAlreadyCompleted = !empty($journey->completed_at);
+            $wasAlreadyCompleted = ! empty($journey->completed_at);
 
             if (($payload['destination_type'] ?? $journey->destination_type) !== $journey->destination_type) {
                 $journey = $this->resetJourneySteps($journey, $payload['destination_type']);
@@ -415,7 +396,7 @@ class EmergencyController extends Controller
             $stepKey = $payload['current_step'] ?? $journey->current_step;
             abort_unless($stepKeys->contains($stepKey), 422);
 
-            if (!$destinationTypeChanged) {
+            if (! $destinationTypeChanged) {
                 $currentIndex = $stepKeys->search($journey->current_step);
                 $newIndex = $stepKeys->search($stepKey);
                 abort_if($newIndex < $currentIndex, 422, 'Không thể quay ngược lại bước hành trình cũ.');
@@ -423,9 +404,10 @@ class EmergencyController extends Controller
 
             $completedStepKeys = $stepKeys->take($stepKeys->search($stepKey) + 1);
 
-            // Ưu tiên lời cảm ơn AI vừa sinh; nếu không có, giữ nội dung đã lưu; cuối cùng rơi về mẫu tĩnh.
-            $finalMessage = $aiFinalMessage
-                ?? ($isOldOrEmpty ? BloodJourney::finalMessageFor($journey->destination_type, $commitment->id) : $journey->final_message);
+            // Thư cuối được phối hợp từ kho mẫu theo loại đích đến, không gọi dịch vụ AI bên ngoài.
+            $finalMessage = $isOldOrEmpty
+                ? BloodJourney::finalMessageFor($journey->destination_type, $commitment->id)
+                : $journey->final_message;
             $pulseLinkMessage = $journey->pulse_link_message
                 ?: $this->gratitudeCardService->pulseLinkMessageForJourney($journey);
             $gratitudeStyle = $journey->gratitude_style
@@ -443,12 +425,12 @@ class EmergencyController extends Controller
             $journey->steps()->whereIn('step_key', $completedStepKeys->all())->whereNull('occurred_at')->update(['occurred_at' => now()]);
             $journey->steps()->whereNotIn('step_key', $completedStepKeys->all())->update(['occurred_at' => null]);
 
-            if ($willComplete && !$wasAlreadyCompleted) {
+            if ($willComplete && ! $wasAlreadyCompleted) {
                 $this->createMobileNotification(
                     $journey->donor_id,
                     'blood_journey_completed',
                     'Thư cảm ơn từ hành trình giọt máu',
-                    $journey->final_message ?? BloodJourney::finalMessageFor($journey->destination_type, $commitment->id),
+                    $journey->resolvedFinalMessage(),
                     [
                         'blood_journey_id' => $journey->public_id,
                         'destination_type' => $journey->destination_type,

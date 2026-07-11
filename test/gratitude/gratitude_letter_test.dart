@@ -79,4 +79,35 @@ void main() {
     expect(letter!.source, GratitudeLetterSource.sosPulseLink);
     expect(letter.messages.single.sender, 'PulseLink');
   });
+
+  test('thư hành trình cũ bị cụt được thay bằng lời cảm ơn hoàn chỉnh', () {
+    final letter = GratitudeLetter.maybeFromNotification(
+      MobileNotification(
+        id: 'journey-completed-truncated',
+        type: 'blood_journey_completed',
+        title: 'Thư cảm ơn từ hành trình giọt máu',
+        body: 'Anh Trần Minh Quân ơi, cả nhà em',
+        createdAt: DateTime(2026, 7, 11),
+        payload: const {
+          'destination_type': 'patient',
+          'gratitude_card': {
+            'id': 'journey-truncated',
+            'source': 'sos_patient',
+            'messages': [
+              {
+                'sender': 'Người nhà bệnh nhân',
+                'title': 'Lời cảm ơn từ người nhà',
+                'body': 'Anh Trần Minh Quân ơi, cả nhà em',
+                'signature': 'Gia đình người nhận máu',
+              },
+            ],
+          },
+        },
+      ),
+    );
+
+    expect(letter, isNotNull);
+    expect(letter!.messages.single.body, isNot(contains('cả nhà em')));
+    expect(letter.messages.single.body, endsWith('.'));
+  });
 }

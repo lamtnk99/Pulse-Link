@@ -88,6 +88,18 @@ class MobileContractApiTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('data.removed', true);
+
+        $testPushResponse = $this->postJson("/api/mobile/me/notifications/test?user_id={$donor->id}")
+            ->assertOk();
+        $this->assertContains(
+            $testPushResponse->json('data.status'),
+            ['no_device', 'skipped'],
+        );
+
+        $this->assertDatabaseHas('mobile_notifications', [
+            'user_id' => $donor->id,
+            'type' => 'system_test',
+        ]);
     }
 
     public function test_mobile_donation_history_orders_same_day_records_by_issued_time(): void

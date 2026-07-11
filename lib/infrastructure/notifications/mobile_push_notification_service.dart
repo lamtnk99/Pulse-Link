@@ -96,6 +96,8 @@ class MobilePushNotificationService {
 
       var settings = await FirebaseMessaging.instance.getNotificationSettings();
       if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+        final androidAllowed = await _requestAndroidNotificationPermission();
+        if (androidAllowed == false) return;
         settings = await _requestSystemPermission();
       }
       if (_isAuthorized(settings.authorizationStatus)) {
@@ -113,6 +115,9 @@ class MobilePushNotificationService {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
+      await _initializeLocalNotifications();
+      final androidAllowed = await _requestAndroidNotificationPermission();
+      if (androidAllowed == false) return PushPermissionStatus.denied;
       final settings = await _requestSystemPermission();
       if (!_isAuthorized(settings.authorizationStatus)) {
         return PushPermissionStatus.denied;
@@ -135,6 +140,61 @@ class MobilePushNotificationService {
     return NotificationPreferences.fromJson(
       data is Map<String, dynamic> ? data : const <String, dynamic>{},
     );
+  }
+
+  Future<String> sendTestNotification() async {
+    final profile = _profile;
+    if (profile == null) {
+      throw StateError('Bạn cần đăng nhập trước khi kiểm tra thông báo.');
+    }
+    if (!isAvailable) {
+      throw StateError('Firebase chưa được bật cho bản ứng dụng này.');
+    }
+
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      await _initializeLocalNotifications();
+    } catch (error) {
+      throw StateError('Firebase chưa khởi tạo được trên thiết bị: $error');
+    }
+
+    final androidAllowed = await _requestAndroidNotificationPermission();
+    if (androidAllowed == false) {
+      throw StateError('Quyền thông báo đang bị tắt trong cài đặt thiết bị.');
+    }
+    final settings = await _requestSystemPermission();
+    if (!_isAuthorized(settings.authorizationStatus)) {
+      throw StateError('Quyền thông báo đang bị tắt trong cài đặt thiết bị.');
+    }
+
+    final token = await FirebaseMessaging.instance.getToken();
+    if (token == null || token.isEmpty) {
+      throw StateError('Thiết bị chưa lấy được FCM token.');
+    }
+    try {
+      await _registerToken(token);
+    } catch (error) {
+      throw StateError('Không đăng ký được FCM token với VPS: $error');
+    }
+
+    final Map<String, dynamic> response;
+    try {
+      response = await _apiClient.postJson(
+        '/api/mobile/me/notifications/test?user_id=${Uri.encodeComponent(profile.id)}',
+      );
+    } catch (error) {
+      throw StateError('VPS chưa chạy được kiểm tra Firebase: $error');
+    }
+    final data = response['data'];
+    final result = data is Map<String, dynamic> ? data : response;
+    final status = result['status']?.toString() ?? 'failed';
+    final message = result['message']?.toString() ??
+        'Không xác định được trạng thái gửi thông báo.';
+    if (status != 'sent') throw StateError(message);
+
+    return message;
   }
 
   Future<NotificationPreferences> savePreferences({
@@ -202,6 +262,14 @@ class MobilePushNotificationService {
       badge: true,
       sound: true,
     );
+  }
+
+  Future<bool?> _requestAndroidNotificationPermission() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return null;
+    final androidPlugin =
+        _localNotifications.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    return androidPlugin?.requestNotificationsPermission();
   }
 
   Future<void> _showForeground(RemoteMessage message) async {
