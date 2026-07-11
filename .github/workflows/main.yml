@@ -59,6 +59,12 @@ jobs:
         run: |
           mkdir -p ios/Runner
           echo -n "$GOOGLE_SERVICE_INFO" | base64 --decode -o ios/Runner/GoogleService-Info.plist
+          
+          PLIST_BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print BUNDLE_ID" ios/Runner/GoogleService-Info.plist || echo "")
+          if [ "$PLIST_BUNDLE_ID" != "${{ env.IOS_BUNDLE_ID }}" ]; then
+            echo "Error: BUNDLE_ID in GoogleService-Info.plist ($PLIST_BUNDLE_ID) does not match IOS_BUNDLE_ID (${{ env.IOS_BUNDLE_ID }})."
+            exit 1
+          fi
 
       - name: Ensure Flutter SDK is available
         run: |
@@ -106,6 +112,12 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN_PATH"
           security default-keychain -s "$KEYCHAIN_PATH"
           security import "$CERTIFICATE_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          
+          curl -s -O https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+          security import AppleWWDRCAG3.cer -k "$KEYCHAIN_PATH" -T /usr/bin/codesign || true
+          curl -s -O https://www.apple.com/certificateauthority/AppleWWDRCAG4.cer
+          security import AppleWWDRCAG4.cer -k "$KEYCHAIN_PATH" -T /usr/bin/codesign || true
+
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
           mkdir -p "$(dirname "$INSTALLED_PROFILE")"
