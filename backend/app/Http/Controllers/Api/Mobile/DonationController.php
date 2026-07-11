@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Api\Mobile;
 
-use App\Http\Controllers\Controller;
-use App\Models\DonationCampaign;
-use App\Models\CampaignDonation;
 use App\Events\CampaignProgressUpdated;
+use App\Http\Controllers\Controller;
+use App\Models\CampaignDonation;
+use App\Models\DonationCampaign;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class DonationController extends Controller
@@ -20,7 +20,7 @@ class DonationController extends Controller
             ->where('status', 'active')
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(fn($c) => $this->formatCampaign($c));
+            ->map(fn ($c) => $this->formatCampaign($c));
 
         return response()->json(['data' => $campaigns]);
     }
@@ -38,11 +38,11 @@ class DonationController extends Controller
             ->selectRaw('id, user_id, donor_name, is_anonymous, message, amount, points, created_at')
             ->orderByRaw('amount DESC, points DESC, created_at DESC')
             ->get()
-            ->groupBy(fn($d) => $d->user_id ?? 'guest-' . $d->id)
+            ->groupBy(fn ($d) => $d->user_id ?? 'guest-'.$d->id)
             ->map(function ($group) {
                 $first = $group->first();
                 $latestWithMessage = $group
-                    ->filter(fn($d) => filled($d->message))
+                    ->filter(fn ($d) => filled($d->message))
                     ->sortByDesc('created_at')
                     ->first();
 
@@ -63,15 +63,15 @@ class DonationController extends Controller
             'data' => [
                 'campaign' => $this->formatCampaign($campaign),
                 'leaderboard' => $leaderboard,
-            ]
+            ],
         ]);
     }
 
     public function donateCash(Request $request, $id): JsonResponse
     {
-        if (! config('services.app_store.cash_donation_enabled')) {
+        if (! config('services.donations.cash_enabled')) {
             return response()->json([
-                'message' => 'Tính năng quyên góp tiền đang tạm tắt trên bản App Store. Bạn vẫn có thể đồng hành bằng điểm Hero.',
+                'message' => 'Tính năng quyên góp tiền đang tạm tắt trên hệ thống. Bạn vẫn có thể đồng hành bằng điểm Hero.',
             ], 403);
         }
 
@@ -91,7 +91,7 @@ class DonationController extends Controller
         ]);
 
         $user = $request->user();
-        $transactionId = 'TXN-' . strtoupper(Str::random(12));
+        $transactionId = 'TXN-'.strtoupper(Str::random(12));
 
         $donation = CampaignDonation::create([
             'donation_campaign_id' => $campaign->id,
@@ -114,7 +114,7 @@ class DonationController extends Controller
                 'donation_id' => $donation->id,
                 'transaction_id' => $transactionId,
                 'payment_url' => $paymentUrl,
-            ]
+            ],
         ]);
     }
 
@@ -135,7 +135,7 @@ class DonationController extends Controller
         ]);
 
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json(['message' => 'Yêu cầu đăng nhập để quyên góp điểm.'], 401);
         }
 
@@ -163,7 +163,7 @@ class DonationController extends Controller
                 'points' => $points,
                 'payment_method' => 'points',
                 'payment_status' => 'success',
-                'transaction_id' => 'PTS-' . strtoupper(Str::random(12)),
+                'transaction_id' => 'PTS-'.strtoupper(Str::random(12)),
                 'donor_name' => ($payload['donor_name'] ?? null) ?: $user->name,
                 'message' => $payload['message'] ?? null,
                 'is_anonymous' => $payload['is_anonymous'] ?? false,
@@ -183,7 +183,7 @@ class DonationController extends Controller
             'data' => [
                 'donation_id' => $donation->id,
                 'remaining_points' => $user->fresh()->points,
-            ]
+            ],
         ]);
     }
 
@@ -228,7 +228,7 @@ class DonationController extends Controller
         return response()->json([
             'data' => [
                 'status' => $donation->payment_status,
-            ]
+            ],
         ]);
     }
 

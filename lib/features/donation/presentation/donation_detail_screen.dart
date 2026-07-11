@@ -746,11 +746,13 @@ class _DonationFormBottomSheet extends StatefulWidget {
 class _DonationFormBottomSheetState extends State<_DonationFormBottomSheet> {
   static const bool _cashDonationEnabledOnIos = bool.fromEnvironment(
     'APP_STORE_CASH_DONATION_ENABLED',
-    defaultValue: false,
+    // The current gateway is a simulation used by test builds. Disable this
+    // explicitly when producing the real App Store binary.
+    defaultValue: true,
   );
 
-  // Android builds use the Vietnamese payment gateways directly. iOS remains
-  // explicitly gated until the App Store fundraising/payment model is ready.
+  // Test builds expose the simulated gateway on both platforms. The iOS
+  // App Store build can turn it off through APP_STORE_CASH_DONATION_ENABLED.
   bool get _cashDonationEnabled =>
       defaultTargetPlatform != TargetPlatform.iOS || _cashDonationEnabledOnIos;
 

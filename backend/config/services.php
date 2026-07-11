@@ -41,8 +41,13 @@ return [
         'firestore_endpoint' => env('FIREBASE_FIRESTORE_ENDPOINT'),
     ],
 
-    'app_store' => [
-        'cash_donation_enabled' => env('APP_STORE_CASH_DONATION_ENABLED', false),
+    'donations' => [
+        // Cổng thanh toán phía backend dùng chung cho Android/web. Việc có hiển
+        // thị trên iOS được kiểm soát riêng ở Flutter khi build App Store.
+        'cash_enabled' => env(
+            'CASH_DONATION_ENABLED',
+            env('APP_STORE_CASH_DONATION_ENABLED', true),
+        ),
     ],
 
 ];

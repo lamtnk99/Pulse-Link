@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\DonationCampaign;
-use App\Models\CampaignDonation;
-use App\Models\User;
 use App\Events\CampaignProgressUpdated;
+use App\Models\CampaignDonation;
+use App\Models\DonationCampaign;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Tests\TestCase;
@@ -15,13 +15,18 @@ class DonationApiTest extends TestCase
     use RefreshDatabase;
 
     protected User $donor;
+
     protected User $admin;
+
     protected string $donorToken;
+
     protected string $adminToken;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        config(['services.donations.cash_enabled' => true]);
 
         // Create a donor
         $this->donor = User::factory()->create([
@@ -54,7 +59,7 @@ class DonationApiTest extends TestCase
         ]);
 
         $response = $this->getJson('/api/mobile/donation/campaigns', [
-            'Authorization' => 'Bearer ' . $this->donorToken,
+            'Authorization' => 'Bearer '.$this->donorToken,
         ]);
 
         $response->assertStatus(200)
@@ -83,8 +88,8 @@ class DonationApiTest extends TestCase
             'donor_name' => 'Donor A',
         ]);
 
-        $response = $this->getJson('/api/mobile/donation/campaigns/' . $campaign->public_id, [
-            'Authorization' => 'Bearer ' . $this->donorToken,
+        $response = $this->getJson('/api/mobile/donation/campaigns/'.$campaign->public_id, [
+            'Authorization' => 'Bearer '.$this->donorToken,
         ]);
 
         $response->assertStatus(200)
@@ -103,13 +108,13 @@ class DonationApiTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->postJson('/api/mobile/donation/campaigns/' . $campaign->public_id . '/donate-points', [
+        $response = $this->postJson('/api/mobile/donation/campaigns/'.$campaign->public_id.'/donate-points', [
             'points' => 200,
             'donor_name' => 'Hero Helper',
             'message' => 'Keep it up!',
             'is_anonymous' => false,
         ], [
-            'Authorization' => 'Bearer ' . $this->donorToken,
+            'Authorization' => 'Bearer '.$this->donorToken,
         ]);
 
         $response->assertStatus(200)
@@ -138,10 +143,10 @@ class DonationApiTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->postJson('/api/mobile/donation/campaigns/' . $campaign->public_id . '/donate-points', [
+        $response = $this->postJson('/api/mobile/donation/campaigns/'.$campaign->public_id.'/donate-points', [
             'points' => 5000, // donor only has 1000 Pts
         ], [
-            'Authorization' => 'Bearer ' . $this->donorToken,
+            'Authorization' => 'Bearer '.$this->donorToken,
         ]);
 
         $response->assertStatus(422)
@@ -157,14 +162,14 @@ class DonationApiTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->postJson('/api/mobile/donation/campaigns/' . $campaign->public_id . '/donate-cash', [
+        $response = $this->postJson('/api/mobile/donation/campaigns/'.$campaign->public_id.'/donate-cash', [
             'amount' => 500000,
             'payment_method' => 'vnpay',
             'donor_name' => 'Anonymous Donor',
             'message' => 'Get well soon',
             'is_anonymous' => true,
         ], [
-            'Authorization' => 'Bearer ' . $this->donorToken,
+            'Authorization' => 'Bearer '.$this->donorToken,
         ]);
 
         $response->assertStatus(200)
@@ -179,6 +184,28 @@ class DonationApiTest extends TestCase
         ]);
     }
 
+    public function test_cash_donation_can_be_disabled_without_affecting_points(): void
+    {
+        config(['services.donations.cash_enabled' => false]);
+        $campaign = DonationCampaign::create([
+            'title' => 'Disabled Cash Fund',
+            'description' => 'Cash gateway is disabled',
+            'status' => 'active',
+        ]);
+
+        $this->postJson('/api/mobile/donation/campaigns/'.$campaign->public_id.'/donate-cash', [
+            'amount' => 500000,
+            'payment_method' => 'vnpay',
+        ], [
+            'Authorization' => 'Bearer '.$this->donorToken,
+        ])
+            ->assertForbidden()
+            ->assertJsonPath(
+                'message',
+                'Tính năng quyên góp tiền đang tạm tắt trên hệ thống. Bạn vẫn có thể đồng hành bằng điểm Hero.',
+            );
+    }
+
     public function test_donor_can_donate_cash_without_optional_fields()
     {
         $campaign = DonationCampaign::create([
@@ -188,11 +215,11 @@ class DonationApiTest extends TestCase
             'status' => 'active',
         ]);
 
-        $response = $this->postJson('/api/mobile/donation/campaigns/' . $campaign->public_id . '/donate-cash', [
+        $response = $this->postJson('/api/mobile/donation/campaigns/'.$campaign->public_id.'/donate-cash', [
             'amount' => 500000,
             'payment_method' => 'vnpay',
         ], [
-            'Authorization' => 'Bearer ' . $this->donorToken,
+            'Authorization' => 'Bearer '.$this->donorToken,
         ]);
 
         $response->assertStatus(200);
@@ -265,7 +292,7 @@ class DonationApiTest extends TestCase
         ]);
 
         $response = $this->getJson('/api/mobile/donation/transactions/TXN-CHECKSTATUS/status', [
-            'Authorization' => 'Bearer ' . $this->donorToken,
+            'Authorization' => 'Bearer '.$this->donorToken,
         ]);
 
         $response->assertStatus(200)
@@ -281,7 +308,7 @@ class DonationApiTest extends TestCase
             'target_amount' => 20000000,
             'target_points' => 2000,
         ], [
-            'Authorization' => 'Bearer ' . $this->adminToken,
+            'Authorization' => 'Bearer '.$this->adminToken,
         ]);
 
         $response->assertStatus(211); // Custom create status or 201
@@ -294,17 +321,17 @@ class DonationApiTest extends TestCase
         $campaignId = DonationCampaign::query()->first()->id;
 
         // 2. View transactions
-        $txResponse = $this->getJson('/api/admin/campaigns/' . $campaignId . '/transactions', [
-            'Authorization' => 'Bearer ' . $this->adminToken,
+        $txResponse = $this->getJson('/api/admin/campaigns/'.$campaignId.'/transactions', [
+            'Authorization' => 'Bearer '.$this->adminToken,
         ]);
         $txResponse->assertStatus(200);
 
         // 3. Update campaign
-        $updateResponse = $this->putJson('/api/admin/campaigns/' . $campaignId, [
+        $updateResponse = $this->putJson('/api/admin/campaigns/'.$campaignId, [
             'title' => 'Updated Admin Campaign',
             'status' => 'completed',
         ], [
-            'Authorization' => 'Bearer ' . $this->adminToken,
+            'Authorization' => 'Bearer '.$this->adminToken,
         ]);
         $updateResponse->assertStatus(200);
         $this->assertDatabaseHas('donation_campaigns', [
@@ -314,8 +341,8 @@ class DonationApiTest extends TestCase
         ]);
 
         // 4. Delete campaign
-        $deleteResponse = $this->deleteJson('/api/admin/campaigns/' . $campaignId, [], [
-            'Authorization' => 'Bearer ' . $this->adminToken,
+        $deleteResponse = $this->deleteJson('/api/admin/campaigns/'.$campaignId, [], [
+            'Authorization' => 'Bearer '.$this->adminToken,
         ]);
         $deleteResponse->assertStatus(200);
         $this->assertDatabaseMissing('donation_campaigns', [
