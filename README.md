@@ -57,7 +57,7 @@ Các định hướng phát triển chính:
 
 - Tích hợp xác thực người dùng, hồ sơ y tế cơ bản và quy trình xác minh danh tính người hiến.
 - Kết nối dữ liệu kho máu thật từ bệnh viện và trung tâm truyền máu để nâng cao độ chính xác của dự báo AI.
-- Mở rộng hệ thống thông báo đa kênh qua push notification, SMS, email hoặc các nền tảng nhắn tin phổ biến.
+- Duy trì FCM push notification cho Android/iOS; tiếp tục mở rộng sang SMS, email hoặc các nền tảng nhắn tin phổ biến khi vận hành chính thức.
 - Tối ưu thuật toán ghép nối người hiến dựa trên nhóm máu, khoảng cách, lịch sử hiến, thời gian hồi phục và khả năng đáp ứng.
 - Xây dựng bản đồ điều phối vùng, giúp theo dõi năng lực đáp ứng máu theo khu vực và hỗ trợ quyết định trong thiên tai, dịch bệnh hoặc sự cố hàng loạt.
 - Phát triển hệ thống tri ân, chứng nhận số và báo cáo tác động để duy trì cộng đồng người hiến lâu dài.
@@ -97,7 +97,7 @@ Pulse Link là hệ sinh thái hiến máu gồm Mobile Flutter, Backend Laravel
 
 Thư mục chính:
 
-- `lib/app`: bootstrap, config dart-define, Firebase optional.
+- `lib/app`: bootstrap, config `dart-define`, Firebase/FCM và điều phối state toàn ứng dụng.
 - `lib/features/daily`: Daily Mode, Hero Pass, sự kiện, bài viết, lịch đặt, lịch sử.
 - `lib/features/sos`: SOS Mode, hold-to-confirm, route plan, trạng thái khẩn cấp.
 - `lib/shared`: theme, widgets, models/repositories dùng chung.
@@ -597,8 +597,8 @@ Các giả định vẫn đang giữ:
 - Chưa có login/auth thật.
 - Demo identity dùng `admin_user_id`, `X-Admin-User-Id`, hoặc resolver mặc định.
 - Mobile donor identity vẫn dùng `user_id` optional hoặc donor mặc định.
-- Firebase/Firebase Cloud Messaging có adapter nhưng config thật chưa bắt buộc cho demo local.
-- SOS realtime Admin dùng Reverb; Mobile Web Firebase listener optional.
+- Firebase Cloud Messaging đã có luồng thiết bị, gửi thử và gửi nền cho mobile. Local demo có thể tắt FCM, nhưng môi trường production cần service account Firebase hợp lệ.
+- SOS realtime Admin/Mobile dùng Reverb độc lập; lỗi FCM không được làm gián đoạn broadcast realtime.
 
 ## Handoff Cho Agent Mới
 
@@ -720,3 +720,41 @@ Trạng thái triển khai:
   - Tích hợp tab **Quản lý Quyên góp** trên sidebar admin sử dụng biểu tượng `HeartHandshake`.
   - Hiển thị thống kê tổng dòng tiền mặt VND và điểm Hero đã thu nhận toàn hệ thống.
   - Form CRUD đầy đủ cho chiến dịch và cửa sổ xem chi tiết lịch sử giao dịch quyên góp từ donors.
+
+## Cập nhật vận hành 2026-07-11
+
+### Thông báo mobile và realtime
+
+- Mobile đăng ký FCM token qua `POST /api/mobile/me/notification-devices`; thiết bị có thể được gỡ đăng ký khi logout hoặc token không còn hợp lệ.
+- API `POST /api/mobile/me/notifications/test` cho phép người dùng tự kiểm tra push notification sau khi cấp quyền thông báo.
+- Backend lưu notification, phát event Reverb trước, rồi đưa FCM sang queue `DispatchMobilePushNotification`. Khi Firebase lỗi hoặc service account không đọc được, Reverb/SOS vẫn tiếp tục hoạt động.
+- Production cần cấu hình `FIREBASE_PROJECT_ID` và `FIREBASE_SERVICE_ACCOUNT_PATH` trỏ tới JSON service account mà user chạy PHP/queue có quyền đọc. Không đưa JSON service account vào Git.
+- Queue worker và scheduler phải chạy liên tục trên VPS để gửi push theo lịch chăm sóc sau hiến, SOS và các thông báo hệ thống.
+
+### App Store, quyền riêng tư và tài khoản
+
+- Mobile có màn **Tài khoản & quyền riêng tư**, mở được chính sách quyền riêng tư, điều khoản sử dụng, hỗ trợ và hướng dẫn xóa tài khoản.
+- Laravel cung cấp các URL public không yêu cầu đăng nhập: `/legal/privacy`, `/legal/terms`, `/legal/delete-account` và `/support`.
+- `DELETE /api/mobile/me/account` xóa dữ liệu cá nhân/tokens/thiết bị liên quan và ẩn danh các bản ghi cần giữ để thống kê hoặc đối soát.
+- Bản iOS hiện dùng bundle identifier `com.pulselinkvn.app`. Cần dùng đúng `GoogleService-Info.plist` của Firebase app có bundle identifier này; Android vẫn dùng `asia.pulselink.app`.
+
+### Thư tri ân và hành trình giọt máu
+
+- Thư cảm ơn ngay sau khi hiến được gửi từ Pulse Link; khi hành trình SOS hoàn tất, thư chuyển thành lời cảm ơn từ người nhà bệnh nhân hoặc bệnh viện tùy kịch bản truyền máu/dự trữ.
+- Nội dung và giao diện thư được chọn từ nhiều mẫu có sẵn trong hệ thống, không phụ thuộc lời gọi AI bên ngoài. Thư đã đọc vẫn có thể mở lại từ Sổ hiến.
+- Người hiến có thể lưu thiệp thành ảnh và chia sẻ qua ứng dụng có sẵn trên thiết bị.
+
+### Quyên góp mô phỏng
+
+- Luồng quyên góp tiền mặt là **cổng thanh toán mô phỏng**, không thu hoặc chuyển tiền thật. Backend điều khiển bằng `CASH_DONATION_ENABLED`; điểm Hero vẫn là một luồng riêng.
+- Bản test Android/iOS có thể bật giao diện mô phỏng. Khi đóng trang chi tiết chiến dịch, card ở Trang chủ và danh sách chiến dịch tự tải lại tiến độ; chiến dịch mới `0%` hiển thị thanh trống ổn định, không dùng animation loading.
+- Nếu phát hành public trên App Store trước khi có mô hình quyên góp hợp lệ, build iOS có thể tắt tab tiền mặt bằng `--dart-define=APP_STORE_CASH_DONATION_ENABLED=false`.
+
+### Lệnh build APK production
+
+```powershell
+flutter build apk --release `
+  --dart-define=USE_MOCK_SERVICES=false `
+  --dart-define=LARAVEL_API_BASE_URL=https://api.pulselink.asia `
+  --dart-define=FIREBASE_PUSH_ENABLED=true
+```
