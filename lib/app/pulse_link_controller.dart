@@ -165,6 +165,14 @@ class PulseLinkController extends ChangeNotifier {
       );
       notifyListeners();
 
+      unawaited(
+        _pushNotificationService?.start(
+              profile: profile,
+              onNotificationOpened: _handlePushNotificationOpened,
+            ) ??
+            Future<void>.value(),
+      );
+
       await _restoreActiveEmergencyMission(profile);
       await _checkAndShowUnacknowledgedJourney();
 
@@ -180,13 +188,6 @@ class PulseLinkController extends ChangeNotifier {
       _notificationSubscription = _emergencySignalService
           .watchNotifications(profile: profile)
           .listen(_handleMobileNotification);
-      unawaited(
-        _pushNotificationService?.start(
-              profile: profile,
-              onNotificationOpened: _handlePushNotificationOpened,
-            ) ??
-            Future<void>.value(),
-      );
     } catch (error) {
       if (error is LaravelApiException && error.statusCode == 401) {
         await logout();
@@ -282,6 +283,13 @@ class PulseLinkController extends ChangeNotifier {
     final service = _pushNotificationService;
     if (profile == null || service == null) return preferences;
     return service.savePreferences(profile: profile, preferences: preferences);
+  }
+
+  bool get pushNotificationsAvailable =>
+      _pushNotificationService?.isAvailable ?? false;
+
+  Future<bool> hasPushPermission() async {
+    return _pushNotificationService?.hasPermission() ?? false;
   }
 
   Future<PushPermissionStatus> requestPushPermission() async {

@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/enums/app_mode.dart';
 import '../core/enums/app_theme_preference.dart';
@@ -10,6 +13,7 @@ import '../features/emergency/presentation/sos_mode_screen.dart';
 import '../features/gratitude/domain/gratitude_letter.dart';
 import '../features/gratitude/presentation/gratitude_letter_screen.dart';
 import '../features/profile/presentation/hero_level_up_screen.dart';
+import '../infrastructure/notifications/mobile_push_notification_service.dart';
 import 'pulse_link_controller.dart';
 import 'pulse_link_state.dart';
 
@@ -27,6 +31,14 @@ class PulseLinkApp extends StatefulWidget {
 
 class _PulseLinkAppState extends State<PulseLinkApp>
     with WidgetsBindingObserver {
+  static const _notificationPromptSeenKey =
+      'notification_permission_intro_seen_v1';
+
+  final _navigatorKey = GlobalKey<NavigatorState>();
+  final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+  bool _notificationPromptCheckRunning = false;
+  bool _notificationPromptHandled = false;
+
   @override
   void initState() {
     super.initState();
@@ -54,8 +66,11 @@ class _PulseLinkAppState extends State<PulseLinkApp>
       animation: widget.controller,
       builder: (context, _) {
         final state = widget.controller.state;
+        _considerNotificationPermissionPrompt(state);
 
         return MaterialApp(
+          navigatorKey: _navigatorKey,
+          scaffoldMessengerKey: _scaffoldMessengerKey,
           debugShowCheckedModeBanner: false,
           title: 'Pulse Link',
           theme: PulseLinkTheme.themeForMode(
@@ -75,6 +90,99 @@ class _PulseLinkAppState extends State<PulseLinkApp>
           ),
         );
       },
+    );
+  }
+
+  void _considerNotificationPermissionPrompt(PulseLinkState state) {
+    if (_notificationPromptHandled ||
+        _notificationPromptCheckRunning ||
+        !widget.controller.pushNotificationsAvailable ||
+        state.isLoading ||
+        state.profile == null ||
+        state.activeMode != AppMode.daily ||
+        state.pendingLevelUp != null ||
+        state.activeGratitudeLetter != null ||
+        state.activeLiveBloodJourney != null) {
+      return;
+    }
+
+    _notificationPromptCheckRunning = true;
+    unawaited(_prepareNotificationPermissionPrompt());
+  }
+
+  Future<void> _prepareNotificationPermissionPrompt() async {
+    final prefs = await SharedPreferences.getInstance();
+    final alreadyHandled = prefs.getBool(_notificationPromptSeenKey) ?? false;
+    final alreadyGranted = await widget.controller.hasPushPermission();
+
+    if (!mounted) return;
+    _notificationPromptCheckRunning = false;
+    if (alreadyHandled || alreadyGranted) {
+      _notificationPromptHandled = true;
+      if (alreadyGranted && !alreadyHandled) {
+        await prefs.setBool(_notificationPromptSeenKey, true);
+      }
+      return;
+    }
+
+    _notificationPromptHandled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_showNotificationPermissionPrompt(prefs));
+    });
+  }
+
+  Future<void> _showNotificationPermissionPrompt(
+    SharedPreferences prefs,
+  ) async {
+    final dialogContext = _navigatorKey.currentContext;
+    if (!mounted || dialogContext == null) {
+      _notificationPromptHandled = false;
+      return;
+    }
+
+    final shouldEnable = await showDialog<bool>(
+      context: dialogContext,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        icon: const Icon(
+          Icons.notifications_active_outlined,
+          color: PulseLinkTheme.primaryRed,
+          size: 34,
+        ),
+        title: const Text(
+          'Không bỏ lỡ lời kêu gọi SOS',
+          textAlign: TextAlign.center,
+        ),
+        content: const Text(
+          'Bật thông báo để Pulse Link báo ngay khi bệnh viện cần nhóm máu phù hợp, nhắc lịch hiến và gửi hướng dẫn chăm sóc sau hiến.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Để sau'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.of(context).pop(true),
+            icon: const Icon(Icons.notifications_outlined),
+            label: const Text('Bật thông báo'),
+          ),
+        ],
+      ),
+    );
+
+    await prefs.setBool(_notificationPromptSeenKey, true);
+    if (shouldEnable != true || !mounted) return;
+
+    final status = await widget.controller.requestPushPermission();
+    if (!mounted || status == PushPermissionStatus.granted) return;
+
+    final message = status == PushPermissionStatus.denied
+        ? 'Bạn có thể bật thông báo sau trong Hồ sơ hoặc Cài đặt thiết bị.'
+        : 'Chưa thể bật Firebase push trên thiết bị này.';
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 

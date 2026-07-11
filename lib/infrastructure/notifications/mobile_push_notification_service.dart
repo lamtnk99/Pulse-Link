@@ -52,6 +52,7 @@ class MobilePushNotificationService {
   StreamSubscription<String>? _tokenRefreshSubscription;
   StreamSubscription<RemoteMessage>? _foregroundSubscription;
   StreamSubscription<RemoteMessage>? _openedSubscription;
+  Future<void>? _pendingTokenRegistration;
   DonorProfile? _profile;
   ValueChanged<Map<String, dynamic>>? _onNotificationOpened;
   bool _initialized = false;
@@ -94,18 +95,28 @@ class MobilePushNotificationService {
           await FirebaseMessaging.instance.getInitialMessage();
       if (initialMessage != null) _handleOpenedMessage(initialMessage);
 
-      var settings = await FirebaseMessaging.instance.getNotificationSettings();
-      if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
-        final androidAllowed = await _requestAndroidNotificationPermission();
-        if (androidAllowed == false) return;
-        settings = await _requestSystemPermission();
-      }
+      final settings =
+          await FirebaseMessaging.instance.getNotificationSettings();
       if (_isAuthorized(settings.authorizationStatus)) {
-        final token = await FirebaseMessaging.instance.getToken();
-        if (token != null) await _registerToken(token);
+        _scheduleTokenRegistration();
       }
     } catch (error) {
       debugPrint('PulseLink push: Firebase chưa sẵn sàng: $error');
+    }
+  }
+
+  Future<bool> hasPermission() async {
+    if (!isAvailable) return false;
+    try {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      final settings =
+          await FirebaseMessaging.instance.getNotificationSettings();
+      return _isAuthorized(settings.authorizationStatus);
+    } catch (error) {
+      debugPrint('PulseLink push: chưa đọc được quyền thông báo: $error');
+      return false;
     }
   }
 
@@ -123,8 +134,7 @@ class MobilePushNotificationService {
         return PushPermissionStatus.denied;
       }
 
-      final token = await FirebaseMessaging.instance.getToken();
-      if (token != null) await _registerToken(token);
+      _scheduleTokenRegistration();
       return PushPermissionStatus.granted;
     } catch (error) {
       debugPrint('PulseLink push: không xin được quyền: $error');
@@ -169,9 +179,14 @@ class MobilePushNotificationService {
       throw StateError('Quyền thông báo đang bị tắt trong cài đặt thiết bị.');
     }
 
-    final token = await FirebaseMessaging.instance.getToken();
+    final token = await _getFcmToken();
     if (token == null || token.isEmpty) {
-      throw StateError('Thiết bị chưa lấy được FCM token.');
+      throw StateError(
+        defaultTargetPlatform == TargetPlatform.iOS
+            ? 'iPhone chưa nhận được APNs token. Hãy kiểm tra Push Notifications, '
+                'APNs key trên Firebase và provisioning profile rồi mở lại ứng dụng.'
+            : 'Thiết bị chưa lấy được FCM token.',
+      );
     }
     try {
       await _registerToken(token);
@@ -227,7 +242,9 @@ class MobilePushNotificationService {
     final profile = _profile;
     if (!isAvailable || profile == null) return;
     try {
-      final token = await FirebaseMessaging.instance.getToken();
+      final token = await _getFcmToken(
+        apnsTimeout: const Duration(seconds: 2),
+      );
       if (token != null) {
         await _apiClient.deleteJson(
           '/api/mobile/me/notification-devices?user_id=${Uri.encodeComponent(profile.id)}',
@@ -313,6 +330,61 @@ class MobilePushNotificationService {
 
   void _handleOpenedMessage(RemoteMessage message) {
     _onNotificationOpened?.call(Map<String, dynamic>.from(message.data));
+  }
+
+  void _scheduleTokenRegistration() {
+    if (_pendingTokenRegistration != null) return;
+
+    final registration = _registerCurrentToken();
+    _pendingTokenRegistration = registration;
+    unawaited(
+      registration.whenComplete(() {
+        if (identical(_pendingTokenRegistration, registration)) {
+          _pendingTokenRegistration = null;
+        }
+      }),
+    );
+  }
+
+  Future<void> _registerCurrentToken() async {
+    try {
+      final token = await _getFcmToken();
+      if (token != null && token.isNotEmpty) {
+        await _registerToken(token);
+      } else {
+        debugPrint(
+          'PulseLink push: APNs/FCM token chưa sẵn sàng, sẽ đăng ký lại '
+          'khi Firebase làm mới token.',
+        );
+      }
+    } catch (error) {
+      debugPrint('PulseLink push: chưa đăng ký được token thiết bị: $error');
+    }
+  }
+
+  Future<String?> _getFcmToken({
+    Duration apnsTimeout = const Duration(seconds: 15),
+  }) async {
+    final messaging = FirebaseMessaging.instance;
+
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final deadline = DateTime.now().add(apnsTimeout);
+      String? apnsToken;
+      do {
+        apnsToken = await messaging.getAPNSToken();
+        if (apnsToken != null && apnsToken.isNotEmpty) break;
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+      } while (DateTime.now().isBefore(deadline));
+
+      if (apnsToken == null || apnsToken.isEmpty) return null;
+    }
+
+    try {
+      return await messaging.getToken();
+    } on FirebaseException catch (error) {
+      if (error.code == 'apns-token-not-set') return null;
+      rethrow;
+    }
   }
 
   Future<void> _registerToken(String token) async {
