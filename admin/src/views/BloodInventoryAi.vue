@@ -8,10 +8,12 @@ import {
   Database,
   Droplet,
   FileText,
+  History,
   ImagePlus,
   Loader2,
   Plus,
   RefreshCw,
+  Save,
   Search,
   Sliders,
   Sparkles,
@@ -69,6 +71,15 @@ const showAiEventModal = ref(false)
 const provinces = ref<any[]>([])
 const wards = ref<any[]>([])
 const hospitals = ref<any[]>([])
+
+const bloodTypeOrder = ['A-', 'A+', 'AB-', 'AB+', 'B-', 'B+', 'O-', 'O+']
+
+const orderedThresholds = computed(() => [...thresholds.value].sort((left, right) => {
+  return bloodTypeOrder.indexOf(left.blood_type) - bloodTypeOrder.indexOf(right.blood_type)
+}))
+
+const activeSmartAlerts = computed(() => smartAlerts.value.filter((alert) => alert.status === 'active'))
+const resolvedSmartAlerts = computed(() => smartAlerts.value.filter((alert) => alert.status !== 'active'))
 
 const aiEventForm = ref({
   hospitalId: null as number | null,
@@ -548,10 +559,58 @@ async function submitMobilization() {
   }
 }
 
+function parseDate(value: string, useDateOnly = false) {
+  const datePart = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
+  const normalized = useDateOnly && datePart
+    ? `${datePart}T12:00:00`
+    : value.includes(' ') ? value.replace(' ', 'T') : value
+  const parsed = new Date(normalized)
+
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function formatInventoryDate(value: string) {
+  const date = parseDate(value, true)
+  if (!date) return 'Chưa xác định'
+
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).format(date)
+}
+
+function formatAlertDateTime(value?: string | null) {
+  if (!value) return null
+  const date = parseDate(value)
+  if (!date) return null
+
+  const time = new Intl.DateTimeFormat('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date)
+
+  return `${time} ${formatInventoryDate(value)}`
+}
+
+function alertStatusLabel(status: SmartAlert['status']) {
+  if (status === 'resolved') return 'Đã khắc phục'
+  if (status === 'mobilized') return 'Đã huy động'
+  return 'Đang xảy ra'
+}
+
+function alertStatusClass(status: SmartAlert['status']) {
+  if (status === 'resolved') return 'bg-emerald-100 text-emerald-700'
+  if (status === 'mobilized') return 'bg-blue-100 text-blue-700'
+  return 'bg-red-100 text-red-700'
+}
+
 // Helper: Phân tích màu cho ngày hết hạn
 function getExpiryColorClass(expiryDate: string, status: string) {
   if (status !== 'available') return 'text-slate-400'
-  const exp = new Date(expiryDate)
+  const exp = parseDate(expiryDate, true)
+  if (!exp) return 'text-slate-400'
   const today = new Date()
   const diffTime = exp.getTime() - today.getTime()
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -563,7 +622,8 @@ function getExpiryColorClass(expiryDate: string, status: string) {
 
 function getExpiryLabel(expiryDate: string, status: string) {
   if (status !== 'available') return status === 'used' ? 'Đã dùng' : 'Đã hủy'
-  const exp = new Date(expiryDate)
+  const exp = parseDate(expiryDate, true)
+  if (!exp) return 'Không xác định'
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   exp.setHours(0, 0, 0, 0)
@@ -872,11 +932,11 @@ onMounted(async () => {
                     </span>
                   </td>
                   <td class="p-4 font-mono">{{ formatVolume(bag.volume_ml) }}</td>
-                  <td class="p-4 text-slate-500">{{ bag.received_date }}</td>
+                  <td class="p-4 text-slate-500 whitespace-nowrap">{{ formatInventoryDate(bag.received_date) }}</td>
                   <td class="p-4">
                     <div class="flex flex-col">
-                      <span :class="getExpiryColorClass(bag.expiry_date, bag.status)">
-                        {{ bag.expiry_date }}
+                      <span class="whitespace-nowrap" :class="getExpiryColorClass(bag.expiry_date, bag.status)">
+                        {{ formatInventoryDate(bag.expiry_date) }}
                       </span>
                       <span class="text-[10px] text-slate-400 font-normal">
                         ({{ getExpiryLabel(bag.expiry_date, bag.status) }})
@@ -1196,116 +1256,145 @@ onMounted(async () => {
       </div>
 
       <!-- Tab 3: Smart Alerts & Mobilization -->
-      <div v-else-if="currentTab === 'alerts'" class="grid gap-6 lg:grid-cols-[380px_1fr]">
-        <!-- Threshold config panel -->
-        <div class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm flex flex-col justify-between">
-          <div>
-            <h3 class="text-base font-black text-slate-950 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
-              <Sliders class="h-4.5 w-4.5 text-[#E31837]" />
-              Ngưỡng an toàn tối thiểu
-            </h3>
-            <p class="text-xs text-slate-500 mb-6">Chỉnh sửa ngưỡng số đơn vị (túi) tối thiểu dự phòng để tự động kích hoạt cảnh báo thông minh.</p>
-            
-            <div class="space-y-3 max-h-[350px] overflow-y-auto pr-1">
-              <div v-for="t in thresholds" :key="t.id" class="flex items-center justify-between border-b border-slate-50 pb-2">
-                <span class="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                  🩸 {{ t.blood_type }}
-                </span>
-                <div class="flex items-center gap-2">
-                  <input
-                    type="number"
-                    v-model="t.min_units"
-                    min="0"
-                    max="150"
-                    class="w-16 h-8 text-center rounded border border-slate-200 text-xs font-black text-slate-800 outline-none focus:border-[#E31837]"
-                  />
-                  <span class="text-[10px] text-slate-400 font-bold">đv</span>
-                </div>
-              </div>
+      <div v-else-if="currentTab === 'alerts'" class="space-y-6">
+        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div class="flex flex-col gap-4 border-b border-slate-100 pb-5 md:flex-row md:items-start md:justify-between">
+            <div>
+              <h3 class="flex items-center gap-2 text-base font-black text-slate-950">
+                <Sliders class="h-5 w-5 text-[#E31837]" />
+                Ngưỡng an toàn tối thiểu
+              </h3>
+              <p class="mt-1 text-xs text-slate-500">Thiết lập số đơn vị dự phòng tối thiểu để hệ thống tự động kích hoạt cảnh báo.</p>
             </div>
-          </div>
-
-          <button
-            @click="handleSaveThresholds"
-            :disabled="isSaving"
-            class="w-full h-11 bg-[#E31837] hover:bg-red-700 text-white font-black text-xs uppercase tracking-wider rounded-lg active:scale-[0.98] transition disabled:opacity-50 mt-6 cursor-pointer"
-          >
-            {{ isSaving ? 'Đang lưu...' : 'LƯU THIẾT LẬP NGƯỠNG' }}
-          </button>
-        </div>
-
-        <!-- Smart Alerts Timeline -->
-        <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div>
-            <h3 class="text-base font-black text-slate-950">Lịch sử cảnh báo & Hoạt động huy động</h3>
-            <p class="text-xs text-slate-500 mt-1">Lịch sử phát hiện cạn kiệt nguồn cung máu từ hệ thống và tiến trình huy động tình nguyện viên.</p>
-          </div>
-
-          <div class="mt-6 space-y-4 max-h-[500px] overflow-y-auto pr-2">
-            <article
-              v-for="alert in smartAlerts"
-              :key="alert.id"
-              class="rounded-xl border p-4 transition"
-              :class="{
-                'border-red-100 bg-red-50/50 shadow-sm': alert.status === 'active',
-                'border-slate-200 bg-slate-50/20': alert.status !== 'active'
-              }"
+            <button
+              @click="handleSaveThresholds"
+              :disabled="isSaving"
+              class="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#E31837] px-4 text-xs font-black uppercase tracking-wide text-white transition hover:bg-red-700 active:scale-[0.98] disabled:opacity-50"
             >
-              <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="grid h-10 w-10 place-items-center rounded-lg font-black text-sm"
-                    :class="{
-                      'bg-red-100 text-[#E31837]': alert.status === 'active',
-                      'bg-slate-200 text-slate-600': alert.status !== 'active'
-                    }"
-                  >
-                    {{ alert.blood_type }}
-                  </div>
-                  <div>
-                    <h4 class="text-xs font-black text-slate-900">
-                      Cảnh báo tồn kho dưới ngưỡng an toàn tối thiểu
-                    </h4>
-                    <p class="text-[11px] font-semibold text-slate-500 mt-0.5">
-                      Thực tế: <span class="text-red-600 font-bold">{{ alert.current_units }} đv</span> / Yêu cầu: {{ alert.threshold_units }} đv.
-                    </p>
-                  </div>
-                </div>
-
-                <div class="flex items-center gap-2">
-                  <span
-                    class="rounded-full px-2.5 py-0.5 text-[9px] font-black uppercase"
-                    :class="{
-                      'bg-red-100 text-red-700 animate-pulse': alert.status === 'active',
-                      'bg-emerald-100 text-emerald-700': alert.status === 'resolved',
-                      'bg-blue-100 text-blue-700': alert.status === 'mobilized'
-                    }"
-                  >
-                    {{ alert.status === 'active' ? 'Đang xảy ra' : alert.status === 'resolved' ? 'Đã khắc phục' : 'Đang huy động' }}
-                  </span>
-                  
-                  <button
-                    v-if="alert.status === 'active'"
-                    @click="openMobilization(alert)"
-                    :disabled="alertLoading"
-                    class="rounded bg-[#E31837] hover:bg-red-700 px-3 py-1.5 text-[10px] font-bold text-white transition active:scale-95 cursor-pointer disabled:opacity-50 flex items-center gap-1"
-                  >
-                    <Loader2 v-if="alertLoading" class="h-3 w-3 animate-spin" />
-                    Kích hoạt huy động
-                  </button>
-                </div>
-              </div>
-
-              <div class="mt-3 flex items-center justify-between text-[10px] text-slate-400 font-bold border-t border-slate-100 pt-2.5">
-                <span>Thời điểm kích hoạt: {{ new Date(alert.triggered_at).toLocaleString('vi-VN') }}</span>
-                <span v-if="alert.resolved_at">Khắc phục lúc: {{ new Date(alert.resolved_at).toLocaleString('vi-VN') }}</span>
-              </div>
-            </article>
-
-            <p v-if="smartAlerts.length === 0" class="text-center text-slate-400 italic p-12">
-              Chưa ghi nhận cảnh báo khan hiếm nào từ hệ thống.
-            </p>
+              <Save class="h-4 w-4" />
+              {{ isSaving ? 'Đang lưu...' : 'Lưu thiết lập ngưỡng' }}
+            </button>
           </div>
+
+          <div class="mt-5 grid grid-cols-2 divide-x divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-100 sm:grid-cols-4 2xl:grid-cols-8">
+            <label v-for="threshold in orderedThresholds" :key="threshold.id" class="min-w-0 p-3.5">
+              <span class="flex items-center gap-1.5 text-xs font-black text-slate-800">
+                <Droplet class="h-4 w-4 fill-[#E31837] text-[#E31837]" />
+                {{ threshold.blood_type }}
+              </span>
+              <span class="mt-2 flex items-center gap-1.5">
+                <input
+                  v-model.number="threshold.min_units"
+                  type="number"
+                  min="0"
+                  max="150"
+                  class="h-9 min-w-0 w-full rounded-md border border-slate-200 px-2 text-center text-sm font-black text-slate-900 outline-none transition focus:border-[#E31837] focus:ring-2 focus:ring-red-100"
+                />
+                <span class="text-[10px] font-bold text-slate-400">đv</span>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <div class="grid gap-6 2xl:grid-cols-2">
+          <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="flex items-center gap-2 text-base font-black text-slate-950">
+                  <AlertTriangle class="h-5 w-5 text-[#E31837]" />
+                  Cảnh báo khan hiếm
+                </h3>
+                <p class="mt-1 text-xs text-slate-500">Các nhóm máu cần huy động người hiến gấp.</p>
+              </div>
+              <span class="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-black text-[#E31837]">
+                {{ activeSmartAlerts.length }} nhóm máu
+              </span>
+            </div>
+
+            <div v-if="activeSmartAlerts.length" class="mt-5 space-y-3">
+              <article
+                v-for="alert in activeSmartAlerts"
+                :key="alert.id"
+                class="rounded-lg border border-red-100 bg-red-50/60 p-4"
+              >
+                <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="flex min-w-0 items-start gap-3">
+                    <div class="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-red-100 text-base font-black text-[#E31837]">
+                      {{ alert.blood_type }}
+                    </div>
+                    <div class="min-w-0">
+                      <h4 class="text-xs font-black text-slate-900">Tồn kho dưới ngưỡng an toàn tối thiểu</h4>
+                      <p class="mt-1 text-[11px] font-semibold text-slate-500">
+                        Thực tế: <span class="font-black text-[#E31837]">{{ alert.current_units }} đv</span>
+                        / Yêu cầu: {{ alert.threshold_units }} đv.
+                      </p>
+                      <p class="mt-2 text-[10px] font-bold text-slate-400">Kích hoạt: {{ formatAlertDateTime(alert.triggered_at) }}</p>
+                    </div>
+                  </div>
+                  <div class="flex shrink-0 items-center gap-2">
+                    <span class="rounded-full bg-red-100 px-2 py-1 text-[9px] font-black uppercase text-red-700 animate-pulse">Đang xảy ra</span>
+                    <button
+                      @click="openMobilization(alert)"
+                      :disabled="alertLoading"
+                      class="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-[#E31837] px-3 text-[10px] font-black text-white transition hover:bg-red-700 active:scale-95 disabled:opacity-50"
+                    >
+                      <Loader2 v-if="alertLoading" class="h-3.5 w-3.5 animate-spin" />
+                      Kích hoạt huy động
+                    </button>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div v-else class="mt-5 rounded-lg border border-dashed border-emerald-200 bg-emerald-50/50 p-8 text-center">
+              <CheckCircle2 class="mx-auto h-7 w-7 text-emerald-500" />
+              <p class="mt-2 text-xs font-bold text-emerald-700">Tồn kho hiện chưa có cảnh báo cần huy động.</p>
+            </div>
+          </section>
+
+          <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="flex items-center gap-2 text-base font-black text-slate-950">
+                  <History class="h-5 w-5 text-slate-600" />
+                  Lịch sử xử lý
+                </h3>
+                <p class="mt-1 text-xs text-slate-500">Lịch sử phát hiện, huy động và khắc phục cảnh báo.</p>
+              </div>
+              <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-600">
+                {{ resolvedSmartAlerts.length }} hoạt động
+              </span>
+            </div>
+
+            <div v-if="resolvedSmartAlerts.length" class="mt-5 divide-y divide-slate-100 overflow-hidden rounded-lg border border-slate-100">
+              <article v-for="alert in resolvedSmartAlerts" :key="alert.id" class="flex gap-3 p-3.5">
+                <div class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-slate-100 text-sm font-black text-slate-700">
+                  {{ alert.blood_type }}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <h4 class="text-xs font-black text-slate-900">Tồn kho dưới ngưỡng an toàn tối thiểu</h4>
+                      <p class="mt-0.5 text-[11px] font-semibold text-slate-500">
+                        Thực tế: <span class="font-bold text-[#E31837]">{{ alert.current_units }} đv</span> / Yêu cầu: {{ alert.threshold_units }} đv.
+                      </p>
+                    </div>
+                    <span class="rounded-full px-2 py-1 text-[9px] font-black uppercase" :class="alertStatusClass(alert.status)">
+                      {{ alertStatusLabel(alert.status) }}
+                    </span>
+                  </div>
+                  <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-bold text-slate-400">
+                    <span>Kích hoạt: {{ formatAlertDateTime(alert.triggered_at) }}</span>
+                    <span v-if="alert.resolved_at">Khắc phục: {{ formatAlertDateTime(alert.resolved_at) }}</span>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <p v-else class="mt-5 rounded-lg border border-dashed border-slate-200 p-8 text-center text-xs font-semibold text-slate-400">
+              Chưa có lịch sử cảnh báo đã xử lý.
+            </p>
+          </section>
         </div>
       </div>
 
