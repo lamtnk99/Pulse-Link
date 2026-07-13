@@ -341,7 +341,7 @@ class EmergencyController extends Controller
             return $commitment->refresh()->load('donor.province', 'donor.ward', 'alert.hospital', 'bloodJourney.hospital', 'bloodJourney.steps');
         });
 
-        $this->broadcastCommitment($commitment);
+        $this->broadcastCommitment($commitment, 'donation_verified');
         $this->evaluateAlertFulfillment($alert);
 
         return EmergencyCommitmentResource::make($commitment);
@@ -507,15 +507,14 @@ class EmergencyController extends Controller
             return $journey->refresh()->load('hospital', 'steps');
         });
 
-        // Chỉ broadcast tới mobile khi journey đạt BƯỚC CUỐI và được công bố — đây là
-        // lúc bật màn cảm ơn cho người hiến. Các bước trung gian (tiếp nhận, kiểm tra
-        // chất lượng, vận chuyển...) không đẩy realtime.
-        // Lưu ý: KHÔNG gate thêm "!wasAlreadyCompleted" — để việc lưu lại bước cuối vẫn
-        // re-broadcast nếu mobile lỡ mất lần đầu. Notification vẫn được gate trong
-        // transaction nên không tạo thông báo trùng.
-        if ($willComplete) {
+        // Tách rõ tín hiệu tiến trình khỏi tín hiệu hiến máu. Mobile dùng update_type
+        // để chỉ tích step ở các bước giữa; bước cuối mới mở thư hành trình.
+        if ($journey->published_at !== null) {
             $commitment->refresh()->load('donor', 'alert', 'bloodJourney.steps');
-            $this->broadcastCommitment($commitment);
+            $this->broadcastCommitment(
+                $commitment,
+                $willComplete ? 'journey_completed' : 'journey_progress',
+            );
         }
 
         return BloodJourneyResource::make($journey);
@@ -649,10 +648,10 @@ class EmergencyController extends Controller
             ->setStatusCode(200);
     }
 
-    private function broadcastCommitment(EmergencyCommitment $commitment): void
+    private function broadcastCommitment(EmergencyCommitment $commitment, ?string $updateType = null): void
     {
         try {
-            broadcast(new EmergencyCommitmentUpdated($commitment));
+            broadcast(new EmergencyCommitmentUpdated($commitment, $updateType));
         } catch (Throwable $exception) {
             Log::warning('Emergency commitment broadcast skipped.', [
                 'commitment_id' => $commitment->id,

@@ -6,6 +6,7 @@ class EmergencyCommitment {
     required this.id,
     required this.alertId,
     required this.status,
+    this.updateType,
     this.cancelReason,
     this.location,
     this.etaMinutes,
@@ -24,6 +25,7 @@ class EmergencyCommitment {
     return EmergencyCommitment(
       id: (json['id'] as Object).toString(),
       alertId: json['alert_id'] as String? ?? '',
+      updateType: json['update_type'] as String?,
       status: EmergencyCommitmentStatus.fromName(
         json['status'] as String? ?? 'committed',
       ),
@@ -47,6 +49,7 @@ class EmergencyCommitment {
 
   final String id;
   final String alertId;
+  final String? updateType;
   final EmergencyCommitmentStatus status;
   final String? cancelReason;
   final GeoPoint? location;
@@ -70,6 +73,7 @@ class EmergencyCommitment {
     return EmergencyCommitment(
       id: id,
       alertId: alertId,
+      updateType: updateType,
       status: status ?? this.status,
       cancelReason:
           clearCancelReason ? null : cancelReason ?? this.cancelReason,

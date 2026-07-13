@@ -14,8 +14,10 @@ class EmergencyCommitmentUpdated implements ShouldBroadcastNow
     use Dispatchable;
     use SerializesModels;
 
-    public function __construct(public EmergencyCommitment $commitment)
-    {
+    public function __construct(
+        public EmergencyCommitment $commitment,
+        public ?string $updateType = null,
+    ) {
         $this->commitment->loadMissing('donor', 'alert', 'bloodJourney.steps');
     }
 
@@ -41,6 +43,7 @@ class EmergencyCommitmentUpdated implements ShouldBroadcastNow
             'commitment' => [
                 'id' => $this->commitment->id,
                 'alert_id' => $this->commitment->alert->public_id,
+                'update_type' => $this->updateType,
                 'status' => $this->commitment->status,
                 'cancel_reason' => $this->commitment->cancel_reason,
                 'eta_minutes' => $this->commitment->eta_minutes,

@@ -73,6 +73,29 @@ class PastDonation {
   final DateTime? resultPublishedAt;
   final BloodJourney? bloodJourney;
 
+  PastDonation copyWith({BloodJourney? bloodJourney}) {
+    return PastDonation(
+      id: id,
+      donatedAt: donatedAt,
+      locationName: locationName,
+      volumeMl: volumeMl,
+      bloodType: bloodType,
+      certificateId: certificateId,
+      status: status,
+      donationType: donationType,
+      certificateTitle: certificateTitle,
+      certificateIssuedAt: certificateIssuedAt,
+      certificateVerifyUrl: certificateVerifyUrl,
+      notes: notes,
+      gratitudeMessage: gratitudeMessage,
+      gratitudeStyle: gratitudeStyle,
+      gratitudeCreatedAt: gratitudeCreatedAt,
+      resultSummary: resultSummary,
+      resultPublishedAt: resultPublishedAt,
+      bloodJourney: bloodJourney ?? this.bloodJourney,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

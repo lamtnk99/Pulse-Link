@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Events\EmergencyCommitmentUpdated;
 use App\Models\EmergencyAlert;
 use App\Models\EmergencyCommitment;
 use App\Models\BloodStock;
@@ -306,6 +307,10 @@ class EmergencyAlertApiTest extends TestCase
             'user_id' => $donor->id,
             'type' => 'donation_verified',
         ]);
+        $this->assertSame(1, \App\Models\MobileNotification::query()
+            ->where('user_id', $donor->id)
+            ->where('type', 'donation_verified')
+            ->count());
 
         $this->postJson("/api/admin/emergency-alerts/{$alertId}/cancel?admin_user_id={$staff->id}")
             ->assertStatus(422)
@@ -490,16 +495,45 @@ class EmergencyAlertApiTest extends TestCase
             'volume_ml' => 350,
         ])->assertOk();
 
+        Event::assertDispatched(EmergencyCommitmentUpdated::class, function (EmergencyCommitmentUpdated $event) use ($commitment): bool {
+            return $event->commitment->id === $commitment->id
+                && $event->updateType === 'donation_verified';
+        });
+
         $stock = BloodStock::query()
             ->where('donation_history_id', $commitment->fresh()->donation_history_id)
             ->firstOrFail();
         $this->assertSame('processing', $stock->status);
 
-        $initialRealtimePayload = (new \App\Events\EmergencyCommitmentUpdated(
+        $initialRealtimePayload = (new EmergencyCommitmentUpdated(
             $commitment->refresh()->load('donor', 'alert', 'bloodJourney.steps')
         ))->broadcastWith();
+        $this->assertNull($initialRealtimePayload['commitment']['update_type']);
         $this->assertNull($initialRealtimePayload['commitment']['blood_journey']['final_message']);
         $this->assertNull($initialRealtimePayload['commitment']['blood_journey']['gratitude_card']);
+        $this->assertDatabaseHas('mobile_notifications', [
+            'user_id' => $donor->id,
+            'type' => 'donation_verified',
+        ]);
+
+        $this->postJson("/api/admin/emergency-alerts/{$alertId}/commitments/{$commitment->id}/journey?admin_user_id={$staff->id}", [
+            'destination_type' => 'patient',
+            'current_step' => 'emergency_transport',
+            'location_label' => 'Khoa cấp cứu',
+            'publish' => true,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.current_step', 'emergency_transport');
+
+        Event::assertDispatched(EmergencyCommitmentUpdated::class, function (EmergencyCommitmentUpdated $event) use ($commitment): bool {
+            return $event->commitment->id === $commitment->id
+                && $event->updateType === 'journey_progress'
+                && $event->commitment->bloodJourney?->current_step === 'emergency_transport';
+        });
+        $this->assertDatabaseMissing('mobile_notifications', [
+            'user_id' => $donor->id,
+            'type' => 'blood_journey_completed',
+        ]);
 
         $this->postJson("/api/admin/emergency-alerts/{$alertId}/commitments/{$commitment->id}/journey?admin_user_id={$staff->id}", [
             'destination_type' => 'reserve',
@@ -511,12 +545,22 @@ class EmergencyAlertApiTest extends TestCase
             ->assertJsonPath('data.destination_type', 'reserve')
             ->assertJsonPath('data.current_step', 'stored');
 
+        Event::assertDispatched(EmergencyCommitmentUpdated::class, function (EmergencyCommitmentUpdated $event) use ($commitment): bool {
+            return $event->commitment->id === $commitment->id
+                && $event->updateType === 'journey_completed'
+                && $event->commitment->bloodJourney?->completed_at !== null;
+        });
+
         $this->assertDatabaseHas('mobile_notifications', [
             'user_id' => $donor->id,
             'type' => 'blood_journey_completed',
         ]);
+        $this->assertSame(1, \App\Models\MobileNotification::query()
+            ->where('user_id', $donor->id)
+            ->where('type', 'blood_journey_completed')
+            ->count());
 
-        $completedRealtimePayload = (new \App\Events\EmergencyCommitmentUpdated(
+        $completedRealtimePayload = (new EmergencyCommitmentUpdated(
             $commitment->refresh()->load('donor', 'alert', 'bloodJourney.steps')
         ))->broadcastWith();
         $completedCard = $completedRealtimePayload['commitment']['blood_journey']['gratitude_card'];
