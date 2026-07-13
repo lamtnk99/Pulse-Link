@@ -69,9 +69,6 @@ class MobilePushNotificationService {
 
     try {
       if (!_initialized) {
-        await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        );
         await _initializeLocalNotifications();
         await FirebaseMessaging.instance
             .setForegroundNotificationPresentationOptions(
@@ -123,9 +120,6 @@ class MobilePushNotificationService {
   Future<PushPermissionStatus> requestPermission() async {
     if (!isAvailable) return PushPermissionStatus.unavailable;
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
       await _initializeLocalNotifications();
       final androidAllowed = await _requestAndroidNotificationPermission();
       if (androidAllowed == false) return PushPermissionStatus.denied;
@@ -162,9 +156,6 @@ class MobilePushNotificationService {
     }
 
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
       await _initializeLocalNotifications();
     } catch (error) {
       throw StateError('Firebase chưa khởi tạo được trên thiết bị: $error');
