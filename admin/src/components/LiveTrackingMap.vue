@@ -7,6 +7,11 @@ const props = defineProps<{
   alert: EmergencyAlert | null
   commitments: EmergencyCommitment[]
   loading: boolean
+  selectedCommitmentId?: number | null
+}>()
+
+const emit = defineEmits<{
+  selectCommitment: [commitment: EmergencyCommitment]
 }>()
 
 const mapEl = ref<HTMLElement | null>(null)
@@ -19,6 +24,16 @@ const statusLabels: Record<EmergencyCommitment['status'], string> = {
   donated: 'Đã hiến',
   cancelled: 'Đã hủy',
   not_needed: 'Ca đã đủ',
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>'"]/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;',
+  })[character] ?? character)
 }
 
 onMounted(() => {
@@ -35,7 +50,7 @@ onBeforeUnmount(() => {
   map?.remove()
 })
 
-watch(() => [props.alert, props.commitments], renderMarkers, { deep: true })
+watch(() => [props.alert, props.commitments, props.selectedCommitmentId], renderMarkers, { deep: true })
 
 function renderMarkers() {
   if (!map || !layerGroup) return
@@ -55,17 +70,39 @@ function renderMarkers() {
     map.setView(hospitalPoint, 12)
   }
 
-  props.commitments.forEach((commitment) => {
-    if (!commitment.latitude || !commitment.longitude) return
-    const point: L.LatLngExpression = [commitment.latitude, commitment.longitude]
-    L.circleMarker(point, {
-      radius: 8,
-      color: commitment.status === 'cancelled' ? '#94a3b8' : '#059669',
-      fillColor: commitment.status === 'cancelled' ? '#cbd5e1' : '#10b981',
+  const mappedCommitments = props.commitments.filter(
+    (commitment) => commitment.latitude !== null && commitment.longitude !== null,
+  )
+  const showEveryLabel = mappedCommitments.length <= 8
+
+  mappedCommitments.forEach((commitment) => {
+    const point: L.LatLngExpression = [Number(commitment.latitude), Number(commitment.longitude)]
+    const isSelected = commitment.id === props.selectedCommitmentId
+    const isEnRoute = commitment.status === 'en_route'
+    const marker = L.circleMarker(point, {
+      radius: isSelected ? 11 : (isEnRoute ? 9 : 7),
+      color: commitment.status === 'cancelled' ? '#94a3b8' : (isSelected ? '#e31837' : '#059669'),
+      fillColor: commitment.status === 'cancelled' ? '#cbd5e1' : (isSelected ? '#fb7185' : '#10b981'),
       fillOpacity: 0.9,
       weight: 2,
     })
-      .bindPopup(`<strong>${commitment.donor?.name}</strong><br>${statusLabels[commitment.status]}${commitment.cancel_reason ? `<br>${commitment.cancel_reason}` : ''}`)
+
+    const donorLabel = `${commitment.donor?.name ?? 'Tình nguyện viên'} (${commitment.donor?.blood_type ?? '--'})`
+    const safeDonorLabel = escapeHtml(donorLabel)
+    if (showEveryLabel || isSelected || isEnRoute) {
+      marker.bindTooltip(donorLabel, {
+        permanent: true,
+        direction: 'top',
+        offset: [0, -10],
+        className: isSelected ? 'sos-donor-label sos-donor-label--selected' : 'sos-donor-label',
+      })
+    } else {
+      marker.bindTooltip(donorLabel, { direction: 'top', className: 'sos-donor-label' })
+    }
+
+    marker
+      .bindPopup(`<strong>${safeDonorLabel}</strong><br>${statusLabels[commitment.status]}${commitment.eta_minutes ? `<br>ETA ${commitment.eta_minutes} phút` : ''}`)
+      .on('click', () => emit('selectCommitment', commitment))
       .addTo(layerGroup!)
 
     if (hospital) {
@@ -90,6 +127,28 @@ function renderMarkers() {
         {{ loading ? 'Đang đồng bộ' : 'Trực tuyến' }}
       </span>
     </div>
-    <div ref="mapEl" class="relative z-0 h-[520px]"></div>
+    <div ref="mapEl" class="relative z-0 h-[500px]"></div>
   </section>
 </template>
+
+<style>
+.sos-donor-label {
+  border: 0;
+  border-radius: 0.45rem;
+  background: #0f172a;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 22%);
+  color: white;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0.35rem 0.55rem;
+  white-space: nowrap;
+}
+
+.sos-donor-label::before {
+  display: none;
+}
+
+.sos-donor-label--selected {
+  background: #e31837;
+}
+</style>

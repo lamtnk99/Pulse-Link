@@ -103,6 +103,7 @@ export interface AdminUser {
 export interface Donor {
   id: number
   name: string
+  email?: string | null
   phone?: string | null
   blood_type: string
   blood_type_verification_status?: 'unreported' | 'self_reported' | 'verified'
@@ -114,6 +115,10 @@ export interface Donor {
   ward?: Ward | null
   latitude?: number
   longitude?: number
+  badge_title?: string | null
+  total_donations?: number
+  points?: number
+  last_seen_at?: string | null
 }
 
 export interface EmergencyRecipient {
