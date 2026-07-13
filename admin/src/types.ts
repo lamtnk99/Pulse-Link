@@ -286,7 +286,7 @@ export interface BloodStock {
   volume_ml: number
   received_date: string
   expiry_date: string
-  status: 'available' | 'used' | 'expired' | 'allocated'
+  status: 'processing' | 'available' | 'used' | 'expired' | 'allocated' | 'discarded'
   donation_history_id?: number | null
   donation_history?: {
     id: number

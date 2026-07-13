@@ -12,6 +12,7 @@ use App\Models\Hospital;
 use App\Services\Admin\AdminUserResolver;
 use App\Services\Donations\DonationRecognitionService;
 use App\Services\Donations\PostDonationCareService;
+use App\Services\Inventory\BloodInventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,7 @@ class DonationEventController extends Controller
         private readonly AdminUserResolver $adminUserResolver,
         private readonly DonationRecognitionService $recognitionService,
         private readonly PostDonationCareService $postDonationCareService,
+        private readonly BloodInventoryService $bloodInventoryService,
     ) {}
 
     public function index(Request $request)
@@ -304,18 +306,17 @@ class DonationEventController extends Controller
                 ]),
             );
 
-            // Tự động đồng bộ sang kho máu (BloodStock)
-            \App\Models\BloodStock::updateOrCreate(
-                ['donation_history_id' => $history->id],
-                [
-                    'hospital_id' => $event->hospital_id,
-                    'blood_type' => $payload['blood_type'],
-                    'volume_ml' => $payload['volume_ml'],
-                    'received_date' => $history->donated_at,
-                    'expiry_date' => \Illuminate\Support\Carbon::parse($history->donated_at)->addDays(35)->toDateString(),
-                    'status' => 'available',
-                    'notes' => 'Hiến máu tình nguyện từ sự kiện: ' . $event->title,
-                ]
+            // Lịch hiến thường chỉ được hoàn tất sau khi nhân viên xác nhận,
+            // vì vậy đơn vị máu có thể vào kho khả dụng ngay.
+            $this->bloodInventoryService->receiveDonation(
+                history: $history,
+                hospitalId: $event->hospital_id,
+                initialStatus: BloodInventoryService::STATUS_AVAILABLE,
+                movementType: 'regular_donation_received',
+                sourceType: 'donation_appointment',
+                sourceId: $appointment->id,
+                actorId: $admin->id,
+                notes: 'Hiến máu tình nguyện từ sự kiện: ' . $event->title,
             );
 
             $appointment->user->update([

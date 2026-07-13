@@ -356,8 +356,11 @@ onBeforeUnmount(() => {
           :active-alerts="activeAlerts"
           :commitments="commitments"
           :is-loading="isLoading"
+          :api-base-url="apiBaseUrl"
+          :selected-hospital-id="selectedHospitalId"
           @open-sos="openSosModal"
           @open-sos-view="switchView('sos')"
+          @open-inventory="switchView('inventory')"
         />
         <SosAlerts
           v-else-if="currentView === 'sos'"

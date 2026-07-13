@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Admin\AdminDashboardController;
 use App\Http\Controllers\Api\Admin\BloodStockController;
 use App\Http\Controllers\Api\Admin\CampaignManagerController;
+use App\Http\Controllers\Api\Admin\BloodForecastController;
 use App\Http\Controllers\Api\Admin\CommunityPostController as AdminCommunityPostController;
 use App\Http\Controllers\Api\Admin\DonationEventController as AdminDonationEventController;
 use App\Http\Controllers\Api\Admin\EmergencyController;
@@ -139,6 +140,16 @@ Route::prefix('admin')->middleware(['role:admin'])->group(function () {
     Route::get('blood-stocks/alerts', [BloodStockController::class, 'getAlerts']);
     Route::post('blood-stocks/alerts/{id}/mobilize', [BloodStockController::class, 'mobilizeAlert']);
     Route::get('blood-stocks/reports', [BloodStockController::class, 'getReports']);
+
+    // Forecast V2: numbers are produced from inventory movements; LLM only explains.
+    Route::get('blood-forecasts/overview', [BloodForecastController::class, 'overview']);
+    Route::get('blood-forecasts/runs', [BloodForecastController::class, 'index']);
+    Route::get('blood-forecasts/runs/{run}', [BloodForecastController::class, 'show']);
+    Route::post('blood-forecasts/runs', [BloodForecastController::class, 'store']);
+    Route::post('blood-forecasts/simulations', [BloodForecastController::class, 'simulate']);
+    Route::patch('forecast-recommendations/{recommendation}', [BloodForecastController::class, 'updateRecommendation']);
+    Route::post('forecast-recommendations/{recommendation}/draft-event', [BloodForecastController::class, 'createDraftEvent']);
+    Route::post('forecast-recommendations/{recommendation}/draft-post', [BloodForecastController::class, 'createDraftPost']);
 });
 
 // Mock Payment Simulator & Webhook (Public Routes)

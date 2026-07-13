@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\BloodStock;
+use App\Models\BloodStockMovement;
 use App\Models\CommunityPost;
 use App\Models\ChatConversation;
 use App\Models\DonationAppointment;
@@ -176,6 +178,15 @@ class AdminOperationsApiTest extends TestCase
         $history = DonationHistory::query()
             ->where('donation_appointment_id', $appointment->id)
             ->firstOrFail();
+        $stock = BloodStock::query()
+            ->where('donation_history_id', $history->id)
+            ->firstOrFail();
+        $this->assertSame('available', $stock->status);
+        $this->assertDatabaseHas('blood_stock_movements', [
+            'blood_stock_id' => $stock->id,
+            'movement_type' => 'regular_donation_received',
+            'available_delta' => 1,
+        ]);
         $this->assertDatabaseHas('chat_conversations', [
             'user_id' => $donor->id,
             'context_type' => ChatConversation::CONTEXT_POST_DONATION_CHECKUP,

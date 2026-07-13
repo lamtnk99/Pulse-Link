@@ -2,17 +2,21 @@
 import { computed } from 'vue'
 import { Activity, AlertTriangle, CalendarCheck2, CalendarRange, CheckCircle2, Droplet, Route, Send, Users } from '@lucide/vue'
 import type { DashboardStats, EmergencyAlert, EmergencyCommitment } from '../types'
+import InventoryForecastSummary from '../components/InventoryForecastSummary.vue'
 
 const props = defineProps<{
   stats: DashboardStats
   activeAlerts: EmergencyAlert[]
   commitments: EmergencyCommitment[]
   isLoading: boolean
+  apiBaseUrl: string
+  selectedHospitalId: number | null
 }>()
 
 const emit = defineEmits<{
   openSos: []
   openSosView: []
+  openInventory: []
 }>()
 
 const enRouteCommitments = computed(() =>
@@ -114,6 +118,12 @@ function formatVolume(value: number | undefined) {
         </div>
       </article>
     </section>
+
+    <InventoryForecastSummary
+      :api-base-url="apiBaseUrl"
+      :hospital-id="selectedHospitalId"
+      @open-inventory="emit('openInventory')"
+    />
 
     <section class="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
       <article class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">

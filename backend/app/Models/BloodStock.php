@@ -39,6 +39,11 @@ class BloodStock extends Model
         return $this->belongsTo(DonationHistory::class);
     }
 
+    public function movements()
+    {
+        return $this->hasMany(BloodStockMovement::class);
+    }
+
     // Scopes
     public function scopeAvailable($query)
     {

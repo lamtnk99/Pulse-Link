@@ -13,7 +13,12 @@ return [
         ))
     ))),
 
-    'allowed_origins_patterns' => [],
+    // Flutter Web uses a random localhost port in debug mode. Keep the
+    // explicit production allow-list above and permit only loopback origins
+    // for local development, regardless of the generated debug port.
+    'allowed_origins_patterns' => [
+        '#^https?://(localhost|127\\.0\\.0\\.1)(:\\d+)?$#',
+    ],
 
     'allowed_headers' => ['*'],
 

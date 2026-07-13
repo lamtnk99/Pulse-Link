@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -63,5 +60,13 @@ class DefaultFirebaseOptions {
     projectId: 'pulse-link-asia',
     storageBucket: 'pulse-link-asia.firebasestorage.app',
     iosBundleId: 'com.pulselinkvn.app',
+  );
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyDdo6i9mZrInZMy5YSYKWPMoC2ZdYtJgQY',
+    appId: '1:149313658511:web:23f67355c3800cac3a5afa',
+    messagingSenderId: '149313658511',
+    projectId: 'pulse-link-asia',
+    authDomain: 'pulse-link-asia.firebaseapp.com',
+    storageBucket: 'pulse-link-asia.firebasestorage.app',
   );
 }

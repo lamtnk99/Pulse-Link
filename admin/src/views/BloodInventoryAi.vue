@@ -40,6 +40,7 @@ const tabNavigationRef = ref<HTMLElement | null>(null)
 const inventoryData = ref<BloodStock[]>([])
 const stats = ref<Record<string, number>>({})
 const breakdown = ref<any[]>([])
+const recentMovements = ref<any[]>([])
 const thresholds = ref<BloodSafetyThreshold[]>([])
 const forecasts = ref<BloodDemandForecast[]>([])
 const smartAlerts = ref<SmartAlert[]>([])
@@ -65,7 +66,10 @@ const holidaySeason = ref(false)
 const weatherExtreme = ref(false)
 const aiReasoning = ref('')
 const aiRecommendations = ref<string[]>([])
+const forecastRecommendationRecords = ref<any[]>([])
 const forecastDate = ref('')
+const forecastDataQuality = ref('')
+const forecastRunStatus = ref('')
 const suggestedEvents = ref<any[]>([])
 const showAiEventModal = ref(false)
 const provinces = ref<any[]>([])
@@ -344,6 +348,7 @@ async function fetchInventory() {
   inventoryData.value = json.data.bags.data
   stats.value = json.data.stats
   breakdown.value = json.data.breakdown
+  recentMovements.value = json.data.recent_movements || []
   totalPages.value = json.data.bags.last_page
 }
 
@@ -358,30 +363,101 @@ async function fetchThresholds() {
 async function fetchForecast(forceRefresh = false) {
   forecastLoading.value = true
   try {
-    const hospitalParam = props.selectedHospitalId ? `hospital_id=${props.selectedHospitalId}` : ''
-    const refreshParam = forceRefresh ? `&force_refresh=true` : ''
-    const dengueParam = dengueOutbreak.value ? `&dengue_outbreak=true` : ''
-    const holidayParam = holidaySeason.value ? `&holiday_season=true` : ''
-    const weatherParam = weatherExtreme.value ? `&weather_extreme=true` : ''
-    
-    const endpoint = forceRefresh ? 'forecast/generate' : 'forecast'
-    const url = `${apiBase}/api/admin/blood-stocks/${endpoint}?${hospitalParam}${refreshParam}${dengueParam}${holidayParam}${weatherParam}`
-    
-    // Nếu forceRefresh, gửi POST, ngược lại gửi GET
-    const method = forceRefresh ? 'POST' : 'GET'
-    const res = await fetch(url, { method })
+    if (!forceRefresh) {
+      const hospitalParam = props.selectedHospitalId ? `?hospital_id=${props.selectedHospitalId}&horizon=30` : '?horizon=30'
+      const res = await fetch(`${apiBase}/api/admin/blood-forecasts/overview${hospitalParam}`)
+      if (!res.ok) throw new Error()
+      const json = await res.json()
+      if (!json.data) {
+        forecasts.value = []
+        aiReasoning.value = 'Chưa có forecast run hoàn tất. Hãy chạy dự báo để lập kế hoạch kho máu.'
+        aiRecommendations.value = []
+        forecastRecommendationRecords.value = []
+        forecastDate.value = ''
+        forecastDataQuality.value = ''
+        return
+      }
+      applyForecastRun(json.data.run, json.data.points, json.data.recommendations || [])
+      return
+    }
+
+    const demandMultiplier = 1 + (dengueOutbreak.value ? 0.25 : 0) + (holidaySeason.value ? 0.15 : 0)
+    const hasSimulation = demandMultiplier !== 1 || weatherExtreme.value
+    const endpoint = hasSimulation ? 'simulations' : 'runs'
+    const res = await fetch(`${apiBase}/api/admin/blood-forecasts/${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        hospital_id: props.selectedHospitalId,
+        demand_multiplier: demandMultiplier,
+        collection_multiplier: weatherExtreme.value ? 0.8 : 1,
+      }),
+    })
     if (!res.ok) throw new Error()
     const json = await res.json()
-    
-    forecasts.value = json.data.forecast
-    aiReasoning.value = json.data.reasoning_summary
-    aiRecommendations.value = json.data.recommendations
-    forecastDate.value = json.data.forecast_date
-    suggestedEvents.value = json.data.suggested_events || []
+    forecastRunStatus.value = json.data.status
+
+    const run = await waitForForecastRun(json.data.id)
+    if (run?.status === 'completed') {
+      applyForecastRun(run, run.points || [], run.recommendations || [])
+      showToast(hasSimulation ? 'Đã hoàn tất mô phỏng kịch bản.' : 'Đã hoàn tất forecast run mới.', 'success')
+    } else {
+      showToast('Forecast run đang được xử lý. Trang sẽ tự cập nhật khi có kết quả.', 'success')
+    }
   } catch (e) {
     showToast('Không thể kết nối dịch vụ AI dự báo.', 'error')
   } finally {
     forecastLoading.value = false
+  }
+}
+
+function applyForecastRun(run: any, points: any[], recommendations: any[]) {
+  const totals = new Map<string, { volume: number; confidence: number[]; explanation: string }>()
+  for (const point of points) {
+    const current = totals.get(point.blood_type) ?? { volume: 0, confidence: [] as number[], explanation: point.explanation || '' }
+    current.volume += Number(point.predicted_volume_ml || 0)
+    current.confidence.push(Number(point.confidence_score || 0))
+    totals.set(point.blood_type, current)
+  }
+  forecasts.value = Array.from(totals.entries()).map(([blood_type, value]) => ({
+    blood_type,
+    predicted_volume_ml: Math.round(value.volume),
+    confidence_score: value.confidence.length ? value.confidence.reduce((sum, score) => sum + score, 0) / value.confidence.length : 0,
+    explanation: value.explanation,
+  }))
+  aiReasoning.value = run.reasoning_summary || 'Forecast được tạo từ ledger nhập, xuất, truyền và hết hạn của kho máu.'
+  aiRecommendations.value = recommendations.map((recommendation: any) => recommendation.rationale || recommendation.title)
+  forecastRecommendationRecords.value = recommendations
+  forecastDate.value = run.generated_at || run.created_at || ''
+  forecastDataQuality.value = run.data_quality?.level || ''
+  forecastRunStatus.value = run.status || ''
+  suggestedEvents.value = []
+}
+
+async function waitForForecastRun(runId: number) {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 750))
+    const res = await fetch(`${apiBase}/api/admin/blood-forecasts/runs/${runId}`)
+    if (!res.ok) return null
+    const json = await res.json()
+    if (json.data.run.status === 'completed' || json.data.run.status === 'failed') {
+      return { ...json.data.run, points: json.data.points, recommendations: json.data.recommendations }
+    }
+  }
+  return null
+}
+
+async function createForecastDraft(recommendation: any, type: 'event' | 'post') {
+  try {
+    const res = await fetch(`${apiBase}/api/admin/forecast-recommendations/${recommendation.id}/draft-${type}`, {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+    })
+    if (!res.ok) throw new Error()
+    recommendation.status = 'draft_created'
+    showToast(type === 'event' ? 'Đã tạo bản nháp đợt hiến; cần duyệt trước khi công bố.' : 'Đã tạo bản nháp bài kêu gọi; cần duyệt trước khi công bố.', 'success')
+  } catch (error) {
+    showToast('Không thể tạo bản nháp từ khuyến nghị này.', 'error')
   }
 }
 
@@ -442,7 +518,7 @@ async function handleAddBag() {
 }
 
 // Update Bag Status (e.g. Mark as Used)
-async function handleUpdateStatus(bagId: number, status: 'used' | 'expired' | 'available') {
+async function handleUpdateStatus(bagId: number, status: 'processing' | 'used' | 'expired' | 'available' | 'allocated' | 'discarded') {
   try {
     const res = await fetch(`${apiBase}/api/admin/blood-stocks/${bagId}/status`, {
       method: 'PUT',
@@ -452,7 +528,14 @@ async function handleUpdateStatus(bagId: number, status: 'used' | 'expired' | 'a
       },
       body: JSON.stringify({
         status,
-        notes: status === 'used' ? 'Đã xuất kho sử dụng cứu chữa.' : 'Đã hủy bỏ.'
+        notes: {
+          available: 'Đã đưa vào kho khả dụng.',
+          allocated: 'Đã điều phối cho ca SOS.',
+          used: 'Đã xuất kho sử dụng cứu chữa.',
+          expired: 'Đã hủy do hết hạn.',
+          discarded: 'Đã loại bỏ theo kiểm tra chất lượng.',
+          processing: 'Đang kiểm tra chất lượng.',
+        }[status]
       })
     })
     
@@ -594,6 +677,21 @@ function formatAlertDateTime(value?: string | null) {
   return `${time} ${formatInventoryDate(value)}`
 }
 
+function movementLabel(movement: any) {
+  const labels: Record<string, string> = {
+    regular_donation_received: 'Đã tiếp nhận đơn vị hiến thường quy',
+    sos_donation_received: 'SOS đã xác nhận hiến, chờ xử lý',
+    sos_stored: 'SOS đã lưu kho',
+    sos_allocated: 'SOS đã điều phối cho người bệnh',
+    sos_transfused: 'SOS đã truyền cho người bệnh',
+    manual_stock_received: 'Nhập kho thủ công',
+    manual_status_updated: 'Cập nhật trạng thái kho',
+    stock_expired: 'Hệ thống ghi nhận hết hạn',
+  }
+
+  return labels[movement.movement_type] || 'Cập nhật tồn kho'
+}
+
 function alertStatusLabel(status: SmartAlert['status']) {
   if (status === 'resolved') return 'Đã khắc phục'
   if (status === 'mobilized') return 'Đã huy động'
@@ -621,7 +719,15 @@ function getExpiryColorClass(expiryDate: string, status: string) {
 }
 
 function getExpiryLabel(expiryDate: string, status: string) {
-  if (status !== 'available') return status === 'used' ? 'Đã dùng' : 'Đã hủy'
+  if (status !== 'available') {
+    return {
+      processing: 'Đang kiểm tra',
+      allocated: 'Đã điều phối',
+      used: 'Đã dùng',
+      expired: 'Đã hết hạn',
+      discarded: 'Đã loại bỏ',
+    }[status] ?? 'Không xác định'
+  }
   const exp = parseDate(expiryDate, true)
   if (!exp) return 'Không xác định'
   const today = new Date()
@@ -670,7 +776,7 @@ onMounted(async () => {
         <p class="text-xs font-black uppercase tracking-[0.24em] text-[#E31837]">Vận hành bệnh viện</p>
         <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-950">Kho máu & Dự báo Nhu cầu AI</h1>
         <p class="mt-1 max-w-3xl text-sm text-slate-500">
-          Xem tồn kho chi tiết, thiết lập cảnh báo an toàn tồn kho tự động và phân tích xu hướng nhu cầu máu tương lai dựa trên dữ liệu Gemini AI.
+          Xem tồn kho chi tiết, thiết lập cảnh báo an toàn tự động và phân tích nhu cầu máu tương lai từ nhật ký nhập, xuất và truyền máu đã đối soát.
         </p>
       </div>
 
@@ -694,7 +800,7 @@ onMounted(async () => {
     </section>
 
     <!-- Thống kê nhanh / Card indicators -->
-    <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       <button
         type="button"
         class="w-full rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-100"
@@ -709,6 +815,40 @@ onMounted(async () => {
         <div class="mt-4 flex items-baseline gap-2">
           <strong class="text-3xl font-black text-slate-950">{{ stats.total_units ?? 0 }}</strong>
           <span class="text-xs font-bold text-slate-500">túi máu</span>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        class="w-full rounded-xl border border-violet-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-violet-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-violet-100"
+        @click="openInventoryTab('inventory')"
+      >
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Đang kiểm tra</span>
+          <div class="grid h-8 w-8 place-items-center rounded bg-violet-50 text-violet-600">
+            <Activity class="h-4 w-4" />
+          </div>
+        </div>
+        <div class="mt-4 flex items-baseline gap-2">
+          <strong class="text-3xl font-black text-violet-700">{{ stats.processing_units ?? 0 }}</strong>
+          <span class="text-xs font-bold text-slate-500">túi SOS</span>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        class="w-full rounded-xl border border-amber-100 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-100"
+        @click="openInventoryTab('inventory')"
+      >
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Đã điều phối</span>
+          <div class="grid h-8 w-8 place-items-center rounded bg-amber-50 text-amber-600">
+            <Activity class="h-4 w-4" />
+          </div>
+        </div>
+        <div class="mt-4 flex items-baseline gap-2">
+          <strong class="text-3xl font-black text-amber-700">{{ stats.allocated_units ?? 0 }}</strong>
+          <span class="text-xs font-bold text-slate-500">túi đang đi</span>
         </div>
       </button>
 
@@ -866,6 +1006,30 @@ onMounted(async () => {
           </div>
         </div>
 
+        <section v-if="recentMovements.length" class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="text-sm font-black text-slate-950">Nhật ký biến động kho gần đây</h3>
+              <p class="mt-1 text-xs text-slate-500">Mỗi thay đổi đều có nguồn và thời điểm để đối soát nhanh.</p>
+            </div>
+            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-500">{{ recentMovements.length }} giao dịch</span>
+          </div>
+          <div class="mt-3 divide-y divide-slate-100">
+            <article v-for="movement in recentMovements" :key="movement.id" class="flex items-center justify-between gap-3 py-2.5 text-xs">
+              <div class="min-w-0">
+                <p class="truncate font-bold text-slate-800">{{ movementLabel(movement) }} · {{ movement.blood_type }}</p>
+                <p class="mt-0.5 text-[10px] font-semibold text-slate-400">{{ formatAlertDateTime(movement.occurred_at) || '--' }} · {{ movement.source || 'inventory' }}</p>
+              </div>
+              <span
+                class="shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-black"
+                :class="Number(movement.available_delta) > 0 ? 'bg-emerald-50 text-emerald-700' : Number(movement.available_delta) < 0 ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-500'"
+              >
+                {{ Number(movement.available_delta) > 0 ? '+' : '' }}{{ movement.available_delta }} đơn vị
+              </span>
+            </article>
+          </div>
+        </section>
+
         <!-- Inventory List Table -->
         <div class="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <!-- Table Toolbar -->
@@ -900,10 +1064,12 @@ onMounted(async () => {
               >
                 <option value="">Tất cả trạng thái</option>
                 <option value="available">Sẵn sàng (Available)</option>
+                <option value="processing">Đang kiểm tra (Processing)</option>
                 <option value="expiring_soon">Sắp hết hạn (&lt;7 ngày)</option>
                 <option value="used">Đã sử dụng (Used)</option>
                 <option value="expired">Đã hết hạn (Expired)</option>
                 <option value="allocated">Đã điều phối SOS (Allocated)</option>
+                <option value="discarded">Đã loại bỏ (Discarded)</option>
               </select>
             </div>
           </div>
@@ -947,10 +1113,12 @@ onMounted(async () => {
                     <span
                       class="inline-block rounded-full px-2 py-0.5 text-[10px] font-bold"
                       :class="{
+                        'bg-violet-100 text-violet-800': bag.status === 'processing',
                         'bg-emerald-100 text-emerald-800': bag.status === 'available',
                         'bg-blue-100 text-blue-800': bag.status === 'used',
                         'bg-red-100 text-red-800': bag.status === 'expired',
-                        'bg-amber-100 text-amber-800': bag.status === 'allocated'
+                        'bg-amber-100 text-amber-800': bag.status === 'allocated',
+                        'bg-slate-100 text-slate-700': bag.status === 'discarded'
                       }"
                     >
                       {{ bag.status.toUpperCase() }}
@@ -975,6 +1143,34 @@ onMounted(async () => {
                         class="rounded border border-red-100 bg-red-50 px-2.5 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 active:scale-95 transition"
                       >
                         Báo hủy/Hết hạn
+                      </button>
+                    </div>
+                    <div class="flex justify-end gap-1.5" v-else-if="bag.status === 'processing'">
+                      <button
+                        @click="handleUpdateStatus(bag.id, 'available')"
+                        class="rounded border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 active:scale-95 transition"
+                      >
+                        Lưu vào kho
+                      </button>
+                      <button
+                        @click="handleUpdateStatus(bag.id, 'discarded')"
+                        class="rounded border border-red-100 bg-red-50 px-2.5 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 active:scale-95 transition"
+                      >
+                        Loại bỏ
+                      </button>
+                    </div>
+                    <div class="flex justify-end gap-1.5" v-else-if="bag.status === 'allocated'">
+                      <button
+                        @click="handleUpdateStatus(bag.id, 'used')"
+                        class="rounded border border-blue-100 bg-blue-50 px-2.5 py-1 text-[10px] font-bold text-blue-600 hover:bg-blue-100 active:scale-95 transition"
+                      >
+                        Xác nhận đã dùng
+                      </button>
+                      <button
+                        @click="handleUpdateStatus(bag.id, 'available')"
+                        class="rounded border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 active:scale-95 transition"
+                      >
+                        Trả kho
                       </button>
                     </div>
                     <span v-else class="text-slate-400 italic text-[11px] font-normal">Đã xử lý (Không thể sửa)</span>
@@ -1023,10 +1219,10 @@ onMounted(async () => {
                   Dự báo nhu cầu máu trong 30 ngày tới
                 </h3>
                 <span class="rounded-full bg-purple-50 px-3 py-1 text-xs font-bold text-purple-600 flex items-center gap-1.5">
-                  <Sparkles class="h-3.5 w-3.5 text-purple-600" /> Powered by Google Gemini
+                  <Sparkles class="h-3.5 w-3.5 text-purple-600" /> Forecast V2 · Inventory ledger
                 </span>
               </div>
-              <p class="text-xs text-slate-500 mt-1">Dựa trên mô hình AI học máy, phân tích nhu cầu sử dụng thực tế của 8 nhóm máu chính.</p>
+              <p class="text-xs text-slate-500 mt-1">Dựa trên movement xuất kho thực tế, nhịp theo ngày trong tuần và khoảng dự báo có thể kiểm chứng.</p>
             </div>
 
             <!-- Custom SVG Chart Container -->
@@ -1100,12 +1296,12 @@ onMounted(async () => {
             <div class="mt-6 border-t border-slate-100 pt-5 space-y-3">
               <h4 class="text-sm font-black text-slate-900 flex items-center gap-1.5">
                 <Sparkles class="h-4.5 w-4.5 text-purple-600" />
-                Lý giải Phân tích từ AI (Gemini Agent):
+                Lý giải từ forecast engine:
               </h4>
               <p class="text-xs text-slate-700 bg-purple-50/50 rounded-lg p-4 border border-purple-100/30 leading-relaxed font-semibold">
                 {{ aiReasoning || 'AI đang phân tích các điều kiện vận hành hiện tại...' }}
               </p>
-              <div class="text-[10px] text-slate-400 font-bold">Ngày lập dự báo: {{ forecastDate }}</div>
+              <div class="text-[10px] text-slate-400 font-bold">Run: {{ forecastRunStatus || '--' }} · Chất lượng dữ liệu: {{ forecastDataQuality || '--' }} · Ngày lập: {{ forecastDate || '--' }}</div>
             </div>
           </div>
 
@@ -1178,6 +1374,34 @@ onMounted(async () => {
                   <span>{{ rec }}</span>
                 </li>
               </ul>
+            </div>
+
+            <div v-if="forecastRecommendationRecords.length" class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
+              <h3 class="text-sm font-black text-slate-950 border-b border-slate-100 pb-3">Bản nháp cần phê duyệt:</h3>
+              <article v-for="recommendation in forecastRecommendationRecords" :key="recommendation.id" class="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <p class="text-xs font-black text-slate-900">{{ recommendation.title }}</p>
+                    <p class="mt-1 text-[11px] font-semibold text-slate-500">{{ recommendation.blood_type || 'Tất cả nhóm' }} · {{ recommendation.severity }}</p>
+                  </div>
+                  <span class="rounded-full bg-white px-2 py-0.5 text-[9px] font-black uppercase text-slate-500">{{ recommendation.status }}</span>
+                </div>
+                <div v-if="recommendation.status === 'suggested'" class="mt-3 flex flex-wrap gap-2">
+                  <button
+                    v-if="recommendation.action_type === 'create_event'"
+                    @click="createForecastDraft(recommendation, 'event')"
+                    class="rounded border border-purple-100 bg-purple-50 px-2.5 py-1.5 text-[10px] font-black text-purple-700 hover:bg-purple-100"
+                  >
+                    Tạo nháp đợt hiến
+                  </button>
+                  <button
+                    @click="createForecastDraft(recommendation, 'post')"
+                    class="rounded border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-slate-700 hover:bg-slate-100"
+                  >
+                    Tạo nháp bài viết
+                  </button>
+                </div>
+              </article>
             </div>
           </div>
         </div>

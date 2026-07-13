@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\EmergencyAlert;
 use App\Models\EmergencyCommitment;
+use App\Models\BloodStock;
+use App\Models\BloodStockMovement;
 use App\Models\Hospital;
 use App\Models\User;
 use App\Services\Contracts\EmergencyAlertRealtimeGateway;
@@ -265,6 +267,38 @@ class EmergencyAlertApiTest extends TestCase
             'volume_ml' => 450,
             'status' => 'verified',
         ]);
+        $this->assertDatabaseHas('blood_stocks', [
+            'donation_history_id' => $commitment->fresh()->donation_history_id,
+            'status' => 'processing',
+        ]);
+        $this->assertDatabaseHas('blood_stock_movements', [
+            'donation_history_id' => $commitment->fresh()->donation_history_id,
+            'movement_type' => 'sos_donation_received',
+            'available_delta' => 0,
+        ]);
+
+        $this->postJson("/api/admin/emergency-alerts/{$alertId}/commitments/{$commitment->id}/journey?admin_user_id={$staff->id}", [
+            'destination_type' => 'patient',
+            'current_step' => 'emergency_transport',
+        ])->assertOk();
+        $this->assertDatabaseHas('blood_stocks', [
+            'donation_history_id' => $commitment->fresh()->donation_history_id,
+            'status' => 'allocated',
+        ]);
+
+        $this->postJson("/api/admin/emergency-alerts/{$alertId}/commitments/{$commitment->id}/journey?admin_user_id={$staff->id}", [
+            'destination_type' => 'patient',
+            'current_step' => 'transfused',
+        ])->assertOk();
+        $this->assertDatabaseHas('blood_stocks', [
+            'donation_history_id' => $commitment->fresh()->donation_history_id,
+            'status' => 'used',
+        ]);
+        $this->assertDatabaseHas('blood_stock_movements', [
+            'donation_history_id' => $commitment->fresh()->donation_history_id,
+            'movement_type' => 'sos_transfused',
+            'available_delta' => 0,
+        ]);
         $donor->refresh();
         $this->assertSame($initialDonations + 1, $donor->total_donations);
         $this->assertSame($initialPoints + 630, $donor->points);
@@ -456,6 +490,11 @@ class EmergencyAlertApiTest extends TestCase
             'volume_ml' => 350,
         ])->assertOk();
 
+        $stock = BloodStock::query()
+            ->where('donation_history_id', $commitment->fresh()->donation_history_id)
+            ->firstOrFail();
+        $this->assertSame('processing', $stock->status);
+
         $initialRealtimePayload = (new \App\Events\EmergencyCommitmentUpdated(
             $commitment->refresh()->load('donor', 'alert', 'bloodJourney.steps')
         ))->broadcastWith();
@@ -483,5 +522,11 @@ class EmergencyAlertApiTest extends TestCase
         $completedCard = $completedRealtimePayload['commitment']['blood_journey']['gratitude_card'];
         $this->assertSame('sos_reserve', $completedCard['source']);
         $this->assertSame('Bệnh viện tiếp nhận', $completedCard['messages'][0]['sender']);
+        $this->assertSame('available', $stock->fresh()->status);
+        $this->assertDatabaseHas('blood_stock_movements', [
+            'blood_stock_id' => $stock->id,
+            'movement_type' => 'sos_stored',
+            'available_delta' => 1,
+        ]);
     }
 }

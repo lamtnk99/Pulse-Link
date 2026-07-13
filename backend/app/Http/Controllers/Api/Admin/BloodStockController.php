@@ -6,12 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\BloodDemandForecast;
 use App\Models\BloodSafetyThreshold;
 use App\Models\BloodStock;
+use App\Models\BloodStockMovement;
 use App\Models\DonationEvent;
 use App\Models\EmergencyAlert;
 use App\Models\Hospital;
 use App\Models\SmartAlert;
 use App\Services\Admin\AdminUserResolver;
 use App\Services\AI\BloodForecastService;
+use App\Services\Inventory\BloodInventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -21,7 +23,8 @@ class BloodStockController extends Controller
 {
     public function __construct(
         private readonly AdminUserResolver $adminUserResolver,
-        private readonly BloodForecastService $forecastService
+        private readonly BloodForecastService $forecastService,
+        private readonly BloodInventoryService $bloodInventoryService,
     ) {}
 
     /**
@@ -79,6 +82,8 @@ class BloodStockController extends Controller
         // Thống kê chung
         $stats = [
             'total_units' => $stocks->count(),
+            'processing_units' => BloodStock::where('hospital_id', $hospitalId)->where('status', BloodInventoryService::STATUS_PROCESSING)->count(),
+            'allocated_units' => BloodStock::where('hospital_id', $hospitalId)->where('status', BloodInventoryService::STATUS_ALLOCATED)->count(),
             'expiring_units' => BloodStock::where('hospital_id', $hospitalId)
                 ->where('status', 'available')
                 ->whereBetween('expiry_date', [now()->toDateString(), now()->addDays(7)->toDateString()])
@@ -88,6 +93,18 @@ class BloodStockController extends Controller
                 ->count(),
             'scarcity_alerts_count' => $scarcityAlertsCount,
             'active_sos_requests' => EmergencyAlert::where('hospital_id', $hospitalId)->where('status', 'active')->count(),
+            'received_today' => BloodStockMovement::where('hospital_id', $hospitalId)
+                ->whereIn('movement_type', ['regular_donation_received', 'sos_donation_received', 'manual_stock_received'])
+                ->whereDate('occurred_at', today())
+                ->count(),
+            'used_today' => BloodStockMovement::where('hospital_id', $hospitalId)
+                ->whereIn('movement_type', ['sos_transfused', 'manual_status_updated'])
+                ->where('to_status', BloodInventoryService::STATUS_USED)
+                ->whereDate('occurred_at', today())
+                ->count(),
+            'net_available_change_24h' => (int) BloodStockMovement::where('hospital_id', $hospitalId)
+                ->where('occurred_at', '>=', now()->subDay())
+                ->sum('available_delta'),
         ];
 
         // Lấy tất cả danh sách túi máu để hiển thị bảng (hỗ trợ phân trang và bộ lọc)
@@ -121,6 +138,11 @@ class BloodStockController extends Controller
         }
 
         $allBags = $query->paginate($request->integer('per_page', 10));
+        $recentMovements = BloodStockMovement::query()
+            ->where('hospital_id', $hospitalId)
+            ->orderByDesc('occurred_at')
+            ->limit(12)
+            ->get();
 
         return response()->json([
             'data' => [
@@ -128,6 +150,7 @@ class BloodStockController extends Controller
                 'stats' => $stats,
                 'breakdown' => $breakdown,
                 'bags' => $allBags,
+                'recent_movements' => $recentMovements,
             ]
         ]);
     }
@@ -156,18 +179,15 @@ class BloodStockController extends Controller
             'notes' => 'nullable|string|max:255',
         ]);
 
-        $stock = BloodStock::create([
-            'hospital_id' => $hospitalId,
-            'blood_type' => $request->input('blood_type'),
-            'volume_ml' => $request->input('volume_ml'),
-            'received_date' => $request->input('received_date'),
-            'expiry_date' => $request->input('expiry_date'),
-            'status' => 'available',
-            'notes' => $request->input('notes'),
-        ]);
-
-        // Kiểm tra xem việc thêm túi máu có giải quyết được cảnh báo khan hiếm nào không
-        $this->checkAndResolveAlert($hospitalId, $stock->blood_type);
+        $stock = DB::transaction(fn () => $this->bloodInventoryService->addManualStock(
+            hospitalId: $hospitalId,
+            bloodType: $request->input('blood_type'),
+            volumeMl: $request->integer('volume_ml'),
+            receivedDate: $request->input('received_date'),
+            expiryDate: $request->input('expiry_date'),
+            actorId: $admin->id,
+            notes: $request->input('notes'),
+        ));
 
         return response()->json([
             'message' => 'Thêm túi máu vào kho thành công.',
@@ -188,26 +208,19 @@ class BloodStockController extends Controller
         }
 
         $request->validate([
-            'status' => 'required|in:available,used,expired,allocated',
+            'status' => 'required|in:processing,available,used,expired,allocated,discarded',
             'notes' => 'nullable|string|max:255',
         ]);
 
-        $oldStatus = $stock->status;
-        $stock->update([
-            'status' => $request->input('status'),
-            'notes' => $request->input('notes') ?? $stock->notes,
-        ]);
-
-        // Nếu chuyển trạng thái từ available sang trạng thái khác (ví dụ: đã dùng hoặc hết hạn)
-        // Cần kiểm tra xem có kích hoạt cảnh báo khan hiếm mới không
-        if ($oldStatus === 'available' && $stock->status !== 'available') {
-            $this->checkAndTriggerAlert($stock->hospital_id, $stock->blood_type);
-        }
-
-        // Nếu chuyển ngược lại thành available
-        if ($oldStatus !== 'available' && $stock->status === 'available') {
-            $this->checkAndResolveAlert($stock->hospital_id, $stock->blood_type);
-        }
+        $stock = DB::transaction(fn () => $this->bloodInventoryService->transition(
+            stock: $stock,
+            toStatus: $request->input('status'),
+            movementType: 'manual_status_updated',
+            sourceType: 'blood_stock',
+            sourceId: $stock->id,
+            actorId: $admin->id,
+            notes: $request->input('notes'),
+        ));
 
         return response()->json([
             'message' => 'Cập nhật trạng thái túi máu thành công.',
@@ -247,6 +260,7 @@ class BloodStockController extends Controller
                 // Xóa dự báo cũ của ngày hôm nay để tránh trùng lặp
                 BloodDemandForecast::where('hospital_id', $hospitalId)
                     ->where('forecast_date', now()->toDateString())
+                    ->whereNull('forecast_run_id')
                     ->delete();
 
                 foreach ($forecastResult['forecast'] as $item) {
@@ -294,6 +308,7 @@ class BloodStockController extends Controller
 
         // Lấy dự báo gần nhất trong DB
         $forecasts = BloodDemandForecast::where('hospital_id', $hospitalId)
+            ->whereNull('forecast_run_id')
             ->where('forecast_date', '>=', now()->subDays(3)->toDateString())
             ->orderBy('forecast_date', 'desc')
             ->get();

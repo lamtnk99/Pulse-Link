@@ -23,6 +23,7 @@ use App\Services\Contracts\EmergencyAlertRealtimeGateway;
 use App\Services\Donations\DonationRecognitionService;
 use App\Services\Emergency\EmergencyDispatchService;
 use App\Services\Gratitude\GratitudeCardService;
+use App\Services\Inventory\BloodInventoryService;
 use App\Services\Mobile\MobileUserResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -44,6 +45,7 @@ class EmergencyController extends Controller
         private readonly DonationRecognitionService $recognitionService,
         private readonly BloodCompatibility $bloodCompatibility,
         private readonly GratitudeCardService $gratitudeCardService,
+        private readonly BloodInventoryService $bloodInventoryService,
     ) {}
 
     public function store(StoreEmergencyAlertRequest $request)
@@ -278,18 +280,17 @@ class EmergencyController extends Controller
                 ]),
             );
 
-            // Tự động đồng bộ sang kho máu (BloodStock)
-            BloodStock::updateOrCreate(
-                ['donation_history_id' => $history->id],
-                [
-                    'hospital_id' => $alert->hospital_id,
-                    'blood_type' => $confirmedBloodType,
-                    'volume_ml' => $volumeMl,
-                    'received_date' => $history->donated_at,
-                    'expiry_date' => Carbon::parse($history->donated_at)->addDays(35)->toDateString(),
-                    'status' => 'available',
-                    'notes' => 'Hiến máu khẩn cấp SOS từ ca cấp cứu: '.$alert->public_id,
-                ]
+            // SOS chỉ ghi nhận máu đã tiếp nhận. Đơn vị này chưa thuộc kho
+            // khả dụng cho đến khi hành trình "reserve" hoàn tất bước stored.
+            $this->bloodInventoryService->receiveDonation(
+                history: $history,
+                hospitalId: $alert->hospital_id,
+                initialStatus: BloodInventoryService::STATUS_PROCESSING,
+                movementType: 'sos_donation_received',
+                sourceType: 'emergency_commitment',
+                sourceId: $commitment->id,
+                actorId: $admin->id,
+                notes: 'Hiến máu khẩn cấp SOS từ ca cấp cứu: '.$alert->public_id,
             );
 
             $commitment->donor->update([
@@ -381,17 +382,24 @@ class EmergencyController extends Controller
             || in_array($existingJourney?->final_message, $oldFallbacks, true);
 
         $wasAlreadyCompleted = false;
-        $journey = DB::transaction(function () use ($alert, $commitment, $payload, $willComplete, $isFinalStep, $isOldOrEmpty, &$wasAlreadyCompleted): BloodJourney {
+        $journey = DB::transaction(function () use ($alert, $commitment, $payload, $willComplete, $isFinalStep, $isOldOrEmpty, $admin, &$wasAlreadyCompleted): BloodJourney {
             $history = DonationHistory::query()->findOrFail($commitment->donation_history_id);
             $journey = $this->ensureBloodJourney($alert, $commitment->loadMissing('donor'), $history, $payload['destination_type'] ?? null);
 
             $wasAlreadyCompleted = ! empty($journey->completed_at);
 
-            if (($payload['destination_type'] ?? $journey->destination_type) !== $journey->destination_type) {
+            $requestedDestinationType = $payload['destination_type'] ?? $journey->destination_type;
+            $destinationTypeChanged = $requestedDestinationType !== $journey->destination_type;
+            abort_if(
+                $destinationTypeChanged && $journey->completed_at !== null,
+                422,
+                'Không thể đổi đích đến sau khi hành trình máu đã hoàn tất.'
+            );
+
+            if ($destinationTypeChanged) {
                 $journey = $this->resetJourneySteps($journey, $payload['destination_type']);
             }
 
-            $destinationTypeChanged = (($payload['destination_type'] ?? $journey->destination_type) !== $journey->destination_type);
             $stepKeys = collect(BloodJourney::defaultSteps($journey->destination_type))->pluck('step_key')->values();
             $stepKey = $payload['current_step'] ?? $journey->current_step;
             abort_unless($stepKeys->contains($stepKey), 422);
@@ -424,6 +432,63 @@ class EmergencyController extends Controller
 
             $journey->steps()->whereIn('step_key', $completedStepKeys->all())->whereNull('occurred_at')->update(['occurred_at' => now()]);
             $journey->steps()->whereNotIn('step_key', $completedStepKeys->all())->update(['occurred_at' => null]);
+
+            $stock = BloodStock::query()
+                ->where('donation_history_id', $history->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($destinationTypeChanged && $stock->status === BloodInventoryService::STATUS_ALLOCATED && $journey->destination_type === 'reserve') {
+                $this->bloodInventoryService->transition(
+                    stock: $stock,
+                    toStatus: BloodInventoryService::STATUS_PROCESSING,
+                    movementType: 'sos_destination_changed',
+                    sourceType: 'blood_journey',
+                    sourceId: $journey->id,
+                    actorId: $admin->id,
+                    notes: 'Đổi đích đến SOS sang kho dự trữ.',
+                    idempotencySuffix: 'allocated:processing:reserve',
+                );
+            }
+
+            if ($journey->destination_type === 'reserve' && $stepKey === 'stored' && $stock->fresh()->status === BloodInventoryService::STATUS_PROCESSING) {
+                $this->bloodInventoryService->transition(
+                    stock: $stock,
+                    toStatus: BloodInventoryService::STATUS_AVAILABLE,
+                    movementType: 'sos_stored',
+                    sourceType: 'blood_journey',
+                    sourceId: $journey->id,
+                    actorId: $admin->id,
+                    notes: 'Đã lưu kho từ hành trình SOS.',
+                    idempotencySuffix: 'processing:available:stored',
+                );
+            }
+
+            if ($journey->destination_type === 'patient' && $stepKey === 'emergency_transport' && $stock->fresh()->status === BloodInventoryService::STATUS_PROCESSING) {
+                $this->bloodInventoryService->transition(
+                    stock: $stock,
+                    toStatus: BloodInventoryService::STATUS_ALLOCATED,
+                    movementType: 'sos_allocated',
+                    sourceType: 'blood_journey',
+                    sourceId: $journey->id,
+                    actorId: $admin->id,
+                    notes: 'Đã điều phối đơn vị máu SOS tới bệnh nhân.',
+                    idempotencySuffix: 'processing:allocated:transport',
+                );
+            }
+
+            if ($journey->destination_type === 'patient' && $stepKey === 'transfused' && $stock->fresh()->status === BloodInventoryService::STATUS_ALLOCATED) {
+                $this->bloodInventoryService->transition(
+                    stock: $stock,
+                    toStatus: BloodInventoryService::STATUS_USED,
+                    movementType: 'sos_transfused',
+                    sourceType: 'blood_journey',
+                    sourceId: $journey->id,
+                    actorId: $admin->id,
+                    notes: 'Đã truyền máu SOS cho bệnh nhân.',
+                    idempotencySuffix: 'allocated:used:transfused',
+                );
+            }
 
             if ($willComplete && ! $wasAlreadyCompleted) {
                 $this->createMobileNotification(

@@ -44,6 +44,12 @@ class BloodStockSeeder extends Seeder
             $histories = DonationHistory::where('hospital_id', $hospital->id)
                 ->where('status', 'verified')
                 ->get();
+            // Một lượt hiến chỉ có thể đại diện cho một đơn vị máu trong kho.
+            // Khi thiếu lịch sử phù hợp, túi demo được để null thay vì tái sử dụng
+            // donation_history_id và làm sai quan hệ nguồn gốc.
+            $unusedHistoriesByType = $histories
+                ->groupBy('blood_type')
+                ->map(fn ($items) => $items->values());
 
             // Nhập ngẫu nhiên túi máu
             foreach ($bloodTypes as $bloodType) {
@@ -74,8 +80,8 @@ class BloodStockSeeder extends Seeder
                         $status = 'used';
                     }
 
-                    $matchingHistories = $histories->where('blood_type', $bloodType);
-                    $history = $matchingHistories->isNotEmpty() ? $matchingHistories->random() : null;
+                    $matchingHistories = $unusedHistoriesByType->get($bloodType);
+                    $history = $matchingHistories?->shift();
 
                     BloodStock::create([
                         'hospital_id' => $hospital->id,

@@ -3,10 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\BloodStock;
+use App\Models\BloodStockMovement;
+use App\Models\ForecastRecommendation;
 use App\Models\BloodSafetyThreshold;
 use App\Models\Hospital;
 use App\Models\SmartAlert;
 use App\Models\User;
+use App\Services\AI\InventoryForecastService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -213,6 +216,65 @@ class BloodStockApiTest extends TestCase
             ]);
     }
 
+    public function test_forecast_v2_reads_used_movements_and_returns_auditable_overview(): void
+    {
+        BloodSafetyThreshold::create([
+            'hospital_id' => $this->hospitalA->id,
+            'blood_type' => 'O+',
+            'min_units' => 3,
+        ]);
+        for ($i = 0; $i < 5; $i++) {
+            BloodStock::create([
+                'hospital_id' => $this->hospitalA->id,
+                'blood_type' => 'O+',
+                'volume_ml' => 350,
+                'received_date' => now()->subDays(5)->toDateString(),
+                'expiry_date' => now()->addDays(30)->toDateString(),
+                'status' => 'available',
+            ]);
+        }
+        for ($day = 1; $day <= 35; $day++) {
+            BloodStockMovement::create([
+                'hospital_id' => $this->hospitalA->id,
+                'blood_type' => 'O+',
+                'movement_type' => 'manual_status_updated',
+                'to_status' => 'used',
+                'quantity_units' => $day % 7 === 0 ? 2 : 1,
+                'volume_ml' => 350,
+                'available_delta' => 0,
+                'idempotency_key' => "test-forecast-used-{$day}",
+                'occurred_at' => now()->subDays($day),
+            ]);
+        }
+
+        $run = app(InventoryForecastService::class)->createRun($this->hospitalA, 'manual', [], $this->sysAdmin->id);
+        app(InventoryForecastService::class)->generate($run);
+
+        $this->withHeader('X-Admin-User-Id', $this->sysAdmin->id)
+            ->getJson("/api/admin/blood-forecasts/overview?hospital_id={$this->hospitalA->id}&horizon=7")
+            ->assertOk()
+            ->assertJsonPath('data.run.status', 'completed')
+            ->assertJsonPath('data.run.data_quality.level', 'medium')
+            ->assertJsonStructure([
+                'data' => [
+                    'run', 'points', 'horizon_totals', 'risk_rows', 'recommendations',
+                ],
+            ]);
+
+        $recommendation = ForecastRecommendation::query()
+            ->where('forecast_run_id', $run->id)
+            ->where('action_type', 'create_event')
+            ->firstOrFail();
+        $this->withHeader('X-Admin-User-Id', $this->sysAdmin->id)
+            ->postJson("/api/admin/forecast-recommendations/{$recommendation->id}/draft-event")
+            ->assertCreated()
+            ->assertJsonPath('data.is_published', false);
+        $this->withHeader('X-Admin-User-Id', $this->sysAdmin->id)
+            ->postJson("/api/admin/forecast-recommendations/{$recommendation->id}/draft-post")
+            ->assertCreated()
+            ->assertJsonPath('data.status', 'draft');
+    }
+
     public function test_console_command_marks_expired_blood_bags(): void
     {
         // 1. Tạo 1 túi máu quá hạn (hạn sử dụng từ 5 ngày trước)
@@ -231,5 +293,10 @@ class BloodStockApiTest extends TestCase
 
         // 3. Túi máu phải chuyển trạng thái sang expired
         $this->assertEquals('expired', $expiredBag->fresh()->status);
+        $this->assertDatabaseHas('blood_stock_movements', [
+            'blood_stock_id' => $expiredBag->id,
+            'movement_type' => 'stock_expired',
+            'available_delta' => -1,
+        ]);
     }
 }
