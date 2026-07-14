@@ -618,7 +618,7 @@ class PulseLinkController extends ChangeNotifier {
       await _removeEmergencyAlert(alert.id);
       if (alert.currentCommitment?.status ==
           EmergencyCommitmentStatus.donated) {
-        _finishSosDonationMission(alert.currentCommitment!, alert: alert);
+        _showSosDonationGratitude(alert.currentCommitment!, alert: alert);
       }
       return;
     }
@@ -1141,80 +1141,23 @@ class PulseLinkController extends ChangeNotifier {
   }
 
   void _handleEmergencyCommitmentUpdate(EmergencyCommitment commitment) {
-    final journey = commitment.bloodJourney;
-
-    // journey_progress là tín hiệu riêng cho các bước giữa. Event vẫn chứa
-    // commitment đầy đủ để cập nhật UI, nhưng tuyệt đối không đi qua luồng gửi thư.
-    if (commitment.updateType == 'journey_progress') {
-      if (journey == null) return;
-
-      var updatedHistoryItem = false;
-      final updatedHistory = _state.donationHistory.map((donation) {
-        if (donation.bloodJourney?.id != journey.id) return donation;
-        updatedHistoryItem = true;
-        return donation.copyWith(bloodJourney: journey);
-      }).toList(growable: false);
-      final isActiveJourney = _state.activeLiveBloodJourney?.id == journey.id;
-
-      if (updatedHistoryItem || isActiveJourney) {
-        _state = _state.copyWith(
-          donationHistory: updatedHistory,
-          activeLiveBloodJourney: isActiveJourney ? journey : null,
-        );
-        notifyListeners();
-      }
-
-      if (!updatedHistoryItem) {
-        // Event có thể đến trước lần đồng bộ lịch sử sau khi hiến. Khi đó chỉ tải
-        // dữ liệu nền; tuyệt đối không mở thư hay thay đổi màn hiện tại.
-        unawaited(refreshDailyData());
-      }
-      return;
-    }
-
-    if (commitment.updateType == 'journey_completed') {
-      if (journey != null) {
-        var updatedHistoryItem = false;
-        final updatedHistory = _state.donationHistory.map((donation) {
-          if (donation.bloodJourney?.id != journey.id) return donation;
-          updatedHistoryItem = true;
-          return donation.copyWith(bloodJourney: journey);
-        }).toList(growable: false);
-
-        _state = _state.copyWith(
-          donationHistory: updatedHistory,
-          clearActiveLiveBloodJourney: true,
-          clearActiveLiveBloodJourneyHospitalName: true,
-          clearActiveLiveBloodJourneyBloodType: true,
-        );
-        notifyListeners();
-        if (!updatedHistoryItem) unawaited(refreshDailyData());
-      }
-      return;
-    }
-
-    if (commitment.updateType == 'donation_verified') {
-      _finishSosDonationMission(commitment);
-      return;
-    }
-
     if (commitment.status == EmergencyCommitmentStatus.donated) {
-      _finishSosDonationMission(commitment);
+      _showSosDonationGratitude(commitment);
     } else if (commitment.status == EmergencyCommitmentStatus.cancelled ||
         commitment.status == EmergencyCommitmentStatus.notNeeded) {
       _stopEmergencyLocationSync();
       unawaited(_removeEmergencyAlert(commitment.alertId));
     } else if (_state.activeLiveBloodJourney != null &&
-        journey != null &&
-        journey.id == _state.activeLiveBloodJourney!.id) {
+        commitment.bloodJourney != null &&
+        commitment.bloodJourney!.id == _state.activeLiveBloodJourney!.id) {
       _state = _state.copyWith(
-        activeLiveBloodJourney: journey,
+        activeLiveBloodJourney: commitment.bloodJourney,
       );
       notifyListeners();
     }
   }
 
-  void _finishSosDonationMission(
+  void _showSosDonationGratitude(
     EmergencyCommitment commitment, {
     EmergencyAlert? alert,
   }) {
@@ -1222,8 +1165,8 @@ class PulseLinkController extends ChangeNotifier {
 
     final sourceAlert = alert ?? _state.activeAlert;
     final journey = commitment.bloodJourney;
-    final showLiveJourney =
-        journey?.completedAt == null && journey?.publishedAt != null;
+    final journeyCompleted = journey?.completedAt != null;
+    final showLiveJourney = !journeyCompleted && journey?.publishedAt != null;
     final committedAlertIds = {..._state.committedAlertIds}
       ..remove(commitment.alertId);
 
@@ -1233,6 +1176,21 @@ class PulseLinkController extends ChangeNotifier {
           .where((candidate) => candidate.id != commitment.alertId)
           .toList(growable: false),
       committedAlertIds: committedAlertIds,
+      activeGratitudeLetter: journeyCompleted
+          ? GratitudeLetter.fromBloodJourney(
+              journey!,
+              profile: _state.profile,
+              hospitalName: sourceAlert?.hospitalName,
+              bloodType: sourceAlert?.requiredBloodType,
+              volumeMl: commitment.donationVolumeMl,
+              donatedAt: commitment.donatedAt,
+            )
+          : GratitudeLetter.fromSosDonation(
+              commitment,
+              profile: _state.profile,
+              hospitalName: sourceAlert?.hospitalName,
+              bloodType: sourceAlert?.requiredBloodType,
+            ),
       sosMissionPhase: SosMissionPhase.alertPreview,
       sosIntensity: 0,
       emergencyCommitted: false,
