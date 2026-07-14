@@ -14,6 +14,7 @@ use App\Services\Admin\AdminUserResolver;
 use App\Services\AI\InventoryForecastService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class BloodForecastController extends Controller
@@ -162,8 +163,28 @@ class BloodForecastController extends Controller
         abort_unless($this->adminUserResolver->canAccessHospital($admin, $recommendation->hospital_id), 403);
         abort_unless($recommendation->action_type === 'create_event', 422, 'Khuyến nghị này không tạo đợt hiến máu.');
 
-        $recommendationPayload = $recommendation->payload ?? [];
-        $existingDraftId = $recommendationPayload['draft_event_id'] ?? null;
+        $validated = $request->validate([
+            'recommendation_ids' => ['sometimes', 'array', 'min:1', 'max:8'],
+            'recommendation_ids.*' => ['integer', 'distinct'],
+        ]);
+        $recommendationIds = collect($validated['recommendation_ids'] ?? [])
+            ->push($recommendation->id)
+            ->unique()
+            ->values();
+        $campaignRecommendations = ForecastRecommendation::query()
+            ->whereIn('id', $recommendationIds)
+            ->get();
+
+        abort_unless($campaignRecommendations->count() === $recommendationIds->count(), 422, 'Có khuyến nghị không tồn tại.');
+        abort_unless($campaignRecommendations->every(fn (ForecastRecommendation $item) => $item->hospital_id === $recommendation->hospital_id
+            && $item->forecast_run_id === $recommendation->forecast_run_id
+            && $item->action_type === 'create_event'
+        ), 422, 'Chỉ có thể gom khuyến nghị cùng một forecast run và bệnh viện.');
+
+        $existingDraftId = $campaignRecommendations
+            ->map(fn (ForecastRecommendation $item) => ($item->payload ?? [])['draft_event_id'] ?? null)
+            ->filter()
+            ->first();
         if ($existingDraftId && ($existing = DonationEvent::query()->find($existingDraftId))) {
             return response()->json(['data' => $existing]);
         }
@@ -173,28 +194,57 @@ class BloodForecastController extends Controller
         // persist a location target when its referenced master record exists.
         $provinceCode = $hospital->province?->code;
         $wardCode = $hospital->ward?->code;
-        $startsAt = ($recommendation->due_date ?? now()->addDays(5))->copy()->setTime(8, 0);
-        $event = DonationEvent::query()->create([
-            'hospital_id' => $hospital->id,
-            'drive_type' => 'in_hospital',
-            'title' => 'Dự thảo · '.$recommendation->title,
-            'organizer' => $hospital->name,
-            'description' => $recommendation->rationale,
-            'starts_at' => $startsAt,
-            'ends_at' => $startsAt->copy()->addHours(4),
-            'location_name' => $hospital->address,
-            'province_code' => $provinceCode,
-            'ward_code' => $wardCode,
-            'latitude' => $hospital->latitude,
-            'longitude' => $hospital->longitude,
-            'urgency' => in_array($recommendation->severity, ['critical', 'high'], true) ? 'high' : 'normal',
-            'capacity' => 120,
-            'is_published' => false,
-        ]);
-        $recommendation->update([
-            'status' => 'draft_created',
-            'payload' => [...$recommendationPayload, 'draft_event_id' => $event->id],
-        ]);
+        $earliestDueDate = $campaignRecommendations
+            ->filter(fn (ForecastRecommendation $item) => $item->due_date !== null)
+            ->sortBy(fn (ForecastRecommendation $item) => $item->due_date->timestamp)
+            ->first()?->due_date;
+        $startsAt = ($earliestDueDate?->copy() ?? now()->addDays(5))->setTime(8, 0);
+        $bloodTypes = $campaignRecommendations->pluck('blood_type')->filter()->unique()->values()->implode(', ');
+        $severityLabels = [
+            'critical' => 'khẩn cấp',
+            'high' => 'ưu tiên cao',
+            'medium' => 'theo dõi',
+        ];
+        $needDetails = $campaignRecommendations->map(function (ForecastRecommendation $item) use ($severityLabels): string {
+            $gap = max(0, (int) ceil((float) $item->projected_gap_units));
+            $gapText = $gap > 0 ? "thiếu dự kiến {$gap} đơn vị" : 'có nguy cơ xuống dưới ngưỡng an toàn';
+            $dueText = $item->due_date ? ' trước '.$item->due_date->format('d/m/Y') : '';
+            $severity = $severityLabels[$item->severity] ?? $item->severity;
+
+            return "- Nhóm {$item->blood_type}: {$gapText}{$dueText} · {$severity}.";
+        })->implode("\n");
+        $description = "Mục tiêu chiến dịch: tổ chức một đợt hiến máu để bổ sung đồng thời các nhóm {$bloodTypes}.\n\n"
+            ."Chi tiết nhu cầu theo dự báo:\n{$needDetails}\n\n"
+            .'Quy mô vận hành đề xuất: 120 lượt đăng ký. Nhân viên y tế kiểm tra lại nhu cầu thực tế trước khi công bố.';
+
+        $event = DB::transaction(function () use ($hospital, $provinceCode, $wardCode, $startsAt, $bloodTypes, $description, $campaignRecommendations): DonationEvent {
+            $event = DonationEvent::query()->create([
+                'hospital_id' => $hospital->id,
+                'drive_type' => 'in_hospital',
+                'title' => 'Dự thảo · Chiến dịch hiến máu ưu tiên '.$bloodTypes,
+                'organizer' => $hospital->name,
+                'description' => $description,
+                'starts_at' => $startsAt,
+                'ends_at' => $startsAt->copy()->addHours(4),
+                'location_name' => $hospital->address,
+                'province_code' => $provinceCode,
+                'ward_code' => $wardCode,
+                'latitude' => $hospital->latitude,
+                'longitude' => $hospital->longitude,
+                'urgency' => $campaignRecommendations->contains(fn (ForecastRecommendation $item) => in_array($item->severity, ['critical', 'high'], true)) ? 'high' : 'normal',
+                'capacity' => 120,
+                'is_published' => false,
+            ]);
+
+            foreach ($campaignRecommendations as $item) {
+                $item->update([
+                    'status' => 'draft_created',
+                    'payload' => [...($item->payload ?? []), 'draft_event_id' => $event->id],
+                ]);
+            }
+
+            return $event;
+        });
 
         return response()->json(['data' => $event], 201);
     }

@@ -85,6 +85,51 @@ const orderedThresholds = computed(() => [...thresholds.value].sort((left, right
 const activeSmartAlerts = computed(() => smartAlerts.value.filter((alert) => alert.status === 'active'))
 const resolvedSmartAlerts = computed(() => smartAlerts.value.filter((alert) => alert.status !== 'active'))
 
+const forecastCampaignPlan = computed(() => {
+  if (!forecastRecommendationRecords.value.length) return null
+
+  const recommendations = forecastRecommendationRecords.value
+  const eventRecommendations = recommendations.filter((recommendation) => recommendation.action_type === 'create_event')
+  const bloodNeeds = recommendations.map((recommendation) => ({
+    bloodType: recommendation.blood_type || 'Tất cả nhóm',
+    severity: recommendation.severity || 'medium',
+    shortageUnits: Math.max(0, Math.ceil(Number(recommendation.projected_gap_units || 0))),
+    dueDate: recommendation.due_date || null,
+    requiresCampaign: recommendation.action_type === 'create_event',
+  }))
+
+  return {
+    bloodNeeds,
+    eventRecommendationIds: eventRecommendations.map((recommendation) => recommendation.id),
+    totalProjectedGap: bloodNeeds.reduce((total, item) => total + item.shortageUnits, 0),
+    capacity: 120,
+    hasDraft: eventRecommendations.some((recommendation) => recommendation.status === 'draft_created'),
+    canCreateEvent: eventRecommendations.some((recommendation) => recommendation.status === 'suggested'),
+  }
+})
+
+function forecastSeverityLabel(severity: string) {
+  const labels: Record<string, string> = {
+    critical: 'Khẩn cấp',
+    high: 'Ưu tiên cao',
+    medium: 'Theo dõi',
+    safe: 'An toàn',
+  }
+
+  return labels[severity] || severity
+}
+
+function forecastSeverityClass(severity: string) {
+  const classes: Record<string, string> = {
+    critical: 'bg-red-50 text-red-700 ring-red-100',
+    high: 'bg-orange-50 text-orange-700 ring-orange-100',
+    medium: 'bg-amber-50 text-amber-700 ring-amber-100',
+    safe: 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+  }
+
+  return classes[severity] || 'bg-slate-50 text-slate-600 ring-slate-100'
+}
+
 const aiEventForm = ref({
   hospitalId: null as number | null,
   driveType: 'in_hospital' as 'in_hospital' | 'mobile',
@@ -447,17 +492,26 @@ async function waitForForecastRun(runId: number) {
   return null
 }
 
-async function createForecastDraft(recommendation: any, type: 'event' | 'post') {
+async function createForecastCampaignDraft() {
+  const plan = forecastCampaignPlan.value
+  if (!plan?.eventRecommendationIds.length) return
+
+  const primaryRecommendationId = plan.eventRecommendationIds[0]
   try {
-    const res = await fetch(`${apiBase}/api/admin/forecast-recommendations/${recommendation.id}/draft-${type}`, {
+    const res = await fetch(`${apiBase}/api/admin/forecast-recommendations/${primaryRecommendationId}/draft-event`, {
       method: 'POST',
-      headers: { Accept: 'application/json' },
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ recommendation_ids: plan.eventRecommendationIds }),
     })
     if (!res.ok) throw new Error()
-    recommendation.status = 'draft_created'
-    showToast(type === 'event' ? 'Đã tạo bản nháp đợt hiến; cần duyệt trước khi công bố.' : 'Đã tạo bản nháp bài kêu gọi; cần duyệt trước khi công bố.', 'success')
+    forecastRecommendationRecords.value.forEach((recommendation) => {
+      if (plan.eventRecommendationIds.includes(recommendation.id)) {
+        recommendation.status = 'draft_created'
+      }
+    })
+    showToast('Đã tạo một bản nháp chiến dịch tổng hợp; cần duyệt trước khi công bố.', 'success')
   } catch (error) {
-    showToast('Không thể tạo bản nháp từ khuyến nghị này.', 'error')
+    showToast('Không thể tạo bản nháp chiến dịch từ dự báo hiện tại.', 'error')
   }
 }
 
@@ -1209,7 +1263,7 @@ onMounted(async () => {
       <!-- Tab 2: AI Forecasting -->
       <div v-else-if="currentTab === 'forecast'" class="space-y-6">
         <!-- AI Forecasting Dashboard -->
-        <div class="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div class="grid items-start gap-6 lg:grid-cols-[1fr_360px]">
           <!-- SVG Line Chart comparing demand -->
           <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
             <div>
@@ -1376,32 +1430,85 @@ onMounted(async () => {
               </ul>
             </div>
 
-            <div v-if="forecastRecommendationRecords.length" class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-              <h3 class="text-sm font-black text-slate-950 border-b border-slate-100 pb-3">Bản nháp cần phê duyệt:</h3>
-              <article v-for="recommendation in forecastRecommendationRecords" :key="recommendation.id" class="rounded-lg border border-slate-100 bg-slate-50 p-3">
-                <div class="flex items-start justify-between gap-2">
+            <div v-if="forecastCampaignPlan" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div class="border-b border-slate-100 px-5 py-4">
+                <div class="flex items-start justify-between gap-3">
                   <div>
-                    <p class="text-xs font-black text-slate-900">{{ recommendation.title }}</p>
-                    <p class="mt-1 text-[11px] font-semibold text-slate-500">{{ recommendation.blood_type || 'Tất cả nhóm' }} · {{ recommendation.severity }}</p>
+                    <h3 class="text-sm font-black text-slate-950">Kế hoạch đáp ứng nhu cầu máu</h3>
+                    <p class="mt-1 text-[11px] font-semibold leading-relaxed text-slate-500">
+                      Gom các tín hiệu thiếu hụt thành một chiến dịch, không tạo từng đợt riêng lẻ theo nhóm máu.
+                    </p>
                   </div>
-                  <span class="rounded-full bg-white px-2 py-0.5 text-[9px] font-black uppercase text-slate-500">{{ recommendation.status }}</span>
-                </div>
-                <div v-if="recommendation.status === 'suggested'" class="mt-3 flex flex-wrap gap-2">
-                  <button
-                    v-if="recommendation.action_type === 'create_event'"
-                    @click="createForecastDraft(recommendation, 'event')"
-                    class="rounded border border-purple-100 bg-purple-50 px-2.5 py-1.5 text-[10px] font-black text-purple-700 hover:bg-purple-100"
+                  <span
+                    class="shrink-0 rounded-full px-2.5 py-1 text-[9px] font-black uppercase"
+                    :class="forecastCampaignPlan.hasDraft ? 'bg-emerald-50 text-emerald-700' : 'bg-purple-50 text-purple-700'"
                   >
-                    Tạo nháp đợt hiến
-                  </button>
-                  <button
-                    @click="createForecastDraft(recommendation, 'post')"
-                    class="rounded border border-slate-200 bg-white px-2.5 py-1.5 text-[10px] font-black text-slate-700 hover:bg-slate-100"
-                  >
-                    Tạo nháp bài viết
-                  </button>
+                    {{ forecastCampaignPlan.hasDraft ? 'Đã tạo nháp' : 'Đề xuất AI' }}
+                  </span>
                 </div>
-              </article>
+              </div>
+
+              <div class="space-y-4 p-5">
+                <div class="rounded-lg border border-purple-100 bg-purple-50/60 p-3.5">
+                  <p class="text-xs font-black text-slate-950">01 chiến dịch hiến máu đa nhóm</p>
+                  <p class="mt-1 text-[11px] font-semibold leading-relaxed text-slate-600">
+                    Quy mô đề xuất {{ forecastCampaignPlan.capacity }} lượt đăng ký. Nhóm ưu tiên và mức thiếu dự báo được dùng để điều phối tiếp nhận trong cùng một đợt hiến.
+                  </p>
+                </div>
+
+                <div class="max-h-52 space-y-2 overflow-y-auto pr-1">
+                  <div
+                    v-for="need in forecastCampaignPlan.bloodNeeds"
+                    :key="need.bloodType"
+                    class="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2.5"
+                  >
+                    <div class="flex min-w-0 items-center gap-2.5">
+                      <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-xs font-black text-[#E31837] shadow-sm">
+                        {{ need.bloodType }}
+                      </span>
+                      <div class="min-w-0">
+                        <p class="truncate text-[11px] font-black text-slate-800">
+                          {{ need.requiresCampaign ? `Thiếu dự kiến ${need.shortageUnits} đơn vị` : 'Theo dõi ngưỡng an toàn' }}
+                        </p>
+                        <p class="mt-0.5 text-[10px] font-semibold text-slate-400">
+                          {{ need.dueDate ? `Mốc rủi ro ${need.dueDate}` : 'Chưa xác định mốc thiếu hụt' }}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      class="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ring-1 ring-inset"
+                      :class="forecastSeverityClass(need.severity)"
+                    >
+                      {{ forecastSeverityLabel(need.severity) }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 text-center">
+                  <div class="rounded-lg bg-slate-50 px-2 py-2.5">
+                    <p class="text-[9px] font-black uppercase tracking-wide text-slate-400">Nhóm cần theo dõi</p>
+                    <p class="mt-1 text-sm font-black text-slate-900">{{ forecastCampaignPlan.bloodNeeds.length }} nhóm</p>
+                  </div>
+                  <div class="rounded-lg bg-slate-50 px-2 py-2.5">
+                    <p class="text-[9px] font-black uppercase tracking-wide text-slate-400">Thiếu dự kiến</p>
+                    <p class="mt-1 text-sm font-black text-[#E31837]">{{ forecastCampaignPlan.totalProjectedGap }} đơn vị</p>
+                  </div>
+                </div>
+
+                <button
+                  v-if="forecastCampaignPlan.eventRecommendationIds.length"
+                  @click="createForecastCampaignDraft"
+                  :disabled="forecastCampaignPlan.hasDraft || !forecastCampaignPlan.canCreateEvent"
+                  class="flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-3 text-xs font-black text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                >
+                  <CheckCircle2 v-if="forecastCampaignPlan.hasDraft" class="h-4 w-4" />
+                  <Plus v-else class="h-4 w-4" />
+                  {{ forecastCampaignPlan.hasDraft ? 'ĐÃ TẠO NHÁP CHIẾN DỊCH' : 'TẠO NHÁP CHIẾN DỊCH TỔNG HỢP' }}
+                </button>
+                <p v-else class="rounded-lg bg-amber-50 px-3 py-2 text-center text-[10px] font-bold text-amber-700">
+                  Chưa cần mở chiến dịch; hệ thống tiếp tục theo dõi các nhóm máu này.
+                </p>
+              </div>
             </div>
           </div>
         </div>

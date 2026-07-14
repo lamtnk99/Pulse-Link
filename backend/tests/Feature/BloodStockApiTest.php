@@ -2,10 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\BloodSafetyThreshold;
 use App\Models\BloodStock;
 use App\Models\BloodStockMovement;
+use App\Models\DonationEvent;
 use App\Models\ForecastRecommendation;
-use App\Models\BloodSafetyThreshold;
 use App\Models\Hospital;
 use App\Models\SmartAlert;
 use App\Models\User;
@@ -18,8 +19,11 @@ class BloodStockApiTest extends TestCase
     use RefreshDatabase;
 
     private Hospital $hospitalA;
+
     private Hospital $hospitalB;
+
     private User $sysAdmin;
+
     private User $staffA;
 
     protected function setUp(): void
@@ -196,7 +200,7 @@ class BloodStockApiTest extends TestCase
     public function test_getting_ai_demand_forecast(): void
     {
         $response = $this->withHeader('X-Admin-User-Id', $this->sysAdmin->id)
-            ->postJson("/api/admin/blood-stocks/forecast/generate", [
+            ->postJson('/api/admin/blood-stocks/forecast/generate', [
                 'hospital_id' => $this->hospitalA->id,
             ]);
 
@@ -207,12 +211,12 @@ class BloodStockApiTest extends TestCase
                     'reasoning_summary',
                     'recommendations',
                     'forecast' => [
-                        '*' => ['blood_type', 'predicted_volume_ml', 'confidence_score', 'explanation']
+                        '*' => ['blood_type', 'predicted_volume_ml', 'confidence_score', 'explanation'],
                     ],
                     'suggested_events' => [
-                        '*' => ['drive_type', 'title', 'organizer', 'description', 'location_name', 'suggested_date', 'starts_at', 'ends_at', 'urgency', 'capacity', 'hospital_id', 'province_code', 'ward_code', 'latitude', 'longitude']
-                    ]
-                ]
+                        '*' => ['drive_type', 'title', 'organizer', 'description', 'location_name', 'suggested_date', 'starts_at', 'ends_at', 'urgency', 'capacity', 'hospital_id', 'province_code', 'ward_code', 'latitude', 'longitude'],
+                    ],
+                ],
             ]);
     }
 
@@ -265,10 +269,35 @@ class BloodStockApiTest extends TestCase
             ->where('forecast_run_id', $run->id)
             ->where('action_type', 'create_event')
             ->firstOrFail();
+        $secondRecommendation = ForecastRecommendation::query()->create([
+            'forecast_run_id' => $run->id,
+            'hospital_id' => $this->hospitalA->id,
+            'blood_type' => 'AB-',
+            'action_type' => 'create_event',
+            'status' => 'suggested',
+            'severity' => 'high',
+            'title' => 'Chuẩn bị bổ sung nhóm AB-',
+            'rationale' => 'Nhóm AB- có nguy cơ xuống dưới ngưỡng an toàn.',
+            'due_date' => now()->addDays(2)->toDateString(),
+            'projected_gap_units' => 4,
+            'payload' => ['data_quality' => 'medium'],
+        ]);
         $this->withHeader('X-Admin-User-Id', $this->sysAdmin->id)
-            ->postJson("/api/admin/forecast-recommendations/{$recommendation->id}/draft-event")
+            ->postJson("/api/admin/forecast-recommendations/{$recommendation->id}/draft-event", [
+                'recommendation_ids' => [$recommendation->id, $secondRecommendation->id],
+            ])
             ->assertCreated()
-            ->assertJsonPath('data.is_published', false);
+            ->assertJsonPath('data.is_published', false)
+            ->assertJsonPath('data.capacity', 120);
+        $draftEvent = DonationEvent::query()->latest('id')->firstOrFail();
+        $this->assertStringContainsString($recommendation->blood_type, $draftEvent->description);
+        $this->assertStringContainsString('AB-', $draftEvent->description);
+        $this->assertSame('draft_created', $recommendation->fresh()->status);
+        $this->assertSame('draft_created', $secondRecommendation->fresh()->status);
+        $this->assertSame(
+            $recommendation->fresh()->payload['draft_event_id'],
+            $secondRecommendation->fresh()->payload['draft_event_id'],
+        );
         $this->withHeader('X-Admin-User-Id', $this->sysAdmin->id)
             ->postJson("/api/admin/forecast-recommendations/{$recommendation->id}/draft-post")
             ->assertCreated()
