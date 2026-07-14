@@ -59,6 +59,16 @@ function renderMarkers() {
   const hospital = props.alert?.hospital
   if (hospital) {
     const hospitalPoint: L.LatLngExpression = [hospital.latitude, hospital.longitude]
+    const hospitalIcon = L.divIcon({
+      className: 'sos-hospital-marker',
+      html: '<span class="sos-hospital-marker__pin"><span class="sos-hospital-marker__cross"></span></span>',
+      iconSize: [38, 38],
+      iconAnchor: [19, 19],
+      popupAnchor: [0, -22],
+    })
+    const safeHospitalName = escapeHtml(hospital.name)
+    const safeHospitalAddress = escapeHtml(hospital.address)
+
     L.circle(hospitalPoint, {
       radius: 5000,
       color: '#dc2626',
@@ -66,7 +76,9 @@ function renderMarkers() {
       fillOpacity: 0.08,
       weight: 2,
     }).addTo(layerGroup)
-    L.marker(hospitalPoint).bindPopup(`<strong>${hospital.name}</strong><br>${hospital.address}`).addTo(layerGroup)
+    L.marker(hospitalPoint, { icon: hospitalIcon, title: hospital.name })
+      .bindPopup(`<strong>${safeHospitalName}</strong><br>${safeHospitalAddress}`)
+      .addTo(layerGroup)
     map.setView(hospitalPoint, 12)
   }
 
@@ -150,5 +162,44 @@ function renderMarkers() {
 
 .sos-donor-label--selected {
   background: #e31837;
+}
+
+.sos-hospital-marker {
+  border: 0;
+  background: transparent;
+}
+
+.sos-hospital-marker__pin {
+  position: relative;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 3px solid white;
+  border-radius: 999px;
+  background: #e31837;
+  box-shadow: 0 5px 15px rgb(127 29 29 / 35%);
+}
+
+.sos-hospital-marker__pin::before {
+  position: absolute;
+  inset: -7px;
+  border: 2px solid rgb(227 24 55 / 35%);
+  border-radius: inherit;
+  content: '';
+}
+
+.sos-hospital-marker__cross,
+.sos-hospital-marker__cross::before {
+  display: block;
+  width: 17px;
+  height: 5px;
+  border-radius: 2px;
+  background: white;
+  content: '';
+}
+
+.sos-hospital-marker__cross::before {
+  transform: rotate(90deg);
 }
 </style>
